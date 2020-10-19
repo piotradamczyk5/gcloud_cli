@@ -71,9 +71,9 @@ summary:
   - command: |
       compute instances ops-agents policies create ops-agents-test-policy --agent-rules=type=not-supported-type --os-types=short-name=centos,version=7
   - stderr: .*argument --agent-rules\:\ Invalid value \[not-supported-type\] from
-      field \[type\], expected one of \[logging, metrics\]..*$
+      field \[type\], expected one of \[logging, metrics, ops-agent\]..*$
   - error: '1: argument --agent-rules: Invalid value [not-supported-type] from field
-      [type], expected one of [logging, metrics].'
+      [type], expected one of [logging, metrics, ops-agent].'
 - execute:
   - command: |
       compute instances ops-agents policies create ops-agents-test-policy --agent-rules=type=logging,package-state=not-supported-state --os-types=short-name=centos,version=7
@@ -371,6 +371,17 @@ actions:
           with [ops-agents-].'
 - execute_command:
     command: |
+      compute instances ops-agents policies create ops-agents-test-policy --agent-rules=type='' --os-types=short-name=centos,version=7
+    events:
+    - expect_stderr:
+        matches: .* argument --agent-rules\:\ Invalid value \[\] from field \[type\],
+          expected one of \[logging, metrics, ops-agent\]..*
+    - expect_exit:
+        code: 1
+        message: 'argument --agent-rules: Invalid value [] from field [type],
+          expected one of [logging, metrics, ops-agent].'
+- execute_command:
+    command: |
       compute instances ops-agents policies create ops-agents-test-policy --agent-rules=not-a-list-of-maps --os-types=short-name=centos,version=7
     events:
     - expect_stderr:
@@ -408,11 +419,11 @@ actions:
     events:
     - expect_stderr:
         matches: .*argument --agent-rules\:\ Invalid value \[not-supported-type\]
-          from field \[type\], expected one of \[logging, metrics\]..*
+          from field \[type\], expected one of \[logging, metrics, ops-agent\]..*
     - expect_exit:
         code: 1
         message: 'argument --agent-rules: Invalid value [not-supported-type] from
-          field [type], expected one of [logging, metrics].'
+          field [type], expected one of [logging, metrics, ops-agent].'
 - execute_command:
     command: |
       compute instances ops-agents policies create ops-agents-test-policy --agent-rules=type=logging,package-state=not-supported-state --os-types=short-name=centos,version=7
@@ -446,6 +457,15 @@ actions:
         message: 'argument --group-labels: Bad syntax for dict arg: [not-a-list-of-maps].
           Please see `gcloud topic flags-file` or `gcloud topic escaping` for information
           on providing list or dictionary flag values with special characters.'
+- execute_command:
+    command: |
+      compute instances ops-agents policies create ops-agents-test-policy --agent-rules=type=logging,enable-autoupgrade=true --os-types=''
+    events:
+    - expect_stderr:
+        matches: .*argument --os-types\:\ not enough args.*
+    - expect_exit:
+        code: 1
+        message: 'argument --os-types: not enough args'
 - execute_command:
     command: |
       compute instances ops-agents policies create ops-agents-test-policy --agent-rules=type=logging;type=metrics --os-types=not-a-list-of-maps

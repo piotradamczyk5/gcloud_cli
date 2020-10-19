@@ -1,4 +1,6 @@
-- help_text:
+- release_tracks: [ALPHA, BETA, GA]
+
+  help_text:
     brief: |
       Update Memorystore Redis instances.
     description: |
@@ -39,14 +41,33 @@
     collection: redis.projects.locations.operations
 
   request:
-    api_version: v1
+    ALPHA:
+      api_version: v1alpha1
+      modify_request_hooks:
+      - googlecloudsdk.command_lib.redis.instances_update_util:CheckFieldsSpecified
+      - googlecloudsdk.command_lib.redis.instances_update_util:AddDisplayName
+      - googlecloudsdk.command_lib.redis.instances_update_util:AddSize
+      - googlecloudsdk.command_lib.redis.instances_update_util:RemoveRedisConfigs
+      - googlecloudsdk.command_lib.redis.instances_update_util:UpdateRedisConfigs
+    BETA:
+      api_version: v1beta1
+      modify_request_hooks:
+      - googlecloudsdk.command_lib.redis.instances_update_util:CheckFieldsSpecified
+      - googlecloudsdk.command_lib.redis.instances_update_util:AddDisplayName
+      - googlecloudsdk.command_lib.redis.instances_update_util:AddSize
+      - googlecloudsdk.command_lib.redis.instances_update_util:RemoveRedisConfigs
+      - googlecloudsdk.command_lib.redis.instances_update_util:UpdateRedisConfigs
+    GA:
+      api_version: v1
+      modify_request_hooks:
+      - googlecloudsdk.command_lib.redis.instances_update_util:CheckFieldsSpecified
+      - googlecloudsdk.command_lib.redis.instances_update_util:AddDisplayName
+      - googlecloudsdk.command_lib.redis.instances_update_util:AddSize
+      - googlecloudsdk.command_lib.redis.instances_update_util:RemoveRedisConfigs
+      - googlecloudsdk.command_lib.redis.instances_update_util:UpdateRedisConfigs
     collection: redis.projects.locations.instances
-    modify_request_hooks:
-    - googlecloudsdk.command_lib.redis.instances_update_util:CheckFieldsSpecified
-    - googlecloudsdk.command_lib.redis.instances_update_util:AddDisplayName
-    - googlecloudsdk.command_lib.redis.instances_update_util:AddSize
-    - googlecloudsdk.command_lib.redis.instances_update_util:RemoveRedisConfigs
-    - googlecloudsdk.command_lib.redis.instances_update_util:UpdateRedisConfigs
+
+
   update:
     read_modify_update: true
     disable_auto_field_mask: true

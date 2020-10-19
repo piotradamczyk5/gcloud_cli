@@ -32,7 +32,7 @@ from tests.lib import e2e_base
 from tests.lib import sdk_test_base
 import mock
 
-_DEFAULT_TIMEOUT = '7056s'
+_DEFAULT_TIMEOUT = '6984s'
 
 
 class DaisyBaseTest(e2e_base.WithMockHttp, sdk_test_base.SdkBase):
@@ -82,6 +82,13 @@ class DaisyBaseTest(e2e_base.WithMockHttp, sdk_test_base.SdkBase):
     self.addCleanup(self.mocked_compute_client_v1.Unmock)
     self.compute_v1_messages = core_apis.GetMessagesModule(
         'compute', 'v1')
+
+    self.mocked_artifacts_v1beta1 = client_mocker.Client(
+        core_apis.GetClientClass('artifactregistry', 'v1beta1'))
+    self.mocked_artifacts_v1beta1.Mock()
+    self.addCleanup(self.mocked_artifacts_v1beta1.Unmock)
+    self.mocked_artifacts_v1beta1_messages = core_apis.GetMessagesModule(
+        'artifactregistry', 'v1beta1')
 
     make_requests_patcher = mock.patch(
         'googlecloudsdk.api_lib.compute.request_helper.MakeRequests',
@@ -238,7 +245,8 @@ class DaisyBaseTest(e2e_base.WithMockHttp, sdk_test_base.SdkBase):
               log_bucket_dir or 'my-project_cloudbuild/logs'),
           request_headers={'Range': 'bytes=0-'}, status=200,
           body=('Cloudbuild output\n[import-image] output\n'
-                '[image-export] output\n[import-ovf] output'))
+                '[image-export] output\n[import-ovf] output\n'
+                '[windows-upgrade] output'))
 
   def _ExpectIamRolesGet(self, is_import, permissions=None, skip_compute=False):
     if is_import:
@@ -392,19 +400,32 @@ class DaisyBaseTest(e2e_base.WithMockHttp, sdk_test_base.SdkBase):
       )
 
     daisy_bucket_name = self.GetScratchBucketNameWithRegion()
+    daisy_bucket = self.storage_v1_messages.Bucket(
+        id=daisy_bucket_name, location=self.GetScratchBucketRegion())
     self.mocked_storage_v1.buckets.Get.Expect(
         self.storage_v1_messages.StorageBucketsGetRequest(
             bucket=daisy_bucket_name),
-        response=self.storage_v1_messages.Bucket(
-            id=daisy_bucket_name, location=self.GetScratchBucketRegion()))
+        response=daisy_bucket)
+    self.mocked_storage_v1.buckets.List.Expect(
+        self.storage_v1_messages.StorageBucketsListRequest(
+            project='my-project',
+            prefix=daisy_bucket.id,
+        ),
+        response=self.storage_v1_messages.Buckets(items=[daisy_bucket]))
 
   def PrepareDaisyBucketMocksWithoutRegion(self):
     daisy_bucket_name = self.GetScratchBucketNameWithoutRegion()
+    daisy_bucket = self.storage_v1_messages.Bucket(id=daisy_bucket_name)
     self.mocked_storage_v1.buckets.Get.Expect(
         self.storage_v1_messages.StorageBucketsGetRequest(
             bucket=daisy_bucket_name),
-        response=self.storage_v1_messages.Bucket(
-            id=daisy_bucket_name))
+        response=daisy_bucket)
+    self.mocked_storage_v1.buckets.List.Expect(
+        self.storage_v1_messages.StorageBucketsListRequest(
+            project='my-project',
+            prefix=daisy_bucket.id,
+        ),
+        response=self.storage_v1_messages.Buckets(items=[daisy_bucket]))
 
   def GetNetworkStep(self, workflow, daisy_vars, operation, regionalized,
                      network=None, subnet=None, include_zone=True,

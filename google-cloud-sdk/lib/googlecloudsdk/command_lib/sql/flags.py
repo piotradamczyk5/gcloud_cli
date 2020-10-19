@@ -274,6 +274,7 @@ def AddDatabaseVersion(parser, restrict_choices=True):
   choices = [
       'MYSQL_5_6',
       'MYSQL_5_7',
+      'MYSQL_8_0',
       'POSTGRES_9_6',
       'POSTGRES_10',
       'POSTGRES_11',
@@ -332,8 +333,9 @@ def AddEnableBinLog(parser, show_negated_in_help=False):
   parser.add_argument(
       '--enable-bin-log',
       required=False,
-      help=('Specified if binary log should be enabled. If backup '
-            'configuration is disabled, binary log must be disabled as well.'),
+      help=('Allows for data recovery from a specific point in time, down to a '
+            'fraction of a second. Must have automatic backups enabled to use. '
+            'Make sure storage can support at least 7 days of logs.'),
       **kwargs)
 
 
@@ -342,9 +344,10 @@ def AddEnablePointInTimeRecovery(parser, show_negated_in_help=False):
   parser.add_argument(
       '--enable-point-in-time-recovery',
       required=False,
-      help=('Specifies if point-in-time recovery (using write-ahead log '
-            'archiving) should be enabled. If backup configuration is '
-            'disabled, point-in-time recovery must be disabled as well.'),
+      help=('Allows for data recovery from a specific point in time, down to a '
+            'fraction of a second, via write-ahead logs. Must have automatic '
+            'backups enabled to use. Make sure storage can support at least 7 '
+            'days of logs.'),
       **kwargs)
 
 
@@ -601,6 +604,18 @@ def AddUriArgument(parser, help_text):
   parser.add_argument('uri', help=help_text)
 
 
+def AddOffloadArgument(parser):
+  """Add the 'offload' argument to the parser."""
+  parser.add_argument(
+      '--offload',
+      action='store_true',
+      help=(
+          'Offload an export to a temporary instance. Doing so reduces strain '
+          'on source instances and allows other operations to be performed '
+          'while the export is in progress.'
+      ))
+
+
 DEFAULT_DATABASE_IMPORT_HELP_TEXT = (
     'Database to which the import is made. If not set, it is assumed that '
     'the database is specified in the file to be imported. If your SQL '
@@ -808,9 +823,22 @@ USERS_FORMAT_BETA = """
   table(
     name.yesno(no='(anonymous)'),
     host,
-    type.yesno(no='NATIVE')
+    type.yesno(no='BUILT_IN')
   )
 """
 
 
 USERS_FORMAT_ALPHA = USERS_FORMAT_BETA
+
+
+def AddActiveDirectoryDomain(parser):
+  """Adds the '--active-directory-domain' flag to the parser.
+
+  Args:
+    parser: The current argparse parser to add this to.
+  """
+  help_text = (
+      'Managed Service for Microsoft Active Directory domain this instance is '
+      'joined to. Only available for SQL Server instances.'
+  )
+  parser.add_argument('--active-directory-domain', help=help_text)

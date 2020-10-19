@@ -44,7 +44,6 @@ from google.auth import credentials as google_auth_creds
 
 ADC_QUOTA_PROJECT_FIELD_NAME = 'quota_project_id'
 
-TOKEN_URI = 'https://oauth2.googleapis.com/token'
 _REVOKE_URI = 'https://accounts.google.com/o/oauth2/revoke'
 
 UNKNOWN_CREDS_NAME = 'unknown'
@@ -84,6 +83,14 @@ def IsUserAccountCredentials(creds):
     return CredentialType.FromCredentials(creds).is_user
   else:
     return CredentialTypeGoogleAuth.FromCredentials(creds).is_user
+
+
+def GetEffectiveTokenUri(cred_json, key='token_uri'):
+  if properties.VALUES.auth.token_host.IsExplicitlySet():
+    return properties.VALUES.auth.token_host.Get()
+  if cred_json.get(key):
+    return cred_json.get(key)
+  return properties.VALUES.auth.DEFAULT_TOKEN_HOST
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -750,6 +757,7 @@ def FromJson(json_value):
   """Returns Oauth2client credentials from library independent json format."""
   json_key = json.loads(json_value)
   cred_type = CredentialType.FromTypeKey(json_key['type'])
+  json_key['token_uri'] = GetEffectiveTokenUri(json_key)
   if cred_type == CredentialType.SERVICE_ACCOUNT:
     cred = service_account.ServiceAccountCredentials.from_json_keyfile_dict(
         json_key, scopes=config.CLOUDSDK_SCOPES)
@@ -776,6 +784,7 @@ def FromJson(json_value):
         service_account_email=json_key['client_email'],
         private_key_pkcs12=base64.b64decode(json_key['private_key']),
         private_key_password=json_key['password'],
+        token_uri=json_key['token_uri'],
         scopes=config.CLOUDSDK_SCOPES)
     cred.user_agent = cred._user_agent = config.CLOUDSDK_USER_AGENT
   else:
@@ -802,12 +811,9 @@ def FromJsonGoogleAuth(json_value):
       account or user account.
   """
   json_key = json.loads(json_value)
+  json_key['token_uri'] = GetEffectiveTokenUri(json_key)
   cred_type = CredentialTypeGoogleAuth.FromTypeKey(json_key['type'])
   if cred_type == CredentialTypeGoogleAuth.SERVICE_ACCOUNT:
-    # To be backward compatible with oauth2client, which sets the token URI
-    # internally if it is not provided.
-    if not json_key.get('token_uri'):
-      json_key['token_uri'] = TOKEN_URI
     # Import only when necessary to decrease the startup time. Move it to
     # global once google-auth is ready to replace oauth2client.
     # pylint: disable=g-import-not-at-top
@@ -829,8 +835,12 @@ def FromJsonGoogleAuth(json_value):
     # pylint: disable=g-import-not-at-top
     from googlecloudsdk.core.credentials import google_auth_credentials as c_google_auth
     # pylint: enable=g-import-not-at-top
-    return c_google_auth.UserCredWithReauth.from_authorized_user_info(
+
+    cred = c_google_auth.UserCredWithReauth.from_authorized_user_info(
         json_key, scopes=json_key.get('scopes'))
+    # token_uri is hard-coded in google-auth library, replace it.
+    cred._token_uri = json_key['token_uri']  # pylint: disable=protected-access
+    return cred
   raise UnknownCredentialsType(
       'Google auth does not support deserialization of {} credentials.'.format(
           json_key['type']))
@@ -850,6 +860,12 @@ def _GetSqliteStore(sqlite_credential_file=None, sqlite_access_token_file=None):
   return CredentialStoreWithCache(credential_store, access_token_cache)
 
 
+def _QuotaProjectIsCurrentProject(quota_project):
+  return quota_project in (
+      properties.VALUES.billing.CURRENT_PROJECT,
+      properties.VALUES.billing.CURRENT_PROJECT_WITH_FALLBACK)
+
+
 def GetQuotaProject(credentials, force_resource_quota):
   """Gets the value to use for the X-Goog-User-Project header.
 
@@ -863,12 +879,16 @@ def GetQuotaProject(credentials, force_resource_quota):
     str, The project id to send in the header or None to not populate the
     header.
   """
-  if not IsUserAccountCredentials(credentials):
+  if credentials is None:
     return None
 
   quota_project = properties.VALUES.billing.quota_project.Get()
-  if quota_project == properties.VALUES.billing.CURRENT_PROJECT:
-    return properties.VALUES.core.project.Get()
+  if _QuotaProjectIsCurrentProject(quota_project):
+    if IsUserAccountCredentials(credentials):
+      return properties.VALUES.core.project.Get()
+    else:
+      # for service account, don't return if flag or property are not set
+      return None
   elif quota_project == properties.VALUES.billing.LEGACY:
     if force_resource_quota:
       return properties.VALUES.core.project.Get()

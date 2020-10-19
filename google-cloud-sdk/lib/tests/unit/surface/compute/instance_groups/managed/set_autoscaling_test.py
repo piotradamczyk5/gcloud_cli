@@ -14,8 +14,6 @@
 # limitations under the License.
 """Tests for the instance-groups managed set-autoscaling subcommand."""
 
-# TODO(b/140557440) Break up file to prevent linter deadline.
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
@@ -1143,6 +1141,7 @@ class InstanceGroupManagersSetAutoscalingTest(test_base.BaseTest):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.GA
+    self.custom_metric = []
 
   def SetUp(self):
     self.SelectApi(self.track.prefix if self.track.prefix else 'v1')
@@ -1245,17 +1244,6 @@ class InstanceGroupManagersSetAutoscalingTest(test_base.BaseTest):
         [(self.compute.autoscalers, 'Insert', request)],
     )
 
-
-class InstanceGroupManagersSetAutoscalingBetaTest(
-    InstanceGroupManagersSetAutoscalingTest):
-
-  INSTANCE_GROUP_MANAGERS = (
-      test_resources.MakeInstanceGroupManagers('beta'))
-  AUTOSCALERS = test_resources.MakeAutoscalers('beta')
-
-  def PreSetUp(self):
-    self.track = calliope_base.ReleaseTrack.BETA
-
   def testUpdateAutoscaler_Mode(self):
     self.make_requests.side_effect = iter([
         [self.INSTANCE_GROUP_MANAGERS[0]],
@@ -1266,20 +1254,12 @@ class InstanceGroupManagersSetAutoscalingBetaTest(
     self.Run('compute instance-groups managed set-autoscaling group-1 '
              '--max-num-replicas 10 --zone zone-1 --mode only-up')
 
-    custom_metric_utilization = (
-        self.messages.AutoscalingPolicyCustomMetricUtilization(
-            metric='custom.cloudmonitoring.googleapis.com/seconds',
-            utilizationTarget=60.,
-            utilizationTargetType=(
-                self.messages.AutoscalingPolicyCustomMetricUtilization.
-                UtilizationTargetTypeValueValuesEnum.
-                DELTA_PER_MINUTE)))
     mode_cls = self.messages.AutoscalingPolicy.ModeValueValuesEnum
     request = self.messages.ComputeAutoscalersUpdateRequest(
         autoscaler='autoscaler-1',
         autoscalerResource=self.messages.Autoscaler(
             autoscalingPolicy=self.messages.AutoscalingPolicy(
-                customMetricUtilizations=[custom_metric_utilization],
+                customMetricUtilizations=self.custom_metric,
                 maxNumReplicas=10,
                 mode=mode_cls.ONLY_UP
             ),
@@ -1296,7 +1276,9 @@ class InstanceGroupManagersSetAutoscalingBetaTest(
     )
 
   def testUpdateAutoscaler_PreservesMode(self):
-    autoscalers = test_resources.MakeAutoscalers(self.track.prefix)
+    autoscalers = test_resources.MakeAutoscalers(self.track.prefix
+                                                 if self.track.prefix
+                                                 else 'v1')
     autoscalers[0].autoscalingPolicy.mode = (
         autoscalers[0].autoscalingPolicy.ModeValueValuesEnum.ONLY_UP)
     self.make_requests.side_effect = iter([
@@ -1308,19 +1290,11 @@ class InstanceGroupManagersSetAutoscalingBetaTest(
     self.Run('compute instance-groups managed set-autoscaling group-1 '
              '--max-num-replicas 10 --zone zone-1')
 
-    custom_metric_utilization = (
-        self.messages.AutoscalingPolicyCustomMetricUtilization(
-            metric='custom.cloudmonitoring.googleapis.com/seconds',
-            utilizationTarget=60.,
-            utilizationTargetType=(
-                self.messages.AutoscalingPolicyCustomMetricUtilization.
-                UtilizationTargetTypeValueValuesEnum.
-                DELTA_PER_MINUTE)))
     request = self.messages.ComputeAutoscalersUpdateRequest(
         autoscaler='autoscaler-1',
         autoscalerResource=self.messages.Autoscaler(
             autoscalingPolicy=self.messages.AutoscalingPolicy(
-                customMetricUtilizations=[custom_metric_utilization],
+                customMetricUtilizations=self.custom_metric,
                 maxNumReplicas=10,
                 mode=self.messages.AutoscalingPolicy.ModeValueValuesEnum.ONLY_UP
             ),
@@ -1376,19 +1350,11 @@ class InstanceGroupManagersSetAutoscalingBetaTest(
              '--max-num-replicas 10 --zone zone-1 '
              '--scale-in-control max-scaled-in-replicas=5,time-window=30')
 
-    custom_metric_utilization = (
-        self.messages.AutoscalingPolicyCustomMetricUtilization(
-            metric='custom.cloudmonitoring.googleapis.com/seconds',
-            utilizationTarget=60.,
-            utilizationTargetType=(
-                self.messages.AutoscalingPolicyCustomMetricUtilization.
-                UtilizationTargetTypeValueValuesEnum.DELTA_PER_MINUTE)))
-
     request = self.messages.ComputeAutoscalersUpdateRequest(
         autoscaler='autoscaler-1',
         autoscalerResource=self.messages.Autoscaler(
             autoscalingPolicy=self.messages.AutoscalingPolicy(
-                customMetricUtilizations=[custom_metric_utilization],
+                customMetricUtilizations=self.custom_metric,
                 maxNumReplicas=10,
                 scaleInControl=scale_in),
             name='autoscaler-1',
@@ -1402,6 +1368,27 @@ class InstanceGroupManagersSetAutoscalingBetaTest(
         self.autoscalers_list_request,
         [(self.compute.autoscalers, 'Update', request)],
     )
+
+
+class InstanceGroupManagersSetAutoscalingBetaTest(
+    InstanceGroupManagersSetAutoscalingTest):
+
+  INSTANCE_GROUP_MANAGERS = (
+      test_resources.MakeInstanceGroupManagers('beta'))
+  AUTOSCALERS = test_resources.MakeAutoscalers('beta')
+
+  def PreSetUp(self):
+    self.track = calliope_base.ReleaseTrack.BETA
+
+  def SetUp(self):
+    super(InstanceGroupManagersSetAutoscalingBetaTest, self).SetUp()
+    self.custom_metric = [(
+        self.messages.AutoscalingPolicyCustomMetricUtilization(
+            metric='custom.cloudmonitoring.googleapis.com/seconds',
+            utilizationTarget=60.,
+            utilizationTargetType=(
+                self.messages.AutoscalingPolicyCustomMetricUtilization.
+                UtilizationTargetTypeValueValuesEnum.DELTA_PER_MINUTE)))]
 
 
 class InstanceGroupManagersSetAutoscalingAlphaTest(
@@ -1433,17 +1420,7 @@ class InstanceGroupManagersSetAutoscalingAlphaTest(
                     predictiveMethod=self.messages
                     .AutoscalingPolicyCpuUtilization
                     .PredictiveMethodValueValuesEnum.STANDARD,),
-                customMetricUtilizations=[
-                    self.messages.AutoscalingPolicyCustomMetricUtilization(
-                        metric='custom.cloudmonitoring.googleapis.com/seconds',
-                        utilizationTarget=60.,
-                        utilizationTargetType=(
-                            self.messages
-                            .AutoscalingPolicyCustomMetricUtilization
-                            .UtilizationTargetTypeValueValuesEnum
-                            .DELTA_PER_MINUTE),
-                    ),
-                ],
+                customMetricUtilizations=self.custom_metric
             ),
             target=self.managed_instance_group_self_link,
         ),
@@ -1452,6 +1429,97 @@ class InstanceGroupManagersSetAutoscalingAlphaTest(
     self.CheckRequests(self.managed_instance_group_get_request,
                        self.autoscalers_list_request,
                        [(self.compute.autoscalers, 'Update', request)])
+
+  def testInsertAutoscaler_ScheduledScaling_MissingRequired(self):
+    self.make_requests.side_effect = iter([
+        [self.INSTANCE_GROUP_MANAGERS[0]],  # Get IGM.
+        test_resources.MakeAutoscalers('alpha'),
+        []  # Insert autoscaler.
+    ])
+    with self.assertRaises(managed_instance_groups_utils.InvalidArgumentError):
+      self.Run('compute instance-groups managed set-autoscaling group-1 '
+               '--max-num-replicas 10 --zone zone-1 '
+               '--set-schedule test-sbs-1 '
+               '--schedule-cron "30 6 * * Mon-Fri" '
+               '--schedule-time-zone "America/New_York" '
+               '--schedule-min-required-replicas 10 '
+               '--schedule-description "description"')
+
+  def testInsertAutoscaler_ScheduledScaling(self):
+    self.Run('compute instance-groups managed set-autoscaling group-1 '
+             '--max-num-replicas 10 --zone zone-1 '
+             '--set-schedule test-sbs-1 '
+             '--schedule-cron "30 6 * * Mon-Fri" '
+             '--schedule-duration-sec 3600 '
+             '--schedule-time-zone "America/New_York" '
+             '--schedule-min-required-replicas 10 '
+             '--schedule-description "description"')
+    scaling_schedule_wrapper = (self.messages.AutoscalingPolicy.
+                                ScalingSchedulesValue.AdditionalProperty)
+    schedules = self.messages.AutoscalingPolicy.ScalingSchedulesValue(
+        additionalProperties=[
+            scaling_schedule_wrapper(
+                key='test-sbs-1',
+                value=self.messages.AutoscalingPolicyScalingSchedule(
+                    schedule='30 6 * * Mon-Fri',
+                    durationSec=3600,
+                    timeZone='America/New_York',
+                    minRequiredReplicas=10,
+                    description='description'))])
+    request = self.messages.ComputeAutoscalersInsertRequest(
+        autoscaler=self.messages.Autoscaler(
+            autoscalingPolicy=self.messages.AutoscalingPolicy(
+                customMetricUtilizations=[],
+                maxNumReplicas=10,
+                scalingSchedules=schedules),
+            name='group-1-aaaa',
+            target=self.managed_instance_group_self_link,
+        ),
+        project='my-project',
+        zone='zone-1',
+    )
+    self.CheckRequests(
+        self.managed_instance_group_get_request,
+        self.autoscalers_list_request,
+        [(self.compute.autoscalers, 'Insert', request)],
+    )
+
+  def testInsertAutoscaler_ScheduledScaling_MissingOptional(self):
+    self.Run('compute instance-groups managed set-autoscaling group-1 '
+             '--max-num-replicas 10 --zone zone-1 '
+             '--set-schedule test-sbs-1 '
+             '--schedule-cron "30 6 * * Mon-Fri" '
+             '--schedule-duration-sec 3600 '
+             '--schedule-time-zone "America/New_York" '
+             '--schedule-min-required-replicas 10 ')
+    scaling_schedule_wrapper = (self.messages.AutoscalingPolicy.
+                                ScalingSchedulesValue.AdditionalProperty)
+    schedules = self.messages.AutoscalingPolicy.ScalingSchedulesValue(
+        additionalProperties=[
+            scaling_schedule_wrapper(
+                key='test-sbs-1',
+                value=self.messages.AutoscalingPolicyScalingSchedule(
+                    schedule='30 6 * * Mon-Fri',
+                    durationSec=3600,
+                    timeZone='America/New_York',
+                    minRequiredReplicas=10))])
+    request = self.messages.ComputeAutoscalersInsertRequest(
+        autoscaler=self.messages.Autoscaler(
+            autoscalingPolicy=self.messages.AutoscalingPolicy(
+                customMetricUtilizations=[],
+                maxNumReplicas=10,
+                scalingSchedules=schedules),
+            name='group-1-aaaa',
+            target=self.managed_instance_group_self_link,
+        ),
+        project='my-project',
+        zone='zone-1',
+    )
+    self.CheckRequests(
+        self.managed_instance_group_get_request,
+        self.autoscalers_list_request,
+        [(self.compute.autoscalers, 'Insert', request)],
+    )
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 NAME
     gcloud alpha compute instances set-machine-type - set machine type for
-        Google Compute Engine virtual machines
+        Compute Engine virtual machines
 
 SYNOPSIS
     gcloud alpha compute instances set-machine-type INSTANCE_NAME
@@ -10,9 +10,9 @@ SYNOPSIS
         [GCLOUD_WIDE_FLAG ...]
 
 DESCRIPTION
-    (ALPHA) gcloud alpha compute instances set-machine-type allows you to
-    change the machine type of a virtual machine in the TERMINATED state (that
-    is, a virtual machine instance that has been stopped).
+    (ALPHA) gcloud alpha compute instances set-machine-type lets you change the
+    machine type of a virtual machine in the TERMINATED state (that is, a
+    virtual machine instance that has been stopped).
 
     For example, if example-instance is a g1-small virtual machine currently in
     the TERMINATED state, running:
@@ -103,7 +103,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute instances set-machine-type
         $ gcloud beta compute instances set-machine-type

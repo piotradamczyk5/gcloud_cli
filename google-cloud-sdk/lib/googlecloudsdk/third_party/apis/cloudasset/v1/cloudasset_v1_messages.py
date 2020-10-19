@@ -14,6 +14,54 @@ from apitools.base.py import extra_types
 package = 'cloudasset'
 
 
+class AccessSelector(_messages.Message):
+  r"""Specifies roles and/or permissions to analyze, to determine both the
+  identities possessing them and the resources they control. If multiple
+  values are specified, results will include roles or permissions matching any
+  of them. The total number of roles and permissions should be equal or less
+  than 10.
+
+  Fields:
+    permissions: Optional. The permissions to appear in result.
+    roles: Optional. The roles to appear in result.
+  """
+
+  permissions = _messages.StringField(1, repeated=True)
+  roles = _messages.StringField(2, repeated=True)
+
+
+class AnalyzeIamPolicyLongrunningRequest(_messages.Message):
+  r"""A request message for AssetService.AnalyzeIamPolicyLongrunning.
+
+  Fields:
+    analysisQuery: Required. The request query.
+    outputConfig: Required. Output configuration indicating where the results
+      will be output to.
+  """
+
+  analysisQuery = _messages.MessageField('IamPolicyAnalysisQuery', 1)
+  outputConfig = _messages.MessageField('IamPolicyAnalysisOutputConfig', 2)
+
+
+class AnalyzeIamPolicyResponse(_messages.Message):
+  r"""A response message for AssetService.AnalyzeIamPolicy.
+
+  Fields:
+    fullyExplored: Represents whether all entries in the main_analysis and
+      service_account_impersonation_analysis have been fully explored to
+      answer the query in the request.
+    mainAnalysis: The main analysis that matches the original request.
+    serviceAccountImpersonationAnalysis: The service account impersonation
+      analysis if
+      AnalyzeIamPolicyRequest.analyze_service_account_impersonation is
+      enabled.
+  """
+
+  fullyExplored = _messages.BooleanField(1)
+  mainAnalysis = _messages.MessageField('IamPolicyAnalysis', 2)
+  serviceAccountImpersonationAnalysis = _messages.MessageField('IamPolicyAnalysis', 3, repeated=True)
+
+
 class Asset(_messages.Message):
   r"""An asset in Google Cloud. An asset can be any resource in the Google
   Cloud [resource hierarchy](https://cloud.google.com/resource-
@@ -35,7 +83,7 @@ class Asset(_messages.Message):
       platform-resource-hierarchy), represented as a list of relative resource
       names. An ancestry path starts with the closest ancestor in the
       hierarchy and ends at root. If the asset is a project, folder, or
-      organization, the ancestry path starts from the asset itself.  Example:
+      organization, the ancestry path starts from the asset itself. Example:
       `["projects/123456789", "folders/5432", "organizations/1234"]`
     assetType: The type of the asset. Example: `compute.googleapis.com/Disk`
       See [Supported asset types](https://cloud.google.com/asset-
@@ -50,9 +98,9 @@ class Asset(_messages.Message):
       topic](https://cloud.google.com/iam/docs/policies#inheritance) for more
       information.
     name: The full name of the asset. Example: `//compute.googleapis.com/proje
-      cts/my_project_123/zones/zone1/instances/instance1`  See [Resource names
-      ](https://cloud.google.com/apis/design/resource_names#full_resource_name
-      ) for more information.
+      cts/my_project_123/zones/zone1/instances/instance1` See [Resource names]
+      (https://cloud.google.com/apis/design/resource_names#full_resource_name)
+      for more information.
     orgPolicy: A representation of an [organization
       policy](https://cloud.google.com/resource-manager/docs/organization-
       policy/overview#organization_policy). There can be more than one
@@ -80,23 +128,19 @@ class AuditConfig(_messages.Message):
   r"""Specifies the audit configuration for a service. The configuration
   determines which permission types are logged, and what identities, if any,
   are exempted from logging. An AuditConfig must have one or more
-  AuditLogConfigs.  If there are AuditConfigs for both `allServices` and a
+  AuditLogConfigs. If there are AuditConfigs for both `allServices` and a
   specific service, the union of the two AuditConfigs is used for that
   service: the log_types specified in each AuditConfig are enabled, and the
-  exempted_members in each AuditLogConfig are exempted.  Example Policy with
-  multiple AuditConfigs:      {       "audit_configs": [         {
-  "service": "allServices",           "audit_log_configs": [             {
-  "log_type": "DATA_READ",               "exempted_members": [
-  "user:jose@example.com"               ]             },             {
-  "log_type": "DATA_WRITE"             },             {
-  "log_type": "ADMIN_READ"             }           ]         },         {
-  "service": "sampleservice.googleapis.com",           "audit_log_configs": [
-  {               "log_type": "DATA_READ"             },             {
-  "log_type": "DATA_WRITE",               "exempted_members": [
-  "user:aliya@example.com"               ]             }           ]         }
-  ]     }  For sampleservice, this policy enables DATA_READ, DATA_WRITE and
-  ADMIN_READ logging. It also exempts jose@example.com from DATA_READ logging,
-  and aliya@example.com from DATA_WRITE logging.
+  exempted_members in each AuditLogConfig are exempted. Example Policy with
+  multiple AuditConfigs: { "audit_configs": [ { "service": "allServices",
+  "audit_log_configs": [ { "log_type": "DATA_READ", "exempted_members": [
+  "user:jose@example.com" ] }, { "log_type": "DATA_WRITE" }, { "log_type":
+  "ADMIN_READ" } ] }, { "service": "sampleservice.googleapis.com",
+  "audit_log_configs": [ { "log_type": "DATA_READ" }, { "log_type":
+  "DATA_WRITE", "exempted_members": [ "user:aliya@example.com" ] } ] } ] } For
+  sampleservice, this policy enables DATA_READ, DATA_WRITE and ADMIN_READ
+  logging. It also exempts jose@example.com from DATA_READ logging, and
+  aliya@example.com from DATA_WRITE logging.
 
   Fields:
     auditLogConfigs: The configuration for logging of each type of permission.
@@ -110,12 +154,11 @@ class AuditConfig(_messages.Message):
 
 
 class AuditLogConfig(_messages.Message):
-  r"""Provides the configuration for logging a type of permissions. Example:
-  {       "audit_log_configs": [         {           "log_type": "DATA_READ",
-  "exempted_members": [             "user:jose@example.com"           ]
-  },         {           "log_type": "DATA_WRITE"         }       ]     }
-  This enables 'DATA_READ' and 'DATA_WRITE' logging, while exempting
-  jose@example.com from DATA_READ logging.
+  r"""Provides the configuration for logging a type of permissions. Example: {
+  "audit_log_configs": [ { "log_type": "DATA_READ", "exempted_members": [
+  "user:jose@example.com" ] }, { "log_type": "DATA_WRITE" } ] } This enables
+  'DATA_READ' and 'DATA_WRITE' logging, while exempting jose@example.com from
+  DATA_READ logging.
 
   Enums:
     LogTypeValueValuesEnum: The log type that this config enables.
@@ -166,6 +209,45 @@ class BigQueryDestination(_messages.Message):
       the table will be overwritten by the contents of assets snapshot. If the
       flag is `FALSE` or unset and the destination table already exists, the
       export call returns an INVALID_ARGUMEMT error.
+    partitionSpec: [partition_spec] determines whether to export to
+      partitioned table(s) and how to partition the data. If [partition_spec]
+      is unset or [partition_spec.partion_key] is unset or
+      `PARTITION_KEY_UNSPECIFIED`, the snapshot results will be exported to
+      non-partitioned table(s). [force] will decide whether to overwrite
+      existing table(s). If [partition_spec] is specified. First, the snapshot
+      results will be written to partitioned table(s) with two additional
+      timestamp columns, readTime and requestTime, one of which will be the
+      partition key. Secondly, in the case when any destination table already
+      exists, it will first try to update existing table's schema as necessary
+      by appending additional columns. Then, if [force] is `TRUE`, the
+      corresponding partition will be overwritten by the snapshot results
+      (data in different partitions will remain intact); if [force] is unset
+      or `FALSE`, it will append the data. An error will be returned if the
+      schema update or data appension fails.
+    separateTablesPerAssetType: If this flag is `TRUE`, the snapshot results
+      will be written to one or multiple tables, each of which contains
+      results of one asset type. The [force] and [partition_spec] fields will
+      apply to each of them. Field [table] will be concatenated with "_" and
+      the asset type names (see https://cloud.google.com/asset-
+      inventory/docs/supported-asset-types for supported asset types) to
+      construct per-asset-type table names, in which all non-alphanumeric
+      characters like "." and "/" will be substituted by "_". Example: if
+      field [table] is "mytable" and snapshot results contain
+      "storage.googleapis.com/Bucket" assets, the corresponding table name
+      will be "mytable_storage_googleapis_com_Bucket". If any of these tables
+      does not exist, a new table with the concatenated name will be created.
+      When [content_type] in the ExportAssetsRequest is `RESOURCE`, the schema
+      of each table will include RECORD-type columns mapped to the nested
+      fields in the Asset.resource.data field of that asset type (up to the 15
+      nested level BigQuery supports
+      (https://cloud.google.com/bigquery/docs/nested-repeated#limitations)).
+      The fields in >15 nested levels will be stored in JSON format string as
+      a child column of its parent RECORD column. If error occurs when
+      exporting to any table, the whole export call will return an error but
+      the export results that already succeed will persist. Example: if
+      exporting to table_type_A succeeds when exporting to table_type_B fails
+      during one export call, the results in table_type_A will persist and
+      there will not be partial results persisting in a table.
     table: Required. The BigQuery table to which the snapshot result should be
       written. If this table does not exist, a new table with the given name
       will be created.
@@ -173,16 +255,18 @@ class BigQueryDestination(_messages.Message):
 
   dataset = _messages.StringField(1)
   force = _messages.BooleanField(2)
-  table = _messages.StringField(3)
+  partitionSpec = _messages.MessageField('PartitionSpec', 3)
+  separateTablesPerAssetType = _messages.BooleanField(4)
+  table = _messages.StringField(5)
 
 
 class Binding(_messages.Message):
   r"""Associates `members` with a `role`.
 
   Fields:
-    condition: The condition that is associated with this binding.  If the
+    condition: The condition that is associated with this binding. If the
       condition evaluates to `true`, then this binding applies to the current
-      request.  If the condition evaluates to `false`, then this binding does
+      request. If the condition evaluates to `false`, then this binding does
       not apply to the current request. However, a different role binding
       might grant the same role to one or more of the members in this binding.
       To learn which resources support conditions in their IAM policies, see
@@ -190,35 +274,35 @@ class Binding(_messages.Message):
       documentation](https://cloud.google.com/iam/help/conditions/resource-
       policies).
     members: Specifies the identities requesting access for a Cloud Platform
-      resource. `members` can have the following values:  * `allUsers`: A
-      special identifier that represents anyone who is    on the internet;
-      with or without a Google account.  * `allAuthenticatedUsers`: A special
-      identifier that represents anyone    who is authenticated with a Google
-      account or a service account.  * `user:{emailid}`: An email address that
-      represents a specific Google    account. For example,
-      `alice@example.com` .   * `serviceAccount:{emailid}`: An email address
-      that represents a service    account. For example, `my-other-
-      app@appspot.gserviceaccount.com`.  * `group:{emailid}`: An email address
-      that represents a Google group.    For example, `admins@example.com`.  *
+      resource. `members` can have the following values: * `allUsers`: A
+      special identifier that represents anyone who is on the internet; with
+      or without a Google account. * `allAuthenticatedUsers`: A special
+      identifier that represents anyone who is authenticated with a Google
+      account or a service account. * `user:{emailid}`: An email address that
+      represents a specific Google account. For example, `alice@example.com` .
+      * `serviceAccount:{emailid}`: An email address that represents a service
+      account. For example, `my-other-app@appspot.gserviceaccount.com`. *
+      `group:{emailid}`: An email address that represents a Google group. For
+      example, `admins@example.com`. *
       `deleted:user:{emailid}?uid={uniqueid}`: An email address (plus unique
       identifier) representing a user that has been recently deleted. For
       example, `alice@example.com?uid=123456789012345678901`. If the user is
       recovered, this value reverts to `user:{emailid}` and the recovered user
-      retains the role in the binding.  *
+      retains the role in the binding. *
       `deleted:serviceAccount:{emailid}?uid={uniqueid}`: An email address
-      (plus    unique identifier) representing a service account that has been
-      recently    deleted. For example,    `my-other-
-      app@appspot.gserviceaccount.com?uid=123456789012345678901`.    If the
+      (plus unique identifier) representing a service account that has been
+      recently deleted. For example, `my-other-
+      app@appspot.gserviceaccount.com?uid=123456789012345678901`. If the
       service account is undeleted, this value reverts to
       `serviceAccount:{emailid}` and the undeleted service account retains the
-      role in the binding.  * `deleted:group:{emailid}?uid={uniqueid}`: An
-      email address (plus unique    identifier) representing a Google group
-      that has been recently    deleted. For example,
-      `admins@example.com?uid=123456789012345678901`. If    the group is
-      recovered, this value reverts to `group:{emailid}` and the    recovered
-      group retains the role in the binding.   * `domain:{domain}`: The G
-      Suite domain (primary) that represents all the    users of that domain.
-      For example, `google.com` or `example.com`.
+      role in the binding. * `deleted:group:{emailid}?uid={uniqueid}`: An
+      email address (plus unique identifier) representing a Google group that
+      has been recently deleted. For example,
+      `admins@example.com?uid=123456789012345678901`. If the group is
+      recovered, this value reverts to `group:{emailid}` and the recovered
+      group retains the role in the binding. * `domain:{domain}`: The G Suite
+      domain (primary) that represents all the users of that domain. For
+      example, `google.com` or `example.com`.
     role: Role that is assigned to `members`. For example, `roles/viewer`,
       `roles/editor`, or `roles/owner`.
   """
@@ -226,6 +310,136 @@ class Binding(_messages.Message):
   condition = _messages.MessageField('Expr', 1)
   members = _messages.StringField(2, repeated=True)
   role = _messages.StringField(3)
+
+
+class CloudassetAnalyzeIamPolicyLongrunningRequest(_messages.Message):
+  r"""A CloudassetAnalyzeIamPolicyLongrunningRequest object.
+
+  Fields:
+    analyzeIamPolicyLongrunningRequest: A AnalyzeIamPolicyLongrunningRequest
+      resource to be passed as the request body.
+    scope: Required. The relative name of the root asset. Only resources and
+      IAM policies within the scope will be analyzed. This can only be an
+      organization number (such as "organizations/123"), a folder number (such
+      as "folders/123"), a project ID (such as "projects/my-project-id"), or a
+      project number (such as "projects/12345"). To know how to get
+      organization id, visit [here ](https://cloud.google.com/resource-
+      manager/docs/creating-managing-
+      organization#retrieving_your_organization_id). To know how to get folder
+      or project id, visit [here ](https://cloud.google.com/resource-
+      manager/docs/creating-managing-
+      folders#viewing_or_listing_folders_and_projects).
+  """
+
+  analyzeIamPolicyLongrunningRequest = _messages.MessageField('AnalyzeIamPolicyLongrunningRequest', 1)
+  scope = _messages.StringField(2, required=True)
+
+
+class CloudassetAnalyzeIamPolicyRequest(_messages.Message):
+  r"""A CloudassetAnalyzeIamPolicyRequest object.
+
+  Fields:
+    analysisQuery_accessSelector_permissions: Optional. The permissions to
+      appear in result.
+    analysisQuery_accessSelector_roles: Optional. The roles to appear in
+      result.
+    analysisQuery_identitySelector_identity: Required. The identity appear in
+      the form of members in [IAM policy
+      binding](https://cloud.google.com/iam/reference/rest/v1/Binding). The
+      examples of supported forms are: "user:mike@example.com",
+      "group:admins@example.com", "domain:google.com", "serviceAccount:my-
+      project-id@appspot.gserviceaccount.com". Notice that wildcard characters
+      (such as * and ?) are not supported. You must give a specific identity.
+    analysisQuery_options_analyzeServiceAccountImpersonation: Optional. If
+      true, the response will include access analysis from identities to
+      resources via service account impersonation. This is a very expensive
+      operation, because many derived queries will be executed. We highly
+      recommend you use AssetService.AnalyzeIamPolicyLongrunning rpc instead.
+      For example, if the request analyzes for which resources user A has
+      permission P, and there's an IAM policy states user A has
+      iam.serviceAccounts.getAccessToken permission to a service account SA,
+      and there's another IAM policy states service account SA has permission
+      P to a GCP folder F, then user A potentially has access to the GCP
+      folder F. And those advanced analysis results will be included in
+      AnalyzeIamPolicyResponse.service_account_impersonation_analysis. Another
+      example, if the request analyzes for who has permission P to a GCP
+      folder F, and there's an IAM policy states user A has
+      iam.serviceAccounts.actAs permission to a service account SA, and
+      there's another IAM policy states service account SA has permission P to
+      the GCP folder F, then user A potentially has access to the GCP folder
+      F. And those advanced analysis results will be included in
+      AnalyzeIamPolicyResponse.service_account_impersonation_analysis. Default
+      is false.
+    analysisQuery_options_expandGroups: Optional. If true, the identities
+      section of the result will expand any Google groups appearing in an IAM
+      policy binding. If IamPolicyAnalysisQuery.identity_selector is
+      specified, the identity in the result will be determined by the
+      selector, and this flag is not allowed to set. Default is false.
+    analysisQuery_options_expandResources: Optional. If true and
+      IamPolicyAnalysisQuery.resource_selector is not specified, the resource
+      section of the result will expand any resource attached to an IAM policy
+      to include resources lower in the resource hierarchy. For example, if
+      the request analyzes for which resources user A has permission P, and
+      the results include an IAM policy with P on a GCP folder, the results
+      will also include resources in that folder with permission P. If true
+      and IamPolicyAnalysisQuery.resource_selector is specified, the resource
+      section of the result will expand the specified resource to include
+      resources lower in the resource hierarchy. Only project or lower
+      resources are supported. Folder and organization resource cannot be used
+      together with this option. For example, if the request analyzes for
+      which users have permission P on a GCP project with this option enabled,
+      the results will include all users who have permission P on that project
+      or any lower resource. Default is false.
+    analysisQuery_options_expandRoles: Optional. If true, the access section
+      of result will expand any roles appearing in IAM policy bindings to
+      include their permissions. If IamPolicyAnalysisQuery.access_selector is
+      specified, the access section of the result will be determined by the
+      selector, and this flag is not allowed to set. Default is false.
+    analysisQuery_options_outputGroupEdges: Optional. If true, the result will
+      output group identity edges, starting from the binding's group members,
+      to any expanded identities. Default is false.
+    analysisQuery_options_outputResourceEdges: Optional. If true, the result
+      will output resource edges, starting from the policy attached resource,
+      to any expanded resources. Default is false.
+    analysisQuery_resourceSelector_fullResourceName: Required. The [full
+      resource name] (https://cloud.google.com/asset-inventory/docs/resource-
+      name-format) of a resource of [supported resource
+      types](https://cloud.google.com/asset-inventory/docs/supported-asset-
+      types#analyzable_asset_types).
+    executionTimeout: Optional. Amount of time executable has to complete. See
+      JSON representation of
+      [Duration](https://developers.google.com/protocol-
+      buffers/docs/proto3#json). If this field is set with a value less than
+      the RPC deadline, and the execution of your query hasn't finished in the
+      specified execution timeout, you will get a response with partial
+      result. Otherwise, your query's execution will continue until the RPC
+      deadline. If it's not finished until then, you will get a
+      DEADLINE_EXCEEDED error. Default is empty.
+    scope: Required. The relative name of the root asset. Only resources and
+      IAM policies within the scope will be analyzed. This can only be an
+      organization number (such as "organizations/123"), a folder number (such
+      as "folders/123"), a project ID (such as "projects/my-project-id"), or a
+      project number (such as "projects/12345"). To know how to get
+      organization id, visit [here ](https://cloud.google.com/resource-
+      manager/docs/creating-managing-
+      organization#retrieving_your_organization_id). To know how to get folder
+      or project id, visit [here ](https://cloud.google.com/resource-
+      manager/docs/creating-managing-
+      folders#viewing_or_listing_folders_and_projects).
+  """
+
+  analysisQuery_accessSelector_permissions = _messages.StringField(1, repeated=True)
+  analysisQuery_accessSelector_roles = _messages.StringField(2, repeated=True)
+  analysisQuery_identitySelector_identity = _messages.StringField(3)
+  analysisQuery_options_analyzeServiceAccountImpersonation = _messages.BooleanField(4)
+  analysisQuery_options_expandGroups = _messages.BooleanField(5)
+  analysisQuery_options_expandResources = _messages.BooleanField(6)
+  analysisQuery_options_expandRoles = _messages.BooleanField(7)
+  analysisQuery_options_outputGroupEdges = _messages.BooleanField(8)
+  analysisQuery_options_outputResourceEdges = _messages.BooleanField(9)
+  analysisQuery_resourceSelector_fullResourceName = _messages.StringField(10)
+  executionTimeout = _messages.StringField(11)
+  scope = _messages.StringField(12, required=True)
 
 
 class CloudassetBatchGetAssetsHistoryRequest(_messages.Message):
@@ -237,10 +451,9 @@ class CloudassetBatchGetAssetsHistoryRequest(_messages.Message):
   Fields:
     assetNames: A list of the full names of the assets. See:
       https://cloud.google.com/asset-inventory/docs/resource-name-format
-      Example:  `//compute.googleapis.com/projects/my_project_123/zones/zone1/
-      instances/instance1`.  The request becomes a no-op if the asset name
-      list is empty, and the max size of the asset name list is 100 in one
-      request.
+      Example: `//compute.googleapis.com/projects/my_project_123/zones/zone1/i
+      nstances/instance1`. The request becomes a no-op if the asset name list
+      is empty, and the max size of the asset name list is 100 in one request.
     contentType: Optional. The content type.
     parent: Required. The relative name of the root asset. It can only be an
       organization number (such as "organizations/123"), a project ID (such as
@@ -255,11 +468,11 @@ class CloudassetBatchGetAssetsHistoryRequest(_messages.Message):
     r"""Optional. The content type.
 
     Values:
-      CONTENT_TYPE_UNSPECIFIED: <no description>
-      RESOURCE: <no description>
-      IAM_POLICY: <no description>
-      ORG_POLICY: <no description>
-      ACCESS_POLICY: <no description>
+      CONTENT_TYPE_UNSPECIFIED: Unspecified content type.
+      RESOURCE: Resource metadata.
+      IAM_POLICY: The actual IAM policy set on a resource.
+      ORG_POLICY: The Cloud Organization Policy set on an asset.
+      ACCESS_POLICY: The Cloud Access context manager Policy set on an asset.
     """
     CONTENT_TYPE_UNSPECIFIED = 0
     RESOURCE = 1
@@ -354,7 +567,7 @@ class CloudassetFeedsPatchRequest(_messages.Message):
       projects/{project_number}/feeds/{client-assigned_feed_identifier} or
       folders/{folder_number}/feeds/{client-assigned_feed_identifier} or
       organizations/{organization_number}/feeds/{client-
-      assigned_feed_identifier}  The client-assigned feed identifier must be
+      assigned_feed_identifier} The client-assigned feed identifier must be
       unique within the parent project/folder/organization.
     updateFeedRequest: A UpdateFeedRequest resource to be passed as the
       request body.
@@ -387,24 +600,36 @@ class CloudassetSearchAllIamPoliciesRequest(_messages.Message):
       the preceding call to this method. `page_token` must be the value of
       `next_page_token` from the previous response. The values of all other
       method parameters must be identical to those in the previous call.
-    query: Optional. The query statement. An empty query can be specified to
-      search all the IAM policies within the given `scope`.  Examples:  *
-      `policy : "amy@gmail.com"` to find Cloud IAM policy bindings that
-      specify user "amy@gmail.com". * `policy : "roles/compute.admin"` to find
-      Cloud IAM policy bindings that   specify the Compute Admin role. *
-      `policy.role.permissions : "storage.buckets.update"` to find Cloud IAM
-      policy bindings that specify a role containing "storage.buckets.update"
-      permission. * `resource : "organizations/123"` to find Cloud IAM policy
-      bindings that   are set on "organizations/123". * `(resource :
-      ("organizations/123" OR "folders/1234") AND policy : "amy")`   to find
-      Cloud IAM policy bindings that are set on "organizations/123" or
-      "folders/1234", and also specify user "amy".  See [how to construct a
+    query: Optional. The query statement. See [how to construct a
       query](https://cloud.google.com/asset-inventory/docs/searching-iam-
-      policies#how_to_construct_a_query) for more details.
-    scope: Required. A scope can be a project, a folder or an organization.
-      The search is limited to the IAM policies within the `scope`.  The
-      allowed values are:  * projects/{PROJECT_ID} * projects/{PROJECT_NUMBER}
-      * folders/{FOLDER_NUMBER} * organizations/{ORGANIZATION_NUMBER}
+      policies#how_to_construct_a_query) for more information. If not
+      specified or empty, it will search all the IAM policies within the
+      specified `scope`. Examples: * `policy:amy@gmail.com` to find IAM policy
+      bindings that specify user "amy@gmail.com". *
+      `policy:roles/compute.admin` to find IAM policy bindings that specify
+      the Compute Admin role. *
+      `policy.role.permissions:storage.buckets.update` to find IAM policy
+      bindings that specify a role containing "storage.buckets.update"
+      permission. Note that if callers don't have `iam.roles.get` access to a
+      role's included permissions, policy bindings that specify this role will
+      be dropped from the search results. * `resource:organizations/123456` to
+      find IAM policy bindings that are set on "organizations/123456". *
+      `Important` to find IAM policy bindings that contain "Important" as a
+      word in any of the searchable fields (except for the included
+      permissions). * `*por*` to find IAM policy bindings that contain "por"
+      as a substring in any of the searchable fields (except for the included
+      permissions). * `resource:(instance1 OR instance2) policy:amy` to find
+      IAM policy bindings that are set on resources "instance1" or "instance2"
+      and also specify user "amy".
+    scope: Required. A scope can be a project, a folder, or an organization.
+      The search is limited to the IAM policies within the `scope`. The caller
+      must be granted the [`cloudasset.assets.searchAllIamPolicies`](http://cl
+      oud.google.com/asset-inventory/docs/access-control#required_permissions)
+      permission on the desired scope. The allowed values are: *
+      projects/{PROJECT_ID} (e.g., "projects/foo-bar") *
+      projects/{PROJECT_NUMBER} (e.g., "projects/12345678") *
+      folders/{FOLDER_NUMBER} (e.g., "folders/1234567") *
+      organizations/{ORGANIZATION_NUMBER} (e.g., "organizations/123456")
   """
 
   pageSize = _messages.IntegerField(1, variant=_messages.Variant.INT32)
@@ -438,32 +663,42 @@ class CloudassetSearchAllResourcesRequest(_messages.Message):
       from the preceding call to this method. `page_token` must be the value
       of `next_page_token` from the previous response. The values of all other
       method parameters, must be identical to those in the previous call.
-    query: Optional. The query statement. An empty query can be specified to
-      search all the resources of certain `asset_types` within the given
-      `scope`.  Examples:  * `name : "Important"` to find Cloud resources
-      whose name contains   "Important" as a word. * `displayName : "Impor*"`
-      to find Cloud resources whose display name   contains "Impor" as a word
-      prefix. * `description : "*por*"` to find Cloud resources whose
-      description   contains "por" as a substring. * `location : "us-west*"`
-      to find Cloud resources whose location is   prefixed with "us-west". *
-      `labels : "prod"` to find Cloud resources whose labels contain "prod" as
-      a key or value. * `labels.env : "prod"` to find Cloud resources which
-      have a label "env"   and its value is "prod". * `labels.env : *` to find
-      Cloud resources which have a label "env". * `"Important"` to find Cloud
-      resources which contain "Important" as a word   in any of the searchable
-      fields. * `"Impor*"` to find Cloud resources which contain "Impor" as a
-      word prefix   in any of the searchable fields. * `"*por*"` to find Cloud
-      resources which contain "por" as a substring in   any of the searchable
-      fields. * `("Important" AND location : ("us-west1" OR "global"))` to
-      find Cloud   resources which contain "Important" as a word in any of the
-      searchable   fields and are also located in the "us-west1" region or the
-      "global"   location.  See [how to construct a
-      query](https://cloud.google.com/asset-inventory/docs/searching-
-      resources#how_to_construct_a_query) for more details.
-    scope: Required. A scope can be a project, a folder or an organization.
-      The search is limited to the resources within the `scope`.  The allowed
-      values are:  * projects/{PROJECT_ID} * projects/{PROJECT_NUMBER} *
-      folders/{FOLDER_NUMBER} * organizations/{ORGANIZATION_NUMBER}
+    query: Optional. The query statement. See [how to construct a
+      query](http://cloud.google.com/asset-inventory/docs/searching-
+      resources#how_to_construct_a_query) for more information. If not
+      specified or empty, it will search all the resources within the
+      specified `scope`. Note that the query string is compared against each
+      Cloud IAM policy binding, including its members, roles, and Cloud IAM
+      conditions. The returned Cloud IAM policies will only contain the
+      bindings that match your query. To learn more about the IAM policy
+      structure, see [IAM policy
+      doc](https://cloud.google.com/iam/docs/policies#structure). Examples: *
+      `name:Important` to find Cloud resources whose name contains "Important"
+      as a word. * `displayName:Impor*` to find Cloud resources whose display
+      name contains "Impor" as a prefix. * `description:*por*` to find Cloud
+      resources whose description contains "por" as a substring. *
+      `location:us-west*` to find Cloud resources whose location is prefixed
+      with "us-west". * `labels:prod` to find Cloud resources whose labels
+      contain "prod" as a key or value. * `labels.env:prod` to find Cloud
+      resources that have a label "env" and its value is "prod". *
+      `labels.env:*` to find Cloud resources that have a label "env". *
+      `Important` to find Cloud resources that contain "Important" as a word
+      in any of the searchable fields. * `Impor*` to find Cloud resources that
+      contain "Impor" as a prefix in any of the searchable fields. * `*por*`
+      to find Cloud resources that contain "por" as a substring in any of the
+      searchable fields. * `Important location:(us-west1 OR global)` to find
+      Cloud resources that contain "Important" as a word in any of the
+      searchable fields and are also located in the "us-west1" region or the
+      "global" location.
+    scope: Required. A scope can be a project, a folder, or an organization.
+      The search is limited to the resources within the `scope`. The caller
+      must be granted the
+      [`cloudasset.assets.searchAllResources`](http://cloud.google.com/asset-
+      inventory/docs/access-control#required_permissions) permission on the
+      desired scope. The allowed values are: * projects/{PROJECT_ID} (e.g.,
+      "projects/foo-bar") * projects/{PROJECT_NUMBER} (e.g.,
+      "projects/12345678") * folders/{FOLDER_NUMBER} (e.g., "folders/1234567")
+      * organizations/{ORGANIZATION_NUMBER} (e.g., "organizations/123456")
   """
 
   assetTypes = _messages.StringField(1, repeated=True)
@@ -494,9 +729,9 @@ class CreateFeedRequest(_messages.Message):
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance:      service Foo {
-  rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);     }  The
-  JSON representation for `Empty` is empty JSON object `{}`.
+  or the response type of an API method. For instance: service Foo { rpc
+  Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
+  representation for `Empty` is empty JSON object `{}`.
   """
 
 
@@ -507,27 +742,29 @@ class Explanation(_messages.Message):
   Messages:
     MatchedPermissionsValue: The map from roles to their included permissions
       that match the permission query (i.e., a query containing
-      `policy.role.permissions:`). Example: if query `policy.role.permissions
-      : "compute.disk.get"` matches a policy binding that contains owner role,
-      the matched_permissions will be `{"roles/owner": ["compute.disk.get"]}`.
-      The roles can also be found in the returned `policy` bindings. Note that
-      the map is populated only for requests with permission queries.
+      `policy.role.permissions:`). Example: if query
+      `policy.role.permissions:compute.disk.get` matches a policy binding that
+      contains owner role, the matched_permissions will be `{"roles/owner":
+      ["compute.disk.get"]}`. The roles can also be found in the returned
+      `policy` bindings. Note that the map is populated only for requests with
+      permission queries.
 
   Fields:
     matchedPermissions: The map from roles to their included permissions that
       match the permission query (i.e., a query containing
-      `policy.role.permissions:`). Example: if query `policy.role.permissions
-      : "compute.disk.get"` matches a policy binding that contains owner role,
-      the matched_permissions will be `{"roles/owner": ["compute.disk.get"]}`.
-      The roles can also be found in the returned `policy` bindings. Note that
-      the map is populated only for requests with permission queries.
+      `policy.role.permissions:`). Example: if query
+      `policy.role.permissions:compute.disk.get` matches a policy binding that
+      contains owner role, the matched_permissions will be `{"roles/owner":
+      ["compute.disk.get"]}`. The roles can also be found in the returned
+      `policy` bindings. Note that the map is populated only for requests with
+      permission queries.
   """
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class MatchedPermissionsValue(_messages.Message):
     r"""The map from roles to their included permissions that match the
     permission query (i.e., a query containing `policy.role.permissions:`).
-    Example: if query `policy.role.permissions : "compute.disk.get"` matches a
+    Example: if query `policy.role.permissions:compute.disk.get` matches a
     policy binding that contains owner role, the matched_permissions will be
     `{"roles/owner": ["compute.disk.get"]}`. The roles can also be found in
     the returned `policy` bindings. Note that the map is populated only for
@@ -567,14 +804,14 @@ class ExportAssetsRequest(_messages.Message):
 
   Fields:
     assetTypes: A list of asset types to take a snapshot for. For example:
-      "compute.googleapis.com/Disk".  Regular expressions are also supported.
-      For example:  * "compute.googleapis.com.*" snapshots resources whose
+      "compute.googleapis.com/Disk". Regular expressions are also supported.
+      For example: * "compute.googleapis.com.*" snapshots resources whose
       asset type starts with "compute.googleapis.com". * ".*Instance"
       snapshots resources whose asset type ends with "Instance". *
       ".*Instance.*" snapshots resources whose asset type contains "Instance".
       See [RE2](https://github.com/google/re2/wiki/Syntax) for all supported
       regular expression syntax. If the regular expression does not match any
-      supported asset type, an INVALID_ARGUMENT error will be returned.  If
+      supported asset type, an INVALID_ARGUMENT error will be returned. If
       specified, only matching assets will be returned, otherwise, it will
       snapshot all asset types. See [Introduction to Cloud Asset
       Inventory](https://cloud.google.com/asset-inventory/docs/overview) for
@@ -599,7 +836,7 @@ class ExportAssetsRequest(_messages.Message):
       RESOURCE: Resource metadata.
       IAM_POLICY: The actual IAM policy set on a resource.
       ORG_POLICY: The Cloud Organization Policy set on an asset.
-      ACCESS_POLICY: The Cloud Access context mananger Policy set on an asset.
+      ACCESS_POLICY: The Cloud Access context manager Policy set on an asset.
     """
     CONTENT_TYPE_UNSPECIFIED = 0
     RESOURCE = 1
@@ -616,20 +853,20 @@ class ExportAssetsRequest(_messages.Message):
 class Expr(_messages.Message):
   r"""Represents a textual expression in the Common Expression Language (CEL)
   syntax. CEL is a C-like expression language. The syntax and semantics of CEL
-  are documented at https://github.com/google/cel-spec.  Example (Comparison):
-  title: "Summary size limit"     description: "Determines if a summary is
-  less than 100 chars"     expression: "document.summary.size() < 100"
-  Example (Equality):      title: "Requestor is owner"     description:
-  "Determines if requestor is the document owner"     expression:
-  "document.owner == request.auth.claims.email"  Example (Logic):      title:
-  "Public documents"     description: "Determine whether the document should
-  be publicly visible"     expression: "document.type != 'private' &&
-  document.type != 'internal'"  Example (Data Manipulation):      title:
-  "Notification string"     description: "Create a notification string with a
-  timestamp."     expression: "'New message received at ' +
-  string(document.create_time)"  The exact variables and functions that may be
-  referenced within an expression are determined by the service that evaluates
-  it. See the service documentation for additional information.
+  are documented at https://github.com/google/cel-spec. Example (Comparison):
+  title: "Summary size limit" description: "Determines if a summary is less
+  than 100 chars" expression: "document.summary.size() < 100" Example
+  (Equality): title: "Requestor is owner" description: "Determines if
+  requestor is the document owner" expression: "document.owner ==
+  request.auth.claims.email" Example (Logic): title: "Public documents"
+  description: "Determine whether the document should be publicly visible"
+  expression: "document.type != 'private' && document.type != 'internal'"
+  Example (Data Manipulation): title: "Notification string" description:
+  "Create a notification string with a timestamp." expression: "'New message
+  received at ' + string(document.create_time)" The exact variables and
+  functions that may be referenced within an expression are determined by the
+  service that evaluates it. See the service documentation for additional
+  information.
 
   Fields:
     description: Optional. Description of the expression. This is a longer
@@ -669,7 +906,7 @@ class Feed(_messages.Message):
     assetTypes: A list of types of the assets to receive updates. You must
       specify either or both of asset_names and asset_types. Only asset
       updates matching specified asset_names or asset_types are exported to
-      the feed. Example: `"compute.googleapis.com/Disk"`  See [this
+      the feed. Example: `"compute.googleapis.com/Disk"` See [this
       topic](https://cloud.google.com/asset-inventory/docs/supported-asset-
       types) for a list of all supported asset types.
     condition: A condition which determines whether an asset update should be
@@ -678,7 +915,9 @@ class Feed(_messages.Message):
       must be a valid [CEL expression] (https://github.com/google/cel-spec) on
       a TemporalAsset with name `temporal_asset`. Example: a Feed with
       expression ("temporal_asset.deleted == true") will only publish Asset
-      deletions. Other fields of `Expr` are optional.
+      deletions. Other fields of `Expr` are optional. See our [user
+      guide](https://cloud.google.com/asset-inventory/docs/monitoring-asset-
+      changes#feed_with_condition) for detailed instructions.
     contentType: Asset content type. If not specified, no content but the
       asset name and type will be returned.
     feedOutputConfig: Required. Feed output configuration defining where the
@@ -687,7 +926,7 @@ class Feed(_messages.Message):
       projects/{project_number}/feeds/{client-assigned_feed_identifier} or
       folders/{folder_number}/feeds/{client-assigned_feed_identifier} or
       organizations/{organization_number}/feeds/{client-
-      assigned_feed_identifier}  The client-assigned feed identifier must be
+      assigned_feed_identifier} The client-assigned feed identifier must be
       unique within the parent project/folder/organization.
   """
 
@@ -700,7 +939,7 @@ class Feed(_messages.Message):
       RESOURCE: Resource metadata.
       IAM_POLICY: The actual IAM policy set on a resource.
       ORG_POLICY: The Cloud Organization Policy set on an asset.
-      ACCESS_POLICY: The Cloud Access context mananger Policy set on an asset.
+      ACCESS_POLICY: The Cloud Access context manager Policy set on an asset.
     """
     CONTENT_TYPE_UNSPECIFIED = 0
     RESOURCE = 1
@@ -736,9 +975,8 @@ class GcsDestination(_messages.Message):
       editing-metadata) for more information.
     uriPrefix: The uri prefix of all generated Cloud Storage objects. Example:
       "gs://bucket_name/object_name_prefix". Each object uri is in format:
-      "gs://bucket_name/object_name_prefix/<asset type>/<shard number> and
-      only contains assets for that type. <shard number> starts from 0.
-      Example:
+      "gs://bucket_name/object_name_prefix// and only contains assets for that
+      type. starts from 0. Example:
       "gs://bucket_name/object_name_prefix/compute.googleapis.com/Disk/0" is
       the first shard of output objects containing all
       compute.googleapis.com/Disk assets. An INVALID_ARGUMENT error will be
@@ -750,38 +988,212 @@ class GcsDestination(_messages.Message):
   uriPrefix = _messages.StringField(2)
 
 
+class GoogleCloudAssetV1Access(_messages.Message):
+  r"""An IAM role or permission under analysis.
+
+  Fields:
+    analysisState: The analysis state of this access.
+    permission: The permission.
+    role: The role.
+  """
+
+  analysisState = _messages.MessageField('IamPolicyAnalysisState', 1)
+  permission = _messages.StringField(2)
+  role = _messages.StringField(3)
+
+
+class GoogleCloudAssetV1AccessControlList(_messages.Message):
+  r"""An access control list, derived from the above IAM policy binding, which
+  contains a set of resources and accesses. May include one item from each set
+  to compose an access control entry. NOTICE that there could be multiple
+  access control lists for one IAM policy binding. The access control lists
+  are created based on resource and access combinations. For example, assume
+  we have the following cases in one IAM policy binding: - Permission P1 and
+  P2 apply to resource R1 and R2; - Permission P3 applies to resource R2 and
+  R3; This will result in the following access control lists: -
+  AccessControlList 1: [R1, R2], [P1, P2] - AccessControlList 2: [R2, R3],
+  [P3]
+
+  Fields:
+    accesses: The accesses that match one of the following conditions: - The
+      access_selector, if it is specified in request; - Otherwise, access
+      specifiers reachable from the policy binding's role.
+    resourceEdges: Resource edges of the graph starting from the policy
+      attached resource to any descendant resources. The Edge.source_node
+      contains the full resource name of a parent resource and
+      Edge.target_node contains the full resource name of a child resource.
+      This field is present only if the output_resource_edges option is
+      enabled in request.
+    resources: The resources that match one of the following conditions: - The
+      resource_selector, if it is specified in request; - Otherwise, resources
+      reachable from the policy attached resource.
+  """
+
+  accesses = _messages.MessageField('GoogleCloudAssetV1Access', 1, repeated=True)
+  resourceEdges = _messages.MessageField('GoogleCloudAssetV1Edge', 2, repeated=True)
+  resources = _messages.MessageField('GoogleCloudAssetV1Resource', 3, repeated=True)
+
+
+class GoogleCloudAssetV1BigQueryDestination(_messages.Message):
+  r"""A BigQuery destination.
+
+  Enums:
+    PartitionKeyValueValuesEnum: The partition key for BigQuery partitioned
+      table.
+
+  Fields:
+    dataset: Required. The BigQuery dataset in format
+      "projects/projectId/datasets/datasetId", to which the analysis results
+      should be exported. If this dataset does not exist, the export call will
+      return an INVALID_ARGUMENT error.
+    partitionKey: The partition key for BigQuery partitioned table.
+    tablePrefix: Required. The prefix of the BigQuery tables to which the
+      analysis results will be written. Tables will be created based on this
+      table_prefix if not exist: * _analysis table will contain export
+      operation's metadata. * _analysis_result will contain all the
+      IamPolicyAnalysisResult. When [partition_key] is specified, both tables
+      will be partitioned based on the [partition_key].
+    writeDisposition: Optional. Specifies the action that occurs if the
+      destination table or partition already exists. The following values are
+      supported: * WRITE_TRUNCATE: If the table or partition already exists,
+      BigQuery overwrites the entire table or all the partitions data. *
+      WRITE_APPEND: If the table or partition already exists, BigQuery appends
+      the data to the table or the latest partition. * WRITE_EMPTY: If the
+      table already exists and contains data, an error is returned. The
+      default value is WRITE_APPEND. Each action is atomic and only occurs if
+      BigQuery is able to complete the job successfully. Details are at
+      https://cloud.google.com/bigquery/docs/loading-data-
+      local#appending_to_or_overwriting_a_table_using_a_local_file.
+  """
+
+  class PartitionKeyValueValuesEnum(_messages.Enum):
+    r"""The partition key for BigQuery partitioned table.
+
+    Values:
+      PARTITION_KEY_UNSPECIFIED: Unspecified partition key. Tables won't be
+        partitioned using this option.
+      REQUEST_TIME: The time when the request is received. If specified as
+        partition key, the result table(s) is partitoned by the RequestTime
+        column, an additional timestamp column representing when the request
+        was received.
+    """
+    PARTITION_KEY_UNSPECIFIED = 0
+    REQUEST_TIME = 1
+
+  dataset = _messages.StringField(1)
+  partitionKey = _messages.EnumField('PartitionKeyValueValuesEnum', 2)
+  tablePrefix = _messages.StringField(3)
+  writeDisposition = _messages.StringField(4)
+
+
+class GoogleCloudAssetV1Edge(_messages.Message):
+  r"""A directional edge.
+
+  Fields:
+    sourceNode: The source node of the edge. For example, it could be a full
+      resource name for a resource node or an email of an identity.
+    targetNode: The target node of the edge. For example, it could be a full
+      resource name for a resource node or an email of an identity.
+  """
+
+  sourceNode = _messages.StringField(1)
+  targetNode = _messages.StringField(2)
+
+
+class GoogleCloudAssetV1GcsDestination(_messages.Message):
+  r"""A Cloud Storage location.
+
+  Fields:
+    uri: Required. The uri of the Cloud Storage object. It's the same uri that
+      is used by gsutil. For example: "gs://bucket_name/object_name". See
+      [Viewing and Editing Object
+      Metadata](https://cloud.google.com/storage/docs/viewing-editing-
+      metadata) for more information.
+  """
+
+  uri = _messages.StringField(1)
+
+
+class GoogleCloudAssetV1Identity(_messages.Message):
+  r"""An identity under analysis.
+
+  Fields:
+    analysisState: The analysis state of this identity.
+    name: The identity name in any form of members appear in [IAM policy
+      binding](https://cloud.google.com/iam/reference/rest/v1/Binding), such
+      as: - user:foo@google.com - group:group1@google.com -
+      serviceAccount:s1@prj1.iam.gserviceaccount.com -
+      projectOwner:some_project_id - domain:google.com - allUsers - etc.
+  """
+
+  analysisState = _messages.MessageField('IamPolicyAnalysisState', 1)
+  name = _messages.StringField(2)
+
+
+class GoogleCloudAssetV1IdentityList(_messages.Message):
+  r"""The identities and group edges.
+
+  Fields:
+    groupEdges: Group identity edges of the graph starting from the binding's
+      group members to any node of the identities. The Edge.source_node
+      contains a group, such as `group:parent@google.com`. The
+      Edge.target_node contains a member of the group, such as
+      `group:child@google.com` or `user:foo@google.com`. This field is present
+      only if the output_group_edges option is enabled in request.
+    identities: Only the identities that match one of the following conditions
+      will be presented: - The identity_selector, if it is specified in
+      request; - Otherwise, identities reachable from the policy binding's
+      members.
+  """
+
+  groupEdges = _messages.MessageField('GoogleCloudAssetV1Edge', 1, repeated=True)
+  identities = _messages.MessageField('GoogleCloudAssetV1Identity', 2, repeated=True)
+
+
+class GoogleCloudAssetV1Resource(_messages.Message):
+  r"""A Google Cloud resource under analysis.
+
+  Fields:
+    analysisState: The analysis state of this resource.
+    fullResourceName: The [full resource name](https://cloud.google.com/asset-
+      inventory/docs/resource-name-format)
+  """
+
+  analysisState = _messages.MessageField('IamPolicyAnalysisState', 1)
+  fullResourceName = _messages.StringField(2)
+
+
 class GoogleCloudOrgpolicyV1BooleanPolicy(_messages.Message):
   r"""Used in `policy_type` to specify how `boolean_policy` will behave at
   this resource.
 
   Fields:
     enforced: If `true`, then the `Policy` is enforced. If `false`, then any
-      configuration is acceptable.  Suppose you have a `Constraint`
+      configuration is acceptable. Suppose you have a `Constraint`
       `constraints/compute.disableSerialPortAccess` with `constraint_default`
       set to `ALLOW`. A `Policy` for that `Constraint` exhibits the following
-      behavior:   - If the `Policy` at this resource has enforced set to
-      `false`, serial     port connection attempts will be allowed.   - If the
-      `Policy` at this resource has enforced set to `true`, serial     port
-      connection attempts will be refused.   - If the `Policy` at this
-      resource is `RestoreDefault`, serial port     connection attempts will
-      be allowed.   - If no `Policy` is set at this resource or anywhere
-      higher in the     resource hierarchy, serial port connection attempts
-      will be allowed.   - If no `Policy` is set at this resource, but one
-      exists higher in the     resource hierarchy, the behavior is as if
-      the`Policy` were set at     this resource.  The following examples
-      demonstrate the different possible layerings:  Example 1 (nearest
-      `Constraint` wins):   `organizations/foo` has a `Policy` with:
-      {enforced: false}   `projects/bar` has no `Policy` set. The constraint
-      at `projects/bar` and `organizations/foo` will not be enforced.  Example
-      2 (enforcement gets replaced):   `organizations/foo` has a `Policy`
-      with:     {enforced: false}   `projects/bar` has a `Policy` with:
-      {enforced: true} The constraint at `organizations/foo` is not enforced.
-      The constraint at `projects/bar` is enforced.  Example 3
-      (RestoreDefault):   `organizations/foo` has a `Policy` with:
-      {enforced: true}   `projects/bar` has a `Policy` with:
-      {RestoreDefault: {}} The constraint at `organizations/foo` is enforced.
-      The constraint at `projects/bar` is not enforced, because
-      `constraint_default` for the `Constraint` is `ALLOW`.
+      behavior: - If the `Policy` at this resource has enforced set to
+      `false`, serial port connection attempts will be allowed. - If the
+      `Policy` at this resource has enforced set to `true`, serial port
+      connection attempts will be refused. - If the `Policy` at this resource
+      is `RestoreDefault`, serial port connection attempts will be allowed. -
+      If no `Policy` is set at this resource or anywhere higher in the
+      resource hierarchy, serial port connection attempts will be allowed. -
+      If no `Policy` is set at this resource, but one exists higher in the
+      resource hierarchy, the behavior is as if the`Policy` were set at this
+      resource. The following examples demonstrate the different possible
+      layerings: Example 1 (nearest `Constraint` wins): `organizations/foo`
+      has a `Policy` with: {enforced: false} `projects/bar` has no `Policy`
+      set. The constraint at `projects/bar` and `organizations/foo` will not
+      be enforced. Example 2 (enforcement gets replaced): `organizations/foo`
+      has a `Policy` with: {enforced: false} `projects/bar` has a `Policy`
+      with: {enforced: true} The constraint at `organizations/foo` is not
+      enforced. The constraint at `projects/bar` is enforced. Example 3
+      (RestoreDefault): `organizations/foo` has a `Policy` with: {enforced:
+      true} `projects/bar` has a `Policy` with: {RestoreDefault: {}} The
+      constraint at `organizations/foo` is enforced. The constraint at
+      `projects/bar` is not enforced, because `constraint_default` for the
+      `Constraint` is `ALLOW`.
   """
 
   enforced = _messages.BooleanField(1)
@@ -789,7 +1201,7 @@ class GoogleCloudOrgpolicyV1BooleanPolicy(_messages.Message):
 
 class GoogleCloudOrgpolicyV1ListPolicy(_messages.Message):
   r"""Used in `policy_type` to specify how `list_policy` behaves at this
-  resource.  `ListPolicy` can define specific values and subtrees of Cloud
+  resource. `ListPolicy` can define specific values and subtrees of Cloud
   Resource Manager resource hierarchy (`Organizations`, `Folders`, `Projects`)
   that are allowed or denied by setting the `allowed_values` and
   `denied_values` fields. This is achieved by using the `under:` and optional
@@ -797,12 +1209,11 @@ class GoogleCloudOrgpolicyV1ListPolicy(_messages.Message):
   values. The `is:` prefix is used to denote specific values, and is required
   only if the value contains a ":". Values prefixed with "is:" are treated the
   same as values with no prefix. Ancestry subtrees must be in one of the
-  following formats:     - "projects/<project-id>", e.g. "projects/tokyo-
-  rain-123"     - "folders/<folder-id>", e.g. "folders/1234"     -
-  "organizations/<organization-id>", e.g. "organizations/1234" The
-  `supports_under` field of the associated `Constraint`  defines whether
-  ancestry prefixes can be used. You can set `allowed_values` and
-  `denied_values` in the same `Policy` if `all_values` is
+  following formats: - "projects/", e.g. "projects/tokyo-rain-123" -
+  "folders/", e.g. "folders/1234" - "organizations/", e.g.
+  "organizations/1234" The `supports_under` field of the associated
+  `Constraint` defines whether ancestry prefixes can be used. You can set
+  `allowed_values` and `denied_values` in the same `Policy` if `all_values` is
   `ALL_VALUES_UNSPECIFIED`. `ALLOW` or `DENY` are used to allow or deny all
   values. If `all_values` is set to either `ALLOW` or `DENY`, `allowed_values`
   and `denied_values` must be unset.
@@ -812,8 +1223,8 @@ class GoogleCloudOrgpolicyV1ListPolicy(_messages.Message):
 
   Fields:
     allValues: The policy all_values state.
-    allowedValues: List of values allowed  at this resource. Can only be set
-      if `all_values` is set to `ALL_VALUES_UNSPECIFIED`.
+    allowedValues: List of values allowed at this resource. Can only be set if
+      `all_values` is set to `ALL_VALUES_UNSPECIFIED`.
     deniedValues: List of values denied at this resource. Can only be set if
       `all_values` is set to `ALL_VALUES_UNSPECIFIED`.
     inheritFromParent: Determines the inheritance behavior for this `Policy`.
@@ -821,65 +1232,62 @@ class GoogleCloudOrgpolicyV1ListPolicy(_messages.Message):
       anywhere up the resource hierarchy. However, if `inherit_from_parent` is
       set to `true`, then the values from the effective `Policy` of the parent
       resource are inherited, meaning the values set in this `Policy` are
-      added to the values inherited up the hierarchy.  Setting `Policy`
+      added to the values inherited up the hierarchy. Setting `Policy`
       hierarchies that inherit both allowed values and denied values isn't
       recommended in most circumstances to keep the configuration simple and
       understandable. However, it is possible to set a `Policy` with
       `allowed_values` set that inherits a `Policy` with `denied_values` set.
       In this case, the values that are allowed must be in `allowed_values`
-      and not present in `denied_values`.  For example, suppose you have a
+      and not present in `denied_values`. For example, suppose you have a
       `Constraint` `constraints/serviceuser.services`, which has a
       `constraint_type` of `list_constraint`, and with `constraint_default`
       set to `ALLOW`. Suppose that at the Organization level, a `Policy` is
       applied that restricts the allowed API activations to {`E1`, `E2`}.
       Then, if a `Policy` is applied to a project below the Organization that
       has `inherit_from_parent` set to `false` and field all_values set to
-      DENY, then an attempt to activate any API will be denied.  The following
+      DENY, then an attempt to activate any API will be denied. The following
       examples demonstrate different possible layerings for `projects/bar`
-      parented by `organizations/foo`:  Example 1 (no inherited values):
-      `organizations/foo` has a `Policy` with values:     {allowed_values:
-      "E1" allowed_values:"E2"}   `projects/bar` has `inherit_from_parent`
-      `false` and values:     {allowed_values: "E3" allowed_values: "E4"} The
-      accepted values at `organizations/foo` are `E1`, `E2`. The accepted
-      values at `projects/bar` are `E3`, and `E4`.  Example 2 (inherited
-      values):   `organizations/foo` has a `Policy` with values:
-      {allowed_values: "E1" allowed_values:"E2"}   `projects/bar` has a
-      `Policy` with values:     {value: "E3" value: "E4" inherit_from_parent:
-      true} The accepted values at `organizations/foo` are `E1`, `E2`. The
-      accepted values at `projects/bar` are `E1`, `E2`, `E3`, and `E4`.
-      Example 3 (inheriting both allowed and denied values):
-      `organizations/foo` has a `Policy` with values:     {allowed_values:
-      "E1" allowed_values: "E2"}   `projects/bar` has a `Policy` with:
-      {denied_values: "E1"} The accepted values at `organizations/foo` are
-      `E1`, `E2`. The value accepted at `projects/bar` is `E2`.  Example 4
-      (RestoreDefault):   `organizations/foo` has a `Policy` with values:
-      {allowed_values: "E1" allowed_values:"E2"}   `projects/bar` has a
-      `Policy` with values:     {RestoreDefault: {}} The accepted values at
+      parented by `organizations/foo`: Example 1 (no inherited values):
+      `organizations/foo` has a `Policy` with values: {allowed_values: "E1"
+      allowed_values:"E2"} `projects/bar` has `inherit_from_parent` `false`
+      and values: {allowed_values: "E3" allowed_values: "E4"} The accepted
+      values at `organizations/foo` are `E1`, `E2`. The accepted values at
+      `projects/bar` are `E3`, and `E4`. Example 2 (inherited values):
+      `organizations/foo` has a `Policy` with values: {allowed_values: "E1"
+      allowed_values:"E2"} `projects/bar` has a `Policy` with values: {value:
+      "E3" value: "E4" inherit_from_parent: true} The accepted values at
+      `organizations/foo` are `E1`, `E2`. The accepted values at
+      `projects/bar` are `E1`, `E2`, `E3`, and `E4`. Example 3 (inheriting
+      both allowed and denied values): `organizations/foo` has a `Policy` with
+      values: {allowed_values: "E1" allowed_values: "E2"} `projects/bar` has a
+      `Policy` with: {denied_values: "E1"} The accepted values at
+      `organizations/foo` are `E1`, `E2`. The value accepted at `projects/bar`
+      is `E2`. Example 4 (RestoreDefault): `organizations/foo` has a `Policy`
+      with values: {allowed_values: "E1" allowed_values:"E2"} `projects/bar`
+      has a `Policy` with values: {RestoreDefault: {}} The accepted values at
       `organizations/foo` are `E1`, `E2`. The accepted values at
       `projects/bar` are either all or none depending on the value of
-      `constraint_default` (if `ALLOW`, all; if `DENY`, none).  Example 5 (no
-      policy inherits parent policy):   `organizations/foo` has no `Policy`
-      set.   `projects/bar` has no `Policy` set. The accepted values at both
-      levels are either all or none depending on the value of
-      `constraint_default` (if `ALLOW`, all; if `DENY`, none).  Example 6
-      (ListConstraint allowing all):   `organizations/foo` has a `Policy` with
-      values:     {allowed_values: "E1" allowed_values: "E2"}   `projects/bar`
-      has a `Policy` with:     {all: ALLOW} The accepted values at
-      `organizations/foo` are `E1`, E2`. Any value is accepted at
-      `projects/bar`.  Example 7 (ListConstraint allowing none):
-      `organizations/foo` has a `Policy` with values:     {allowed_values:
-      "E1" allowed_values: "E2"}   `projects/bar` has a `Policy` with:
-      {all: DENY} The accepted values at `organizations/foo` are `E1`, E2`. No
-      value is accepted at `projects/bar`.  Example 10 (allowed and denied
-      subtrees of Resource Manager hierarchy): Given the following resource
-      hierarchy   O1->{F1, F2}; F1->{P1}; F2->{P2, P3},   `organizations/foo`
-      has a `Policy` with values:     {allowed_values:
-      "under:organizations/O1"}   `projects/bar` has a `Policy` with:
-      {allowed_values: "under:projects/P3"}     {denied_values:
-      "under:folders/F2"} The accepted values at `organizations/foo` are
-      `organizations/O1`,   `folders/F1`, `folders/F2`, `projects/P1`,
-      `projects/P2`,   `projects/P3`. The accepted values at `projects/bar`
-      are `organizations/O1`,   `folders/F1`, `projects/P1`.
+      `constraint_default` (if `ALLOW`, all; if `DENY`, none). Example 5 (no
+      policy inherits parent policy): `organizations/foo` has no `Policy` set.
+      `projects/bar` has no `Policy` set. The accepted values at both levels
+      are either all or none depending on the value of `constraint_default`
+      (if `ALLOW`, all; if `DENY`, none). Example 6 (ListConstraint allowing
+      all): `organizations/foo` has a `Policy` with values: {allowed_values:
+      "E1" allowed_values: "E2"} `projects/bar` has a `Policy` with: {all:
+      ALLOW} The accepted values at `organizations/foo` are `E1`, E2`. Any
+      value is accepted at `projects/bar`. Example 7 (ListConstraint allowing
+      none): `organizations/foo` has a `Policy` with values: {allowed_values:
+      "E1" allowed_values: "E2"} `projects/bar` has a `Policy` with: {all:
+      DENY} The accepted values at `organizations/foo` are `E1`, E2`. No value
+      is accepted at `projects/bar`. Example 10 (allowed and denied subtrees
+      of Resource Manager hierarchy): Given the following resource hierarchy
+      O1->{F1, F2}; F1->{P1}; F2->{P2, P3}, `organizations/foo` has a `Policy`
+      with values: {allowed_values: "under:organizations/O1"} `projects/bar`
+      has a `Policy` with: {allowed_values: "under:projects/P3"}
+      {denied_values: "under:folders/F2"} The accepted values at
+      `organizations/foo` are `organizations/O1`, `folders/F1`, `folders/F2`,
+      `projects/P1`, `projects/P2`, `projects/P3`. The accepted values at
+      `projects/bar` are `organizations/O1`, `folders/F1`, `projects/P1`.
     suggestedValue: Optional. The Google Cloud Console will try to default to
       a configuration that matches the value specified in this `Policy`. If
       `suggested_value` is not set, it will inherit the value specified higher
@@ -914,15 +1322,15 @@ class GoogleCloudOrgpolicyV1Policy(_messages.Message):
     booleanPolicy: For boolean `Constraints`, whether to enforce the
       `Constraint` or not.
     constraint: The name of the `Constraint` the `Policy` is configuring, for
-      example, `constraints/serviceuser.services`.  A [list of available
+      example, `constraints/serviceuser.services`. A [list of available
       constraints](/resource-manager/docs/organization-policy/org-policy-
-      constraints) is available.  Immutable after creation.
+      constraints) is available. Immutable after creation.
     etag: An opaque tag indicating the current version of the `Policy`, used
-      for concurrency control.  When the `Policy` is returned from either a
+      for concurrency control. When the `Policy` is returned from either a
       `GetPolicy` or a `ListOrgPolicy` request, this `etag` indicates the
       version of the current `Policy` to use when executing a read-modify-
-      write loop.  When the `Policy` is returned from a `GetEffectivePolicy`
-      request, the `etag` will be unset.  When the `Policy` is used in a
+      write loop. When the `Policy` is returned from a `GetEffectivePolicy`
+      request, the `etag` will be unset. When the `Policy` is used in a
       `SetOrgPolicy` method, use the `etag` value that was returned from a
       `GetOrgPolicy` request as part of a read-modify-write loop for
       concurrency control. Not setting the `etag`in a `SetOrgPolicy` request
@@ -949,7 +1357,7 @@ class GoogleCloudOrgpolicyV1Policy(_messages.Message):
 class GoogleCloudOrgpolicyV1RestoreDefault(_messages.Message):
   r"""Ignores policies set above this resource and restores the
   `constraint_default` enforcement behavior of the specific `Constraint` at
-  this resource.  Suppose that `constraint_default` is set to `ALLOW` for the
+  this resource. Suppose that `constraint_default` is set to `ALLOW` for the
   `Constraint` `constraints/serviceuser.services`. Suppose that organization
   foo.com sets a `Policy` at their Organization resource node that restricts
   the allowed service activations to deny all service activations. They could
@@ -1138,10 +1546,15 @@ class GoogleIdentityAccesscontextmanagerV1DevicePolicy(_messages.Message):
     r"""AllowedDeviceManagementLevelsValueListEntryValuesEnum enum type.
 
     Values:
-      MANAGEMENT_UNSPECIFIED: <no description>
-      NONE: <no description>
-      BASIC: <no description>
-      COMPLETE: <no description>
+      MANAGEMENT_UNSPECIFIED: The device's management level is not specified
+        or not known.
+      NONE: The device is not managed.
+      BASIC: Basic management is enabled, which is generally limited to
+        monitoring and wiping the corporate account.
+      COMPLETE: Complete device management. This includes more thorough
+        monitoring and the ability to directly manage the device (such as
+        remote wiping). This can be enabled through the Android Enterprise
+        Platform.
     """
     MANAGEMENT_UNSPECIFIED = 0
     NONE = 1
@@ -1152,10 +1565,12 @@ class GoogleIdentityAccesscontextmanagerV1DevicePolicy(_messages.Message):
     r"""AllowedEncryptionStatusesValueListEntryValuesEnum enum type.
 
     Values:
-      ENCRYPTION_UNSPECIFIED: <no description>
-      ENCRYPTION_UNSUPPORTED: <no description>
-      UNENCRYPTED: <no description>
-      ENCRYPTED: <no description>
+      ENCRYPTION_UNSPECIFIED: The encryption status of the device is not
+        specified or not known.
+      ENCRYPTION_UNSUPPORTED: The device does not support encryption.
+      UNENCRYPTED: The device supports encryption, but is currently
+        unencrypted.
+      ENCRYPTED: The device is encrypted.
     """
     ENCRYPTION_UNSPECIFIED = 0
     ENCRYPTION_UNSUPPORTED = 1
@@ -1236,7 +1651,7 @@ class GoogleIdentityAccesscontextmanagerV1ServicePerimeter(_messages.Message):
   Fields:
     description: Description of the `ServicePerimeter` and its use. Does not
       affect behavior.
-    name: Required. Resource name for the ServicePerimeter.  The `short_name`
+    name: Required. Resource name for the ServicePerimeter. The `short_name`
       component must begin with a letter and only include alphanumeric and
       '_'. Format: `accessPolicies/{policy_id}/servicePerimeters/{short_name}`
     perimeterType: Perimeter type indicator. A single project is allowed to be
@@ -1253,7 +1668,7 @@ class GoogleIdentityAccesscontextmanagerV1ServicePerimeter(_messages.Message):
       perimeter content and boundaries.
     title: Human readable title. Must be unique within the Policy.
     useExplicitDryRunSpec: Use explicit dry run spec flag. Ordinarily, a dry-
-      run spec implicitly exists  for all Service Perimeters, and that spec is
+      run spec implicitly exists for all Service Perimeters, and that spec is
       identical to the status for those Service Perimeters. When this flag is
       set, it inhibits the generation of the implicit spec, thereby allowing
       the user to explicitly provide a configuration ("spec") to use in a dry-
@@ -1324,13 +1739,236 @@ class GoogleIdentityAccesscontextmanagerV1VpcAccessibleServices(_messages.Messag
 
   Fields:
     allowedServices: The list of APIs usable within the Service Perimeter.
-      Must be empty unless 'enable_restriction' is True.
+      Must be empty unless 'enable_restriction' is True. You can specify a
+      list of individual services, as well as include the 'RESTRICTED-
+      SERVICES' value, which automatically includes all of the services
+      protected by the perimeter.
     enableRestriction: Whether to restrict API calls within the Service
       Perimeter to the list of APIs specified in 'allowed_services'.
   """
 
   allowedServices = _messages.StringField(1, repeated=True)
   enableRestriction = _messages.BooleanField(2)
+
+
+class IamPolicyAnalysis(_messages.Message):
+  r"""An analysis message to group the query and results.
+
+  Fields:
+    analysisQuery: The analysis query.
+    analysisResults: A list of IamPolicyAnalysisResult that matches the
+      analysis query, or empty if no result is found.
+    fullyExplored: Represents whether all entries in the analysis_results have
+      been fully explored to answer the query.
+    nonCriticalErrors: A list of non-critical errors happened during the query
+      handling.
+  """
+
+  analysisQuery = _messages.MessageField('IamPolicyAnalysisQuery', 1)
+  analysisResults = _messages.MessageField('IamPolicyAnalysisResult', 2, repeated=True)
+  fullyExplored = _messages.BooleanField(3)
+  nonCriticalErrors = _messages.MessageField('IamPolicyAnalysisState', 4, repeated=True)
+
+
+class IamPolicyAnalysisOutputConfig(_messages.Message):
+  r"""Output configuration for export IAM policy analysis destination.
+
+  Fields:
+    bigqueryDestination: Destination on BigQuery.
+    gcsDestination: Destination on Cloud Storage.
+  """
+
+  bigqueryDestination = _messages.MessageField('GoogleCloudAssetV1BigQueryDestination', 1)
+  gcsDestination = _messages.MessageField('GoogleCloudAssetV1GcsDestination', 2)
+
+
+class IamPolicyAnalysisQuery(_messages.Message):
+  r"""IAM policy analysis query message.
+
+  Fields:
+    accessSelector: Optional. Specifies roles or permissions for analysis.
+      This is optional.
+    identitySelector: Optional. Specifies an identity for analysis.
+    options: Optional. The query options.
+    resourceSelector: Optional. Specifies a resource for analysis.
+    scope: Required. The relative name of the root asset. Only resources and
+      IAM policies within the scope will be analyzed. This can only be an
+      organization number (such as "organizations/123"), a folder number (such
+      as "folders/123"), a project ID (such as "projects/my-project-id"), or a
+      project number (such as "projects/12345"). To know how to get
+      organization id, visit [here ](https://cloud.google.com/resource-
+      manager/docs/creating-managing-
+      organization#retrieving_your_organization_id). To know how to get folder
+      or project id, visit [here ](https://cloud.google.com/resource-
+      manager/docs/creating-managing-
+      folders#viewing_or_listing_folders_and_projects).
+  """
+
+  accessSelector = _messages.MessageField('AccessSelector', 1)
+  identitySelector = _messages.MessageField('IdentitySelector', 2)
+  options = _messages.MessageField('Options', 3)
+  resourceSelector = _messages.MessageField('ResourceSelector', 4)
+  scope = _messages.StringField(5)
+
+
+class IamPolicyAnalysisResult(_messages.Message):
+  r"""IAM Policy analysis result, consisting of one IAM policy binding and
+  derived access control lists.
+
+  Fields:
+    accessControlLists: The access control lists derived from the iam_binding
+      that match or potentially match resource and access selectors specified
+      in the request.
+    attachedResourceFullName: The [full resource
+      name](https://cloud.google.com/asset-inventory/docs/resource-name-
+      format) of the resource to which the iam_binding policy attaches.
+    fullyExplored: Represents whether all analyses on the iam_binding have
+      successfully finished.
+    iamBinding: The Cloud IAM policy binding under analysis.
+    identityList: The identity list derived from members of the iam_binding
+      that match or potentially match identity selector specified in the
+      request.
+  """
+
+  accessControlLists = _messages.MessageField('GoogleCloudAssetV1AccessControlList', 1, repeated=True)
+  attachedResourceFullName = _messages.StringField(2)
+  fullyExplored = _messages.BooleanField(3)
+  iamBinding = _messages.MessageField('Binding', 4)
+  identityList = _messages.MessageField('GoogleCloudAssetV1IdentityList', 5)
+
+
+class IamPolicyAnalysisState(_messages.Message):
+  r"""Represents the detailed state of an entity under analysis, such as a
+  resource, an identity or an access.
+
+  Enums:
+    CodeValueValuesEnum: The Google standard error code that best describes
+      the state. For example: - OK means the analysis on this entity has been
+      successfully finished; - PERMISSION_DENIED means an access denied error
+      is encountered; - DEADLINE_EXCEEDED means the analysis on this entity
+      hasn't been started in time;
+
+  Fields:
+    cause: The human-readable description of the cause of failure.
+    code: The Google standard error code that best describes the state. For
+      example: - OK means the analysis on this entity has been successfully
+      finished; - PERMISSION_DENIED means an access denied error is
+      encountered; - DEADLINE_EXCEEDED means the analysis on this entity
+      hasn't been started in time;
+  """
+
+  class CodeValueValuesEnum(_messages.Enum):
+    r"""The Google standard error code that best describes the state. For
+    example: - OK means the analysis on this entity has been successfully
+    finished; - PERMISSION_DENIED means an access denied error is encountered;
+    - DEADLINE_EXCEEDED means the analysis on this entity hasn't been started
+    in time;
+
+    Values:
+      OK: Not an error; returned on success HTTP Mapping: 200 OK
+      CANCELLED: The operation was cancelled, typically by the caller. HTTP
+        Mapping: 499 Client Closed Request
+      UNKNOWN: Unknown error. For example, this error may be returned when a
+        `Status` value received from another address space belongs to an error
+        space that is not known in this address space. Also errors raised by
+        APIs that do not return enough error information may be converted to
+        this error. HTTP Mapping: 500 Internal Server Error
+      INVALID_ARGUMENT: The client specified an invalid argument. Note that
+        this differs from `FAILED_PRECONDITION`. `INVALID_ARGUMENT` indicates
+        arguments that are problematic regardless of the state of the system
+        (e.g., a malformed file name). HTTP Mapping: 400 Bad Request
+      DEADLINE_EXCEEDED: The deadline expired before the operation could
+        complete. For operations that change the state of the system, this
+        error may be returned even if the operation has completed
+        successfully. For example, a successful response from a server could
+        have been delayed long enough for the deadline to expire. HTTP
+        Mapping: 504 Gateway Timeout
+      NOT_FOUND: Some requested entity (e.g., file or directory) was not
+        found. Note to server developers: if a request is denied for an entire
+        class of users, such as gradual feature rollout or undocumented
+        allowlist, `NOT_FOUND` may be used. If a request is denied for some
+        users within a class of users, such as user-based access control,
+        `PERMISSION_DENIED` must be used. HTTP Mapping: 404 Not Found
+      ALREADY_EXISTS: The entity that a client attempted to create (e.g., file
+        or directory) already exists. HTTP Mapping: 409 Conflict
+      PERMISSION_DENIED: The caller does not have permission to execute the
+        specified operation. `PERMISSION_DENIED` must not be used for
+        rejections caused by exhausting some resource (use
+        `RESOURCE_EXHAUSTED` instead for those errors). `PERMISSION_DENIED`
+        must not be used if the caller can not be identified (use
+        `UNAUTHENTICATED` instead for those errors). This error code does not
+        imply the request is valid or the requested entity exists or satisfies
+        other pre-conditions. HTTP Mapping: 403 Forbidden
+      UNAUTHENTICATED: The request does not have valid authentication
+        credentials for the operation. HTTP Mapping: 401 Unauthorized
+      RESOURCE_EXHAUSTED: Some resource has been exhausted, perhaps a per-user
+        quota, or perhaps the entire file system is out of space. HTTP
+        Mapping: 429 Too Many Requests
+      FAILED_PRECONDITION: The operation was rejected because the system is
+        not in a state required for the operation's execution. For example,
+        the directory to be deleted is non-empty, an rmdir operation is
+        applied to a non-directory, etc. Service implementors can use the
+        following guidelines to decide between `FAILED_PRECONDITION`,
+        `ABORTED`, and `UNAVAILABLE`: (a) Use `UNAVAILABLE` if the client can
+        retry just the failing call. (b) Use `ABORTED` if the client should
+        retry at a higher level (e.g., when a client-specified test-and-set
+        fails, indicating the client should restart a read-modify-write
+        sequence). (c) Use `FAILED_PRECONDITION` if the client should not
+        retry until the system state has been explicitly fixed. E.g., if an
+        "rmdir" fails because the directory is non-empty,
+        `FAILED_PRECONDITION` should be returned since the client should not
+        retry unless the files are deleted from the directory. HTTP Mapping:
+        400 Bad Request
+      ABORTED: The operation was aborted, typically due to a concurrency issue
+        such as a sequencer check failure or transaction abort. See the
+        guidelines above for deciding between `FAILED_PRECONDITION`,
+        `ABORTED`, and `UNAVAILABLE`. HTTP Mapping: 409 Conflict
+      OUT_OF_RANGE: The operation was attempted past the valid range. E.g.,
+        seeking or reading past end-of-file. Unlike `INVALID_ARGUMENT`, this
+        error indicates a problem that may be fixed if the system state
+        changes. For example, a 32-bit file system will generate
+        `INVALID_ARGUMENT` if asked to read at an offset that is not in the
+        range [0,2^32-1], but it will generate `OUT_OF_RANGE` if asked to read
+        from an offset past the current file size. There is a fair bit of
+        overlap between `FAILED_PRECONDITION` and `OUT_OF_RANGE`. We recommend
+        using `OUT_OF_RANGE` (the more specific error) when it applies so that
+        callers who are iterating through a space can easily look for an
+        `OUT_OF_RANGE` error to detect when they are done. HTTP Mapping: 400
+        Bad Request
+      UNIMPLEMENTED: The operation is not implemented or is not
+        supported/enabled in this service. HTTP Mapping: 501 Not Implemented
+      INTERNAL: Internal errors. This means that some invariants expected by
+        the underlying system have been broken. This error code is reserved
+        for serious errors. HTTP Mapping: 500 Internal Server Error
+      UNAVAILABLE: The service is currently unavailable. This is most likely a
+        transient condition, which can be corrected by retrying with a
+        backoff. Note that it is not always safe to retry non-idempotent
+        operations. See the guidelines above for deciding between
+        `FAILED_PRECONDITION`, `ABORTED`, and `UNAVAILABLE`. HTTP Mapping: 503
+        Service Unavailable
+      DATA_LOSS: Unrecoverable data loss or corruption. HTTP Mapping: 500
+        Internal Server Error
+    """
+    OK = 0
+    CANCELLED = 1
+    UNKNOWN = 2
+    INVALID_ARGUMENT = 3
+    DEADLINE_EXCEEDED = 4
+    NOT_FOUND = 5
+    ALREADY_EXISTS = 6
+    PERMISSION_DENIED = 7
+    UNAUTHENTICATED = 8
+    RESOURCE_EXHAUSTED = 9
+    FAILED_PRECONDITION = 10
+    ABORTED = 11
+    OUT_OF_RANGE = 12
+    UNIMPLEMENTED = 13
+    INTERNAL = 14
+    UNAVAILABLE = 15
+    DATA_LOSS = 16
+
+  cause = _messages.StringField(1)
+  code = _messages.EnumField('CodeValueValuesEnum', 2)
 
 
 class IamPolicySearchResult(_messages.Message):
@@ -1344,31 +1982,48 @@ class IamPolicySearchResult(_messages.Message):
       original IAM policy can contain multiple bindings. This only contains
       the bindings that match the given query. For queries that don't contain
       a constrain on policies (e.g., an empty query), this contains all the
-      bindings.  To search against the `policy` bindings:  * use a field
-      query, as following:     - query by the policy contained members.
-      Example:       `policy : "amy@gmail.com"`     - query by the policy
-      contained roles. Example:       `policy : "roles/compute.admin"`     -
-      query by the policy contained roles' implied permissions. Example:
-      `policy.role.permissions : "compute.instances.create"`
+      bindings. To search against the `policy` bindings: * use a field query:
+      - query by the policy contained members. Example: `policy:amy@gmail.com`
+      - query by the policy contained roles. Example:
+      `policy:roles/compute.admin` - query by the policy contained roles'
+      included permissions. Example:
+      `policy.role.permissions:compute.instances.create`
     project: The project that the associated GCP resource belongs to, in the
       form of projects/{PROJECT_NUMBER}. If an IAM policy is set on a resource
       (like VM instance, Cloud Storage bucket), the project field will
       indicate the project that contains the resource. If an IAM policy is set
-      on a folder or orgnization, the project field will be empty.  To search
-      against the `project`:  * specify the `scope` field as this project in
+      on a folder or orgnization, the project field will be empty. To search
+      against the `project`: * specify the `scope` field as this project in
       your search request.
     resource: The full resource name of the resource associated with this IAM
       policy. Example: `//compute.googleapis.com/projects/my_project_123/zones
       /zone1/instances/instance1`. See [Cloud Asset Inventory Resource Name
       Format](https://cloud.google.com/asset-inventory/docs/resource-name-
-      format) for more information.  To search against the `resource`:  * use
-      a field query. Example: `resource : "organizations/123"`
+      format) for more information. To search against the `resource`: * use a
+      field query. Example: `resource:organizations/123`
   """
 
   explanation = _messages.MessageField('Explanation', 1)
   policy = _messages.MessageField('Policy', 2)
   project = _messages.StringField(3)
   resource = _messages.StringField(4)
+
+
+class IdentitySelector(_messages.Message):
+  r"""Specifies an identity for which to determine resource access, based on
+  roles assigned either directly to them or to the groups they belong to,
+  directly or indirectly.
+
+  Fields:
+    identity: Required. The identity appear in the form of members in [IAM
+      policy binding](https://cloud.google.com/iam/reference/rest/v1/Binding).
+      The examples of supported forms are: "user:mike@example.com",
+      "group:admins@example.com", "domain:google.com", "serviceAccount:my-
+      project-id@appspot.gserviceaccount.com". Notice that wildcard characters
+      (such as * and ?) are not supported. You must give a specific identity.
+  """
+
+  identity = _messages.StringField(1)
 
 
 class ListFeedsResponse(_messages.Message):
@@ -1386,17 +2041,17 @@ class Operation(_messages.Message):
   a network API call.
 
   Messages:
-    MetadataValue: Service-specific metadata associated with the operation.
-      It typically contains progress information and common metadata such as
-      create time. Some services might not provide such metadata.  Any method
+    MetadataValue: Service-specific metadata associated with the operation. It
+      typically contains progress information and common metadata such as
+      create time. Some services might not provide such metadata. Any method
       that returns a long-running operation should document the metadata type,
       if any.
-    ResponseValue: The normal response of the operation in case of success.
-      If the original method returns no data on success, such as `Delete`, the
-      response is `google.protobuf.Empty`.  If the original method is standard
-      `Get`/`Create`/`Update`, the response should be the resource.  For other
+    ResponseValue: The normal response of the operation in case of success. If
+      the original method returns no data on success, such as `Delete`, the
+      response is `google.protobuf.Empty`. If the original method is standard
+      `Get`/`Create`/`Update`, the response should be the resource. For other
       methods, the response should have the type `XxxResponse`, where `Xxx` is
-      the original method name.  For example, if the original method name is
+      the original method name. For example, if the original method name is
       `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.
 
   Fields:
@@ -1405,29 +2060,29 @@ class Operation(_messages.Message):
       `response` is available.
     error: The error result of the operation in case of failure or
       cancellation.
-    metadata: Service-specific metadata associated with the operation.  It
+    metadata: Service-specific metadata associated with the operation. It
       typically contains progress information and common metadata such as
-      create time. Some services might not provide such metadata.  Any method
+      create time. Some services might not provide such metadata. Any method
       that returns a long-running operation should document the metadata type,
       if any.
     name: The server-assigned name, which is only unique within the same
       service that originally returns it. If you use the default HTTP mapping,
       the `name` should be a resource name ending with
       `operations/{unique_id}`.
-    response: The normal response of the operation in case of success.  If the
+    response: The normal response of the operation in case of success. If the
       original method returns no data on success, such as `Delete`, the
-      response is `google.protobuf.Empty`.  If the original method is standard
-      `Get`/`Create`/`Update`, the response should be the resource.  For other
+      response is `google.protobuf.Empty`. If the original method is standard
+      `Get`/`Create`/`Update`, the response should be the resource. For other
       methods, the response should have the type `XxxResponse`, where `Xxx` is
-      the original method name.  For example, if the original method name is
+      the original method name. For example, if the original method name is
       `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.
   """
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class MetadataValue(_messages.Message):
-    r"""Service-specific metadata associated with the operation.  It typically
+    r"""Service-specific metadata associated with the operation. It typically
     contains progress information and common metadata such as create time.
-    Some services might not provide such metadata.  Any method that returns a
+    Some services might not provide such metadata. Any method that returns a
     long-running operation should document the metadata type, if any.
 
     Messages:
@@ -1453,12 +2108,12 @@ class Operation(_messages.Message):
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class ResponseValue(_messages.Message):
-    r"""The normal response of the operation in case of success.  If the
+    r"""The normal response of the operation in case of success. If the
     original method returns no data on success, such as `Delete`, the response
-    is `google.protobuf.Empty`.  If the original method is standard
-    `Get`/`Create`/`Update`, the response should be the resource.  For other
+    is `google.protobuf.Empty`. If the original method is standard
+    `Get`/`Create`/`Update`, the response should be the resource. For other
     methods, the response should have the type `XxxResponse`, where `Xxx` is
-    the original method name.  For example, if the original method name is
+    the original method name. For example, if the original method name is
     `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.
 
     Messages:
@@ -1489,6 +2144,71 @@ class Operation(_messages.Message):
   response = _messages.MessageField('ResponseValue', 5)
 
 
+class Options(_messages.Message):
+  r"""Contains query options.
+
+  Fields:
+    analyzeServiceAccountImpersonation: Optional. If true, the response will
+      include access analysis from identities to resources via service account
+      impersonation. This is a very expensive operation, because many derived
+      queries will be executed. We highly recommend you use
+      AssetService.AnalyzeIamPolicyLongrunning rpc instead. For example, if
+      the request analyzes for which resources user A has permission P, and
+      there's an IAM policy states user A has
+      iam.serviceAccounts.getAccessToken permission to a service account SA,
+      and there's another IAM policy states service account SA has permission
+      P to a GCP folder F, then user A potentially has access to the GCP
+      folder F. And those advanced analysis results will be included in
+      AnalyzeIamPolicyResponse.service_account_impersonation_analysis. Another
+      example, if the request analyzes for who has permission P to a GCP
+      folder F, and there's an IAM policy states user A has
+      iam.serviceAccounts.actAs permission to a service account SA, and
+      there's another IAM policy states service account SA has permission P to
+      the GCP folder F, then user A potentially has access to the GCP folder
+      F. And those advanced analysis results will be included in
+      AnalyzeIamPolicyResponse.service_account_impersonation_analysis. Default
+      is false.
+    expandGroups: Optional. If true, the identities section of the result will
+      expand any Google groups appearing in an IAM policy binding. If
+      IamPolicyAnalysisQuery.identity_selector is specified, the identity in
+      the result will be determined by the selector, and this flag is not
+      allowed to set. Default is false.
+    expandResources: Optional. If true and
+      IamPolicyAnalysisQuery.resource_selector is not specified, the resource
+      section of the result will expand any resource attached to an IAM policy
+      to include resources lower in the resource hierarchy. For example, if
+      the request analyzes for which resources user A has permission P, and
+      the results include an IAM policy with P on a GCP folder, the results
+      will also include resources in that folder with permission P. If true
+      and IamPolicyAnalysisQuery.resource_selector is specified, the resource
+      section of the result will expand the specified resource to include
+      resources lower in the resource hierarchy. Only project or lower
+      resources are supported. Folder and organization resource cannot be used
+      together with this option. For example, if the request analyzes for
+      which users have permission P on a GCP project with this option enabled,
+      the results will include all users who have permission P on that project
+      or any lower resource. Default is false.
+    expandRoles: Optional. If true, the access section of result will expand
+      any roles appearing in IAM policy bindings to include their permissions.
+      If IamPolicyAnalysisQuery.access_selector is specified, the access
+      section of the result will be determined by the selector, and this flag
+      is not allowed to set. Default is false.
+    outputGroupEdges: Optional. If true, the result will output group identity
+      edges, starting from the binding's group members, to any expanded
+      identities. Default is false.
+    outputResourceEdges: Optional. If true, the result will output resource
+      edges, starting from the policy attached resource, to any expanded
+      resources. Default is false.
+  """
+
+  analyzeServiceAccountImpersonation = _messages.BooleanField(1)
+  expandGroups = _messages.BooleanField(2)
+  expandResources = _messages.BooleanField(3)
+  expandRoles = _messages.BooleanField(4)
+  outputGroupEdges = _messages.BooleanField(5)
+  outputResourceEdges = _messages.BooleanField(6)
+
+
 class OutputConfig(_messages.Message):
   r"""Output configuration for export assets destination.
 
@@ -1500,6 +2220,41 @@ class OutputConfig(_messages.Message):
 
   bigqueryDestination = _messages.MessageField('BigQueryDestination', 1)
   gcsDestination = _messages.MessageField('GcsDestination', 2)
+
+
+class PartitionSpec(_messages.Message):
+  r"""Specifications of BigQuery partitioned table as export destination.
+
+  Enums:
+    PartitionKeyValueValuesEnum: The partition key for BigQuery partitioned
+      table.
+
+  Fields:
+    partitionKey: The partition key for BigQuery partitioned table.
+  """
+
+  class PartitionKeyValueValuesEnum(_messages.Enum):
+    r"""The partition key for BigQuery partitioned table.
+
+    Values:
+      PARTITION_KEY_UNSPECIFIED: Unspecified partition key. If used, it means
+        using non-partitioned table.
+      READ_TIME: The time when the snapshot is taken. If specified as
+        partition key, the result table(s) is partitoned by the additional
+        timestamp column, readTime. If [read_time] in ExportAssetsRequest is
+        specified, the readTime column's value will be the same as it.
+        Otherwise, its value will be the current time that is used to take the
+        snapshot.
+      REQUEST_TIME: The time when the request is received and started to be
+        processed. If specified as partition key, the result table(s) is
+        partitoned by the requestTime column, an additional timestamp column
+        representing when the request was received.
+    """
+    PARTITION_KEY_UNSPECIFIED = 0
+    READ_TIME = 1
+    REQUEST_TIME = 2
+
+  partitionKey = _messages.EnumField('PartitionKeyValueValuesEnum', 1)
 
 
 class Permissions(_messages.Message):
@@ -1515,37 +2270,33 @@ class Permissions(_messages.Message):
 
 class Policy(_messages.Message):
   r"""An Identity and Access Management (IAM) policy, which specifies access
-  controls for Google Cloud resources.   A `Policy` is a collection of
+  controls for Google Cloud resources. A `Policy` is a collection of
   `bindings`. A `binding` binds one or more `members` to a single `role`.
   Members can be user accounts, service accounts, Google groups, and domains
   (such as G Suite). A `role` is a named list of permissions; each `role` can
-  be an IAM predefined role or a user-created custom role.  For some types of
+  be an IAM predefined role or a user-created custom role. For some types of
   Google Cloud resources, a `binding` can also specify a `condition`, which is
   a logical expression that allows access to a resource only if the expression
   evaluates to `true`. A condition can add constraints based on attributes of
   the request, the resource, or both. To learn which resources support
   conditions in their IAM policies, see the [IAM
   documentation](https://cloud.google.com/iam/help/conditions/resource-
-  policies).  **JSON example:**      {       "bindings": [         {
-  "role": "roles/resourcemanager.organizationAdmin",           "members": [
-  "user:mike@example.com",             "group:admins@example.com",
-  "domain:google.com",             "serviceAccount:my-project-
-  id@appspot.gserviceaccount.com"           ]         },         {
-  "role": "roles/resourcemanager.organizationViewer",           "members": [
-  "user:eve@example.com"           ],           "condition": {
-  "title": "expirable access",             "description": "Does not grant
-  access after Sep 2020",             "expression": "request.time <
-  timestamp('2020-10-01T00:00:00.000Z')",           }         }       ],
-  "etag": "BwWWja0YfJA=",       "version": 3     }  **YAML example:**
-  bindings:     - members:       - user:mike@example.com       -
-  group:admins@example.com       - domain:google.com       -
-  serviceAccount:my-project-id@appspot.gserviceaccount.com       role:
-  roles/resourcemanager.organizationAdmin     - members:       -
-  user:eve@example.com       role: roles/resourcemanager.organizationViewer
-  condition:         title: expirable access         description: Does not
-  grant access after Sep 2020         expression: request.time <
-  timestamp('2020-10-01T00:00:00.000Z')     - etag: BwWWja0YfJA=     -
-  version: 3  For a description of IAM and its features, see the [IAM
+  policies). **JSON example:** { "bindings": [ { "role":
+  "roles/resourcemanager.organizationAdmin", "members": [
+  "user:mike@example.com", "group:admins@example.com", "domain:google.com",
+  "serviceAccount:my-project-id@appspot.gserviceaccount.com" ] }, { "role":
+  "roles/resourcemanager.organizationViewer", "members": [
+  "user:eve@example.com" ], "condition": { "title": "expirable access",
+  "description": "Does not grant access after Sep 2020", "expression":
+  "request.time < timestamp('2020-10-01T00:00:00.000Z')", } } ], "etag":
+  "BwWWja0YfJA=", "version": 3 } **YAML example:** bindings: - members: -
+  user:mike@example.com - group:admins@example.com - domain:google.com -
+  serviceAccount:my-project-id@appspot.gserviceaccount.com role:
+  roles/resourcemanager.organizationAdmin - members: - user:eve@example.com
+  role: roles/resourcemanager.organizationViewer condition: title: expirable
+  access description: Does not grant access after Sep 2020 expression:
+  request.time < timestamp('2020-10-01T00:00:00.000Z') - etag: BwWWja0YfJA= -
+  version: 3 For a description of IAM and its features, see the [IAM
   documentation](https://cloud.google.com/iam/docs/).
 
   Fields:
@@ -1560,24 +2311,24 @@ class Policy(_messages.Message):
       conditions: An `etag` is returned in the response to `getIamPolicy`, and
       systems are expected to put that etag in the request to `setIamPolicy`
       to ensure that their change will be applied to the same version of the
-      policy.  **Important:** If you use IAM Conditions, you must include the
+      policy. **Important:** If you use IAM Conditions, you must include the
       `etag` field whenever you call `setIamPolicy`. If you omit this field,
       then IAM allows you to overwrite a version `3` policy with a version `1`
       policy, and all of the conditions in the version `3` policy are lost.
-    version: Specifies the format of the policy.  Valid values are `0`, `1`,
-      and `3`. Requests that specify an invalid value are rejected.  Any
+    version: Specifies the format of the policy. Valid values are `0`, `1`,
+      and `3`. Requests that specify an invalid value are rejected. Any
       operation that affects conditional role bindings must specify version
-      `3`. This requirement applies to the following operations:  * Getting a
+      `3`. This requirement applies to the following operations: * Getting a
       policy that includes a conditional role binding * Adding a conditional
       role binding to a policy * Changing a conditional role binding in a
       policy * Removing any role binding, with or without a condition, from a
-      policy   that includes conditions  **Important:** If you use IAM
+      policy that includes conditions **Important:** If you use IAM
       Conditions, you must include the `etag` field whenever you call
       `setIamPolicy`. If you omit this field, then IAM allows you to overwrite
       a version `3` policy with a version `1` policy, and all of the
-      conditions in the version `3` policy are lost.  If a policy does not
+      conditions in the version `3` policy are lost. If a policy does not
       include any conditions, operations on that policy may specify any valid
-      version or leave the field unset.  To learn which resources support
+      version or leave the field unset. To learn which resources support
       conditions in their IAM policies, see the [IAM
       documentation](https://cloud.google.com/iam/help/conditions/resource-
       policies).
@@ -1612,18 +2363,18 @@ class Resource(_messages.Message):
       removed and may not be present.
     discoveryDocumentUri: The URL of the discovery document containing the
       resource's JSON schema. Example:
-      `https://www.googleapis.com/discovery/v1/apis/compute/v1/rest`  This
+      `https://www.googleapis.com/discovery/v1/apis/compute/v1/rest` This
       value is unspecified for resources that do not have an API based on a
       discovery document, such as Cloud Bigtable.
     discoveryName: The JSON schema name listed in the discovery document.
-      Example: `Project`  This value is unspecified for resources that do not
+      Example: `Project` This value is unspecified for resources that do not
       have an API based on a discovery document, such as Cloud Bigtable.
     location: The location of the resource in Google Cloud, such as its zone
       and region. For more information, see
       https://cloud.google.com/about/locations/.
     parent: The full name of the immediate parent of this resource. See
       [Resource Names](https://cloud.google.com/apis/design/resource_names#ful
-      l_resource_name) for more information.  For Google Cloud assets, this
+      l_resource_name) for more information. For Google Cloud assets, this
       value is the parent resource defined in the [Cloud IAM policy
       hierarchy](https://cloud.google.com/iam/docs/overview#policy_hierarchy).
       Example: `//cloudresourcemanager.googleapis.com/projects/my_project_123`
@@ -1673,105 +2424,102 @@ class ResourceSearchResult(_messages.Message):
   r"""A result of Resource Search, containing information of a cloud resource.
 
   Messages:
-    AdditionalAttributesValue: The additional attributes of this resource. The
-      attributes may vary from one resource type to another. Examples:
-      `projectId` for Project, `dnsName` for DNS ManagedZone. This field
-      contains a subset of the resource metadata fields that are returned by
-      the List or Get APIs provided by the corresponding GCP service (e.g.,
-      Compute Engine). see [API references](https://cloud.google.com/asset-
-      inventory/docs/supported-asset-types#supported_resource_types) of CAIS
-      supported resource types. You can search values of these fields through
-      free text search. However, you should not consume the field
-      programically as the field names and values may change as the GCP
-      service (e.g., Compute Engine) updates to a new incompatible API
-      version.  To search against the `additional_attributes`:  * use a free
-      text query to match the attributes values. Example: to search
-      `additional_attributes = { dnsName: "foobar" }`, you can issue a query
-      `"foobar"`.
+    AdditionalAttributesValue: The additional searchable attributes of this
+      resource. The attributes may vary from one resource type to another.
+      Examples: `projectId` for Project, `dnsName` for DNS ManagedZone. This
+      field contains a subset of the resource metadata fields that are
+      returned by the List or Get APIs provided by the corresponding GCP
+      service (e.g., Compute Engine). see [API references and supported
+      searchable attributes](https://cloud.google.com/asset-
+      inventory/docs/supported-asset-types#searchable_asset_types) for more
+      information. You can search values of these fields through free text
+      search. However, you should not consume the field programically as the
+      field names and values may change as the GCP service updates to a new
+      incompatible API version. To search against the `additional_attributes`:
+      * use a free text query to match the attributes values. Example: to
+      search `additional_attributes = { dnsName: "foobar" }`, you can issue a
+      query `foobar`.
     LabelsValue: Labels associated with this resource. See [Labelling and
       grouping GCP
       resources](https://cloud.google.com/blog/products/gcp/labelling-and-
-      grouping-your-google-cloud-platform-resources) for more information.  To
-      search against the `labels`:  * use a field query, as following:     -
-      query on any label's key or value. Example: `labels : "prod"`     -
-      query by a given label. Example: `labels.env : "prod"`     - query by a
-      given label'sexistence. Example: `labels.env : *` * use a free text
-      query. Example: `"prod"`
+      grouping-your-google-cloud-platform-resources) for more information. To
+      search against the `labels`: * use a field query: - query on any label's
+      key or value. Example: `labels:prod` - query by a given label. Example:
+      `labels.env:prod` - query by a given label's existence. Example:
+      `labels.env:*` * use a free text query. Example: `prod`
 
   Fields:
-    additionalAttributes: The additional attributes of this resource. The
-      attributes may vary from one resource type to another. Examples:
-      `projectId` for Project, `dnsName` for DNS ManagedZone. This field
-      contains a subset of the resource metadata fields that are returned by
-      the List or Get APIs provided by the corresponding GCP service (e.g.,
-      Compute Engine). see [API references](https://cloud.google.com/asset-
-      inventory/docs/supported-asset-types#supported_resource_types) of CAIS
-      supported resource types. You can search values of these fields through
-      free text search. However, you should not consume the field
-      programically as the field names and values may change as the GCP
-      service (e.g., Compute Engine) updates to a new incompatible API
-      version.  To search against the `additional_attributes`:  * use a free
-      text query to match the attributes values. Example: to search
-      `additional_attributes = { dnsName: "foobar" }`, you can issue a query
-      `"foobar"`.
+    additionalAttributes: The additional searchable attributes of this
+      resource. The attributes may vary from one resource type to another.
+      Examples: `projectId` for Project, `dnsName` for DNS ManagedZone. This
+      field contains a subset of the resource metadata fields that are
+      returned by the List or Get APIs provided by the corresponding GCP
+      service (e.g., Compute Engine). see [API references and supported
+      searchable attributes](https://cloud.google.com/asset-
+      inventory/docs/supported-asset-types#searchable_asset_types) for more
+      information. You can search values of these fields through free text
+      search. However, you should not consume the field programically as the
+      field names and values may change as the GCP service updates to a new
+      incompatible API version. To search against the `additional_attributes`:
+      * use a free text query to match the attributes values. Example: to
+      search `additional_attributes = { dnsName: "foobar" }`, you can issue a
+      query `foobar`.
     assetType: The type of this resource. Example:
-      `compute.googleapis.com/Disk`.  To search against the `asset_type`:  *
+      `compute.googleapis.com/Disk`. To search against the `asset_type`: *
       specify the `asset_type` field in your search request.
     description: One or more paragraphs of text description of this resource.
-      Maximum length could be up to 1M bytes.  To search against the
-      `description`:  * use a field query. Example: `description : "*important
+      Maximum length could be up to 1M bytes. To search against the
+      `description`: * use a field query. Example: `description:"*important
       instance*"` * use a free text query. Example: `"*important instance*"`
-    displayName: The display name of this resource.  To search against the
-      `display_name`:  * use a field query. Example: `displayName : "My
+    displayName: The display name of this resource. To search against the
+      `display_name`: * use a field query. Example: `displayName:"My
       Instance"` * use a free text query. Example: `"My Instance"`
     labels: Labels associated with this resource. See [Labelling and grouping
       GCP resources](https://cloud.google.com/blog/products/gcp/labelling-and-
-      grouping-your-google-cloud-platform-resources) for more information.  To
-      search against the `labels`:  * use a field query, as following:     -
-      query on any label's key or value. Example: `labels : "prod"`     -
-      query by a given label. Example: `labels.env : "prod"`     - query by a
-      given label'sexistence. Example: `labels.env : *` * use a free text
-      query. Example: `"prod"`
+      grouping-your-google-cloud-platform-resources) for more information. To
+      search against the `labels`: * use a field query: - query on any label's
+      key or value. Example: `labels:prod` - query by a given label. Example:
+      `labels.env:prod` - query by a given label's existence. Example:
+      `labels.env:*` * use a free text query. Example: `prod`
     location: Location can be `global`, regional like `us-east1`, or zonal
-      like `us-west1-b`.  To search against the `location`:  * use a field
-      query. Example: `location : "us-west*"` * use a free text query.
-      Example: `"us-west*"`
+      like `us-west1-b`. To search against the `location`: * use a field
+      query. Example: `location:us-west*` * use a free text query. Example:
+      `us-west*`
     name: The full resource name of this resource. Example: `//compute.googlea
       pis.com/projects/my_project_123/zones/zone1/instances/instance1`. See
       [Cloud Asset Inventory Resource Name
       Format](https://cloud.google.com/asset-inventory/docs/resource-name-
-      format) for more information.  To search against the `name`:  * use a
-      field query. Example: `name : "instance1"` * use a free text query.
-      Example: `"instance1"`
+      format) for more information. To search against the `name`: * use a
+      field query. Example: `name:instance1` * use a free text query. Example:
+      `instance1`
     networkTags: Network tags associated with this resource. Like labels,
       network tags are a type of annotations used to group GCP resources. See
       [Labelling GCP
       resources](https://cloud.google.com/blog/products/gcp/labelling-and-
-      grouping-your-google-cloud-platform-resources) for more information.  To
-      search against the `network_tags`:  * use a field query. Example:
-      `networkTags : "internal"` * use a free text query. Example:
-      `"internal"`
+      grouping-your-google-cloud-platform-resources) for more information. To
+      search against the `network_tags`: * use a field query. Example:
+      `networkTags:internal` * use a free text query. Example: `internal`
     project: The project that this resource belongs to, in the form of
-      projects/{PROJECT_NUMBER}.  To search against the `project`:  * specify
+      projects/{PROJECT_NUMBER}. To search against the `project`: * specify
       the `scope` field as this project in your search request.
   """
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class AdditionalAttributesValue(_messages.Message):
-    r"""The additional attributes of this resource. The attributes may vary
-    from one resource type to another. Examples: `projectId` for Project,
-    `dnsName` for DNS ManagedZone. This field contains a subset of the
-    resource metadata fields that are returned by the List or Get APIs
+    r"""The additional searchable attributes of this resource. The attributes
+    may vary from one resource type to another. Examples: `projectId` for
+    Project, `dnsName` for DNS ManagedZone. This field contains a subset of
+    the resource metadata fields that are returned by the List or Get APIs
     provided by the corresponding GCP service (e.g., Compute Engine). see [API
-    references](https://cloud.google.com/asset-inventory/docs/supported-asset-
-    types#supported_resource_types) of CAIS supported resource types. You can
-    search values of these fields through free text search. However, you
-    should not consume the field programically as the field names and values
-    may change as the GCP service (e.g., Compute Engine) updates to a new
-    incompatible API version.  To search against the `additional_attributes`:
-    * use a free text query to match the attributes values. Example: to search
-    `additional_attributes = { dnsName: "foobar" }`, you can issue a query
-    `"foobar"`.
+    references and supported searchable
+    attributes](https://cloud.google.com/asset-inventory/docs/supported-asset-
+    types#searchable_asset_types) for more information. You can search values
+    of these fields through free text search. However, you should not consume
+    the field programically as the field names and values may change as the
+    GCP service updates to a new incompatible API version. To search against
+    the `additional_attributes`: * use a free text query to match the
+    attributes values. Example: to search `additional_attributes = { dnsName:
+    "foobar" }`, you can issue a query `foobar`.
 
     Messages:
       AdditionalProperty: An additional property for a
@@ -1798,12 +2546,11 @@ class ResourceSearchResult(_messages.Message):
   class LabelsValue(_messages.Message):
     r"""Labels associated with this resource. See [Labelling and grouping GCP
     resources](https://cloud.google.com/blog/products/gcp/labelling-and-
-    grouping-your-google-cloud-platform-resources) for more information.  To
-    search against the `labels`:  * use a field query, as following:     -
-    query on any label's key or value. Example: `labels : "prod"`     - query
-    by a given label. Example: `labels.env : "prod"`     - query by a given
-    label'sexistence. Example: `labels.env : *` * use a free text query.
-    Example: `"prod"`
+    grouping-your-google-cloud-platform-resources) for more information. To
+    search against the `labels`: * use a field query: - query on any label's
+    key or value. Example: `labels:prod` - query by a given label. Example:
+    `labels.env:prod` - query by a given label's existence. Example:
+    `labels.env:*` * use a free text query. Example: `prod`
 
     Messages:
       AdditionalProperty: An additional property for a LabelsValue object.
@@ -1834,6 +2581,21 @@ class ResourceSearchResult(_messages.Message):
   name = _messages.StringField(7)
   networkTags = _messages.StringField(8, repeated=True)
   project = _messages.StringField(9)
+
+
+class ResourceSelector(_messages.Message):
+  r"""Specifies the resource to analyze for access policies, which may be set
+  directly on the resource, or on ancestors such as organizations, folders or
+  projects.
+
+  Fields:
+    fullResourceName: Required. The [full resource name]
+      (https://cloud.google.com/asset-inventory/docs/resource-name-format) of
+      a resource of [supported resource types](https://cloud.google.com/asset-
+      inventory/docs/supported-asset-types#analyzable_asset_types).
+  """
+
+  fullResourceName = _messages.StringField(1)
 
 
 class SearchAllIamPoliciesResponse(_messages.Message):
@@ -1935,7 +2697,7 @@ class Status(_messages.Message):
   r"""The `Status` type defines a logical error model that is suitable for
   different programming environments, including REST APIs and RPC APIs. It is
   used by [gRPC](https://github.com/grpc). Each `Status` message contains
-  three pieces of data: error code, error message, and error details.  You can
+  three pieces of data: error code, error message, and error details. You can
   find out more about this error model and how to work with it in the [API
   Design Guide](https://cloud.google.com/apis/design/errors).
 
@@ -1944,7 +2706,7 @@ class Status(_messages.Message):
 
   Fields:
     code: The status code, which should be an enum value of google.rpc.Code.
-    details: A list of messages that carry the error details.  There is a
+    details: A list of messages that carry the error details. There is a
       common set of message types for APIs to use.
     message: A developer-facing error message, which should be in English. Any
       user-facing error message should be localized and sent in the

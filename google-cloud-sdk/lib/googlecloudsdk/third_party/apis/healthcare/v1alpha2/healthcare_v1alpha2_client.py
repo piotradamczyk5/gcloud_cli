@@ -42,7 +42,6 @@ class HealthcareV1alpha2(base_api.BaseApiClient):
     self.projects_locations_datasets_annotationStores = self.ProjectsLocationsDatasetsAnnotationStoresService(self)
     self.projects_locations_datasets_consentStores_attributeDefinitions = self.ProjectsLocationsDatasetsConsentStoresAttributeDefinitionsService(self)
     self.projects_locations_datasets_consentStores_consentArtifacts = self.ProjectsLocationsDatasetsConsentStoresConsentArtifactsService(self)
-    self.projects_locations_datasets_consentStores_consents_history = self.ProjectsLocationsDatasetsConsentStoresConsentsHistoryService(self)
     self.projects_locations_datasets_consentStores_consents = self.ProjectsLocationsDatasetsConsentStoresConsentsService(self)
     self.projects_locations_datasets_consentStores_userDataMappings = self.ProjectsLocationsDatasetsConsentStoresUserDataMappingsService(self)
     self.projects_locations_datasets_consentStores = self.ProjectsLocationsDatasetsConsentStoresService(self)
@@ -97,8 +96,7 @@ class HealthcareV1alpha2(base_api.BaseApiClient):
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified Annotation store and removes all annotations that are.
-contained within it.
+      r"""Deletes the specified Annotation store and removes all annotations that are contained within it.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresDeleteRequest) input message
@@ -125,14 +123,7 @@ contained within it.
     )
 
     def Evaluate(self, request, global_params=None):
-      r"""Evaluate an Annotation store against a.
-ground truth Annotation store.
-When the operation finishes successfully, a detailed response is returned
-of type EvaluateAnnotationStoreResponse, contained in the response. The metadata field type is
-OperationMetadata.
-Errors are logged to Cloud Logging
-(see [Viewing logs](/healthcare/docs/how-tos/logging) and
-ImportAnnotations for a sample log entry).
+      r"""Evaluate an Annotation store against a ground truth Annotation store. When the operation finishes successfully, a detailed response is returned of type EvaluateAnnotationStoreResponse, contained in the response. The metadata field type is OperationMetadata. Errors are logged to Cloud Logging (see [Viewing logs](/healthcare/docs/how-tos/logging) and ImportAnnotations for a sample log entry).
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresEvaluateRequest) input message
@@ -159,21 +150,7 @@ ImportAnnotations for a sample log entry).
     )
 
     def Export(self, request, global_params=None):
-      r"""Export.
-Annotations from
-the Annotation
-store.
-If the request is successful, a detailed response is returned of type
-ExportAnnotationsResponse, contained in the
-response field when the
-operation finishes.
-The metadata field type is
-OperationMetadata.
-If errors occur, the error
-field type is ImportAnnotationsErrorDetails.
-Errors are also logged to Cloud Logging
-(see [Viewing logs](/healthcare/docs/how-tos/logging) and
-ImportAnnotations for a sample log entry).
+      r"""Export Annotations from the Annotation store. If the request is successful, a detailed response is returned of type ExportAnnotationsResponse, contained in the response field when the operation finishes. The metadata field type is OperationMetadata. Errors are logged to Cloud Logging (see [Viewing logs](/healthcare/docs/how-tos/logging) and ImportAnnotations for a sample log entry).
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresExportRequest) input message
@@ -200,8 +177,7 @@ ImportAnnotations for a sample log entry).
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the specified Annotation store or returns NOT_FOUND if it does not.
-exist.
+      r"""Gets the specified Annotation store or returns NOT_FOUND if it does not exist.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresGetRequest) input message
@@ -228,9 +204,7 @@ exist.
     )
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresGetIamPolicyRequest) input message
@@ -257,55 +231,7 @@ set.
     )
 
     def Import(self, request, global_params=None):
-      r"""Import.
-Annotations to
-the Annotation
-store by
-loading data from the specified sources.
-If the request is successful, a detailed response is returned as of type
-ImportAnnotationsResponse, contained in the
-response field when the
-operation finishes.
-The metadata field type is
-OperationMetadata.
-If errors occur, the error
-field type is ImportAnnotationsErrorDetails.
-Errors are also logged to Cloud Logging
-(see [Viewing logs](/healthcare/docs/how-tos/logging)).
-For example, the following sample log entry shows a
-`failed to parse Cloud Storage object` error that occurred while attempting
-to import `gs://ANNOTATION_FILENAME.json` to
-`projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/annotationStores/{annotation_store_id}`.
-```json
-jsonPayload: {
-  @type:
-  "type.googleapis.com/google.cloud.healthcare.logging.ImportAnnotationLogEntry"
-  error: {
-    code:  3
-    message:  "failed to parse Cloud Storage object"
-  }
-  source:  "gs://ANNOTATION_FILENAME.json"
-}
-logName:
-"projects/{project_id}/logs/healthcare.googleapis.com%2Fimport_annotations"
-operation: {
-  id:
-  "projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/operations/{operation_id}"
-  producer:  "healthcare.googleapis.com/ImportAnnotations"
-}
-receiveTimestamp:  "TIMESTAMP"
-resource: {
-  labels: {
-    annotation_store_id:  "{annotation_store_id}"
-    dataset_id:  "{dataset_id}"
-    location:  "{location_id}"
-    project_id:  "{project_id}"
-  }
-  type:  "healthcare_annotation_store"
-}
-severity:  "ERROR"
-timestamp:  "TIMESTAMP"
-```
+      r"""Import Annotations to the Annotation store by loading data from the specified sources. If the request is successful, a detailed response is returned as of type ImportAnnotationsResponse, contained in the response field when the operation finishes. The metadata field type is OperationMetadata. Errors are logged to Cloud Logging (see [Viewing logs](/healthcare/docs/how-tos/logging)). For example, the following sample log entry shows a `failed to parse Cloud Storage object` error that occurred while attempting to import `gs://ANNOTATION_FILENAME.json` to `projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/annotationStores/{annotation_store_id}`. ```json jsonPayload: { @type: "type.googleapis.com/google.cloud.healthcare.logging.ImportAnnotationLogEntry" error: { code: 3 message: "failed to parse Cloud Storage object" } source: "gs://ANNOTATION_FILENAME.json" } logName: "projects/{project_id}/logs/healthcare.googleapis.com%2Fimport_annotations" operation: { id: "projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/operations/{operation_id}" producer: "healthcare.googleapis.com/ImportAnnotations" } receiveTimestamp: "TIMESTAMP" resource: { labels: { annotation_store_id: "{annotation_store_id}" dataset_id: "{dataset_id}" location: "{location_id}" project_id: "{project_id}" } type: "healthcare_annotation_store" } severity: "ERROR" timestamp: "TIMESTAMP" ```.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresImportRequest) input message
@@ -386,10 +312,7 @@ timestamp:  "TIMESTAMP"
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresSetIamPolicyRequest) input message
@@ -416,13 +339,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsAnnotationStoresTestIamPermissionsRequest) input message
@@ -459,8 +376,7 @@ may "fail open" without warning.
           }
 
     def Create(self, request, global_params=None):
-      r"""Creates a new Attribute definition in the.
-parent Consent store.
+      r"""Creates a new Attribute definition in the parent Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresAttributeDefinitionsCreateRequest) input message
@@ -487,8 +403,7 @@ parent Consent store.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified Attribute definition. Fails if it.
-is referenced by the latest revision of any Consent or User data mapping.
+      r"""Deletes the specified Attribute definition. Fails if it is referenced by the latest revision of any Consent or User data mapping.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresAttributeDefinitionsDeleteRequest) input message
@@ -542,8 +457,7 @@ is referenced by the latest revision of any Consent or User data mapping.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists the Attribute definitions in the given.
-Consent store.
+      r"""Lists the Attribute definitions in the given Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresAttributeDefinitionsListRequest) input message
@@ -607,8 +521,7 @@ Consent store.
           }
 
     def Create(self, request, global_params=None):
-      r"""Creates a new Consent artifact in the.
-parent Consent store.
+      r"""Creates a new Consent artifact in the parent Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentArtifactsCreateRequest) input message
@@ -635,8 +548,7 @@ parent Consent store.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified Consent artifact. Fails if it is.
-referenced by the latest revision of any Consent.
+      r"""Deletes the specified Consent artifact. Fails if it is referenced by the latest revision of any Consent.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentArtifactsDeleteRequest) input message
@@ -690,8 +602,7 @@ referenced by the latest revision of any Consent.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists the Consent artifacts in the given.
-Consent store.
+      r"""Lists the Consent artifacts in the given Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentArtifactsListRequest) input message
@@ -717,73 +628,6 @@ Consent store.
         supports_download=False,
     )
 
-  class ProjectsLocationsDatasetsConsentStoresConsentsHistoryService(base_api.BaseApiService):
-    """Service class for the projects_locations_datasets_consentStores_consents_history resource."""
-
-    _NAME = 'projects_locations_datasets_consentStores_consents_history'
-
-    def __init__(self, client):
-      super(HealthcareV1alpha2.ProjectsLocationsDatasetsConsentStoresConsentsHistoryService, self).__init__(client)
-      self._upload_configs = {
-          }
-
-    def DeleteAll(self, request, global_params=None):
-      r"""Deletes historical versions of a Consent excluding the.
-current version from the Consent store.
-This operation does not affect the related consent artifact.
-
-      Args:
-        request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsHistoryDeleteAllRequest) input message
-        global_params: (StandardQueryParameters, default: None) global arguments
-      Returns:
-        (Empty) The response message.
-      """
-      config = self.GetMethodConfig('DeleteAll')
-      return self._RunMethod(
-          config, request, global_params=global_params)
-
-    DeleteAll.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path='v1alpha2/projects/{projectsId}/locations/{locationsId}/datasets/{datasetsId}/consentStores/{consentStoresId}/consents/{consentsId}/history:deleteAll',
-        http_method='POST',
-        method_id='healthcare.projects.locations.datasets.consentStores.consents.history.deleteAll',
-        ordered_params=['consent'],
-        path_params=['consent'],
-        query_params=[],
-        relative_path='v1alpha2/{+consent}/history:deleteAll',
-        request_field='deleteAllConsentHistoryRequest',
-        request_type_name='HealthcareProjectsLocationsDatasetsConsentStoresConsentsHistoryDeleteAllRequest',
-        response_type_name='Empty',
-        supports_download=False,
-    )
-
-    def List(self, request, global_params=None):
-      r"""Lists historical versions of a Consent excluding the.
-current version from the Consent store.
-
-      Args:
-        request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsHistoryListRequest) input message
-        global_params: (StandardQueryParameters, default: None) global arguments
-      Returns:
-        (ListConsentHistoryResponse) The response message.
-      """
-      config = self.GetMethodConfig('List')
-      return self._RunMethod(
-          config, request, global_params=global_params)
-
-    List.method_config = lambda: base_api.ApiMethodInfo(
-        flat_path='v1alpha2/projects/{projectsId}/locations/{locationsId}/datasets/{datasetsId}/consentStores/{consentStoresId}/consents/{consentsId}/history',
-        http_method='GET',
-        method_id='healthcare.projects.locations.datasets.consentStores.consents.history.list',
-        ordered_params=['consent'],
-        path_params=['consent'],
-        query_params=['filter', 'pageSize', 'pageToken'],
-        relative_path='v1alpha2/{+consent}/history',
-        request_field='',
-        request_type_name='HealthcareProjectsLocationsDatasetsConsentStoresConsentsHistoryListRequest',
-        response_type_name='ListConsentHistoryResponse',
-        supports_download=False,
-    )
-
   class ProjectsLocationsDatasetsConsentStoresConsentsService(base_api.BaseApiService):
     """Service class for the projects_locations_datasets_consentStores_consents resource."""
 
@@ -795,8 +639,7 @@ current version from the Consent store.
           }
 
     def Create(self, request, global_params=None):
-      r"""Creates a new Consent.
-in the parent Consent store.
+      r"""Creates a new Consent in the parent Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsCreateRequest) input message
@@ -823,11 +666,7 @@ in the parent Consent store.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the Consent and.
-its revisions. To keep a record of the Consent but mark it inactive, see
-[RevokeConsent]. To delete a revision of a Consent, see
-[DeleteConsentRevision]. This operation does not delete the related
-consent artifact.
+      r"""Deletes the Consent and its revisions. To keep a record of the Consent but mark it inactive, see [RevokeConsent]. To delete a revision of a Consent, see [DeleteConsentRevision]. This operation does not delete the related consent artifact.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsDeleteRequest) input message
@@ -854,8 +693,7 @@ consent artifact.
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the specified revision of a Consent, or the latest revision.
-if `revision_id` is not specified in the resource name.
+      r"""Gets the specified revision of a Consent, or the latest revision if `revision_id` is not specified in the resource name.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsGetRequest) input message
@@ -882,9 +720,7 @@ if `revision_id` is not specified in the resource name.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists the Consent in.
-the given Consent store, returning each
-consent's latest revision.
+      r"""Lists the Consent in the given Consent store, returning each consent's latest revision.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsListRequest) input message
@@ -911,10 +747,7 @@ consent's latest revision.
     )
 
     def Patch(self, request, global_params=None):
-      r"""Updates the latest revision of the specified.
-Consent by committing a
-new revision with the changes. A FAILED_PRECONDITION error occurs if the latest revision
-of the given consent is in the `REJECTED` or `REVOKED` state.
+      r"""Updates the latest revision of the specified Consent by committing a new revision with the changes. A FAILED_PRECONDITION error occurs if the latest revision of the given consent is in the `REJECTED` or `REVOKED` state.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsPatchRequest) input message
@@ -941,18 +774,13 @@ of the given consent is in the `REJECTED` or `REVOKED` state.
     )
 
     def Revoke(self, request, global_params=None):
-      r"""Revokes the latest revision of the specified Consent by committing a.
-new revision with `state` updated to `REVOKED`. If the latest revision of
-the given consent is in the `REVOKED` state, no new revision is committed.
-A FAILED_PRECONDITION error occurs
-if the latest revision of the given consent is in `DRAFT` or `REJECTED`
-state.
+      r"""Revokes the latest revision of the specified Consent by committing a new revision with `state` updated to `REVOKED`. If the latest revision of the given consent is in the `REVOKED` state, no new revision is committed. A FAILED_PRECONDITION error occurs if the latest revision of the given consent is in `DRAFT` or `REJECTED` state.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresConsentsRevokeRequest) input message
         global_params: (StandardQueryParameters, default: None) global arguments
       Returns:
-        (RevokeConsentResponse) The response message.
+        (Consent) The response message.
       """
       config = self.GetMethodConfig('Revoke')
       return self._RunMethod(
@@ -968,7 +796,7 @@ state.
         relative_path='v1alpha2/{+name}:revoke',
         request_field='revokeConsentRequest',
         request_type_name='HealthcareProjectsLocationsDatasetsConsentStoresConsentsRevokeRequest',
-        response_type_name='RevokeConsentResponse',
+        response_type_name='Consent',
         supports_download=False,
     )
 
@@ -1010,8 +838,7 @@ state.
     )
 
     def Create(self, request, global_params=None):
-      r"""Creates a new User data mapping in the.
-parent Consent store.
+      r"""Creates a new User data mapping in the parent Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresUserDataMappingsCreateRequest) input message
@@ -1092,8 +919,7 @@ parent Consent store.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists the User data mappings in the given.
-Consent store.
+      r"""Lists the User data mappings in the given Consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresUserDataMappingsListRequest) input message
@@ -1157,9 +983,7 @@ Consent store.
           }
 
     def CheckDataAccess(self, request, global_params=None):
-      r"""Checks if a particular data_id of a User data mapping in the given.
-Consent store is
-consented for a given use.
+      r"""Checks if a particular data_id of a User data mapping in the given Consent store is consented for a given use.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresCheckDataAccessRequest) input message
@@ -1186,9 +1010,7 @@ consented for a given use.
     )
 
     def Create(self, request, global_params=None):
-      r"""Creates a new Consent store in the.
-parent dataset. Attempting to create a consent store with the same ID as an
-existing store fails with an ALREADY_EXISTS error.
+      r"""Creates a new Consent store in the parent dataset. Attempting to create a consent store with the same ID as an existing store fails with an ALREADY_EXISTS error.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresCreateRequest) input message
@@ -1215,8 +1037,7 @@ existing store fails with an ALREADY_EXISTS error.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified Consent store and removes all.
-consent data in the specified consent store.
+      r"""Deletes the specified Consent store and removes all consent data in the specified consent store.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresDeleteRequest) input message
@@ -1243,12 +1064,7 @@ consent data in the specified consent store.
     )
 
     def EvaluateUserConsents(self, request, global_params=None):
-      r"""Evaluates the end user's Consents for all matching.
-User data mappings.
-
-Note: User data mappings are indexed asynchronously, so there might be a
-slight delay between the time a mapping is created or updated and when it
-is included in the results of EvaluateUserConsents.
+      r"""Evaluates the end user's Consents for all matching User data mappings. Note: User data mappings are indexed asynchronously, so there might be a slight delay between the time a mapping is created or updated and when it is included in the results of EvaluateUserConsents.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresEvaluateUserConsentsRequest) input message
@@ -1302,9 +1118,7 @@ is included in the results of EvaluateUserConsents.
     )
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresGetIamPolicyRequest) input message
@@ -1331,8 +1145,7 @@ set.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists the Consent stores in the given.
-dataset.
+      r"""Lists the Consent stores in the given dataset.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresListRequest) input message
@@ -1386,49 +1199,7 @@ dataset.
     )
 
     def QueryAccessibleData(self, request, global_params=None):
-      r"""Queries all data_ids that are consented for a given use in the given.
-Consent store and
-writes them to a specified destination.
-
-The returned Operation includes a progress
-counter for the number of User data mappings processed.
-
-Errors are logged to Cloud Logging (see [Viewing logs]
-(/healthcare/docs/how-tos/logging)). For example, the following
-sample log entry shows a `failed to evaluate consent policy` error that
-occurred during a QueryAccessibleData call to consent store
-`projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/consentStores/{consent_store_id}`.
-```json
-jsonPayload: {
-  @type:
-  "type.googleapis.com/google.cloud.healthcare.logging.QueryAccessibleDataLogEntry"
-  error: {
-    code:  9
-    message:  "failed to evaluate consent policy"
-  }
-  resourceName:
-  "projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/consentStores/{consent_store_id}/consents/{consent_id}"
-}
-logName:
-"projects/{project_id}/logs/healthcare.googleapis.com%2Fquery_accessible_data"
-operation: {
-  id:
-  "projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/operations/{operation_id}"
-  producer:  "healthcare.googleapis.com/QueryAccessibleData"
-}
-receiveTimestamp:  "TIMESTAMP"
-resource: {
-  labels: {
-    consent_store_id:  "{consent_store_id}"
-    dataset_id:  "{dataset_id}"
-    location:  "{location_id}"
-    project_id:  "{project_id}"
-  }
-  type:  "healthcare_consent_store"
-}
-severity:  "ERROR"
-timestamp:  "TIMESTAMP"
-```
+      r"""Queries all data_ids that are consented for a given use in the given Consent store and writes them to a specified destination. The returned Operation includes a progress counter for the number of User data mappings processed. Errors are logged to Cloud Logging (see [Viewing logs] (/healthcare/docs/how-tos/logging)). For example, the following sample log entry shows a `failed to evaluate consent policy` error that occurred during a QueryAccessibleData call to consent store `projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/consentStores/{consent_store_id}`. ```json jsonPayload: { @type: "type.googleapis.com/google.cloud.healthcare.logging.QueryAccessibleDataLogEntry" error: { code: 9 message: "failed to evaluate consent policy" } resourceName: "projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/consentStores/{consent_store_id}/consents/{consent_id}" } logName: "projects/{project_id}/logs/healthcare.googleapis.com%2Fquery_accessible_data" operation: { id: "projects/{project_id}/locations/{location_id}/datasets/{dataset_id}/operations/{operation_id}" producer: "healthcare.googleapis.com/QueryAccessibleData" } receiveTimestamp: "TIMESTAMP" resource: { labels: { consent_store_id: "{consent_store_id}" dataset_id: "{dataset_id}" location: "{location_id}" project_id: "{project_id}" } type: "healthcare_consent_store" } severity: "ERROR" timestamp: "TIMESTAMP" ```.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresQueryAccessibleDataRequest) input message
@@ -1455,10 +1226,7 @@ timestamp:  "TIMESTAMP"
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresSetIamPolicyRequest) input message
@@ -1485,13 +1253,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsConsentStoresTestIamPermissionsRequest) input message
@@ -1528,9 +1290,7 @@ may "fail open" without warning.
           }
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDataProtectionStoresGetIamPolicyRequest) input message
@@ -1557,10 +1317,7 @@ set.
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDataProtectionStoresSetIamPolicyRequest) input message
@@ -1587,13 +1344,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDataProtectionStoresTestIamPermissionsRequest) input message
@@ -1657,8 +1408,7 @@ may "fail open" without warning.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified DICOM store and removes all images that are contained.
-within it.
+      r"""Deletes the specified DICOM store and removes all images that are contained within it.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDicomStoresDeleteRequest) input message
@@ -1685,12 +1435,7 @@ within it.
     )
 
     def Export(self, request, global_params=None):
-      r"""Exports data to the specified destination by copying it from the DICOM.
-store.
-Errors are also logged to Cloud Logging. For more information,
-see [Viewing logs](/healthcare/docs/how-tos/logging).
-The metadata field type is
-OperationMetadata.
+      r"""Exports data to the specified destination by copying it from the DICOM store. Errors are also logged to Cloud Logging. For more information, see [Viewing logs](/healthcare/docs/how-tos/logging). The metadata field type is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDicomStoresExportRequest) input message
@@ -1744,9 +1489,7 @@ OperationMetadata.
     )
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDicomStoresGetIamPolicyRequest) input message
@@ -1773,13 +1516,7 @@ set.
     )
 
     def Import(self, request, global_params=None):
-      r"""Imports data into the DICOM store by copying it from the specified source.
-For errors, the Operation is populated with error details (in the form
-of ImportDicomDataErrorDetails in error.details), which holds
-finer-grained error information. Errors are also logged to Cloud Logging.
-For more information, see [Viewing logs](/healthcare/docs/how-tos/logging).
-The metadata field type is
-OperationMetadata.
+      r"""Imports data into the DICOM store by copying it from the specified source. Errors are logged to Cloud Logging. For more information, see [Viewing logs](/healthcare/docs/how-tos/logging). The metadata field type is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDicomStoresImportRequest) input message
@@ -1860,10 +1597,7 @@ OperationMetadata.
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDicomStoresSetIamPolicyRequest) input message
@@ -1890,13 +1624,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDicomStoresTestIamPermissionsRequest) input message
@@ -1987,21 +1715,7 @@ may "fail open" without warning.
     )
 
     def Export(self, request, global_params=None):
-      r"""Export resources from the FHIR store to the specified destination.
-
-This method returns an Operation that can
-be used to track the status of the export by calling
-GetOperation.
-
-Immediate fatal errors appear in the
-error field, errors are also logged
-to Cloud Logging (see [Viewing
-logs](/healthcare/docs/how-tos/logging)).
-Otherwise, when the operation finishes, a detailed response of type
-ExportResourcesResponse is returned in the
-response field.
-The metadata field type for this
-operation is OperationMetadata.
+      r""" Export resources from the FHIR store to the specified destination. This method returns an Operation that can be used to track the status of the export by calling GetOperation. Immediate fatal errors appear in the error field, errors are also logged to Cloud Logging (see [Viewing logs](/healthcare/docs/how-tos/logging)). Otherwise, when the operation finishes, a detailed response of type ExportResourcesResponse is returned in the response field. The metadata field type for this operation is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsFhirStoresExportRequest) input message
@@ -2055,9 +1769,7 @@ operation is OperationMetadata.
     )
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsFhirStoresGetIamPolicyRequest) input message
@@ -2084,78 +1796,7 @@ set.
     )
 
     def Import(self, request, global_params=None):
-      r"""Import resources to the FHIR store by loading data from the specified.
-sources. This method is optimized to load large quantities of data using
-import semantics that ignore some FHIR store configuration options and are
-not suitable for all use cases. It is primarily intended to load data into
-an empty FHIR store that is not being used by other clients. In cases
-where this method is not appropriate, consider using ExecuteBundle to
-load data.
-
-Every resource in the input must contain a client-supplied ID. Each
-resource is stored using the supplied ID regardless of the
-enable_update_create setting on the FHIR
-store.
-
-The import process does not enforce referential integrity, regardless of
-the
-disable_referential_integrity
-setting on the FHIR store. This allows the import of resources with
-arbitrary interdependencies without considering grouping or ordering, but
-if the input data contains invalid references or if some resources fail to
-be imported, the FHIR store might be left in a state that violates
-referential integrity.
-
-The import process does not trigger Cloud Pub/Sub notification or BigQuery
-streaming update, regardless of how those are configured on the FHIR store.
-
-If a resource with the specified ID already exists, the most recent
-version of the resource is overwritten without creating a new historical
-version, regardless of the
-disable_resource_versioning
-setting on the FHIR store. If transient failures occur during the import,
-successfully imported resources could be overwritten more than once.
-
-The import operation is idempotent unless the input data contains multiple
-valid resources with the same ID but different contents. In that case,
-after the import completes, the store contains exactly one resource
-with that ID but there is no ordering guarantee on which version of the
-contents it has. The operation result counters do not count
-duplicate IDs as an error and count one success for each resource in
-the input, which might result in a success count larger than the number
-of resources in the FHIR store. This often occurs when importing data
-organized in bundles produced by Patient-everything
-where each bundle contains its own copy of a resource such as Practitioner
-that might be referred to by many patients.
-
-If some resources fail to import, for example due to parsing errors,
-successfully imported resources are not rolled back.
-
-The location and format of the input data is specified by the parameters
-below. Note that if no format is specified, this method assumes the
-`BUNDLE` format. When using the `BUNDLE` format this method ignores the
-`Bundle.type` field, except that `history` bundles are rejected, and does
-not apply any of the bundle processing semantics for batch or transaction
-bundles. Unlike in ExecuteBundle, transaction bundles are not executed
-as a single transaction and bundle-internal references are not rewritten.
-The bundle is treated as a collection of resources to be written as
-provided in `Bundle.entry.resource`, ignoring `Bundle.entry.request`. As
-an example, this allows the import of `searchset` bundles produced by a
-FHIR search or
-Patient-everything operation.
-
-This method returns an Operation that can
-be used to track the status of the import by calling
-GetOperation.
-
-Immediate fatal errors appear in the
-error field, errors are also logged
-to Cloud Logging (see [Viewing
-logs](/healthcare/docs/how-tos/logging)). Otherwise, when the
-operation finishes, a detailed response of type ImportResourcesResponse
-is returned in the response field.
-The metadata field type for this
-operation is OperationMetadata.
+      r""" Import resources to the FHIR store by loading data from the specified sources. This method is optimized to load large quantities of data using import semantics that ignore some FHIR store configuration options and are not suitable for all use cases. It is primarily intended to load data into an empty FHIR store that is not being used by other clients. In cases where this method is not appropriate, consider using ExecuteBundle to load data. Every resource in the input must contain a client-supplied ID. Each resource is stored using the supplied ID regardless of the enable_update_create setting on the FHIR store. The import process does not enforce referential integrity, regardless of the disable_referential_integrity setting on the FHIR store. This allows the import of resources with arbitrary interdependencies without considering grouping or ordering, but if the input data contains invalid references or if some resources fail to be imported, the FHIR store might be left in a state that violates referential integrity. The import process does not trigger Cloud Pub/Sub notification or BigQuery streaming update, regardless of how those are configured on the FHIR store. If a resource with the specified ID already exists, the most recent version of the resource is overwritten without creating a new historical version, regardless of the disable_resource_versioning setting on the FHIR store. If transient failures occur during the import, successfully imported resources could be overwritten more than once. The import operation is idempotent unless the input data contains multiple valid resources with the same ID but different contents. In that case, after the import completes, the store contains exactly one resource with that ID but there is no ordering guarantee on which version of the contents it has. The operation result counters do not count duplicate IDs as an error and count one success for each resource in the input, which might result in a success count larger than the number of resources in the FHIR store. This often occurs when importing data organized in bundles produced by Patient-everything where each bundle contains its own copy of a resource such as Practitioner that might be referred to by many patients. If some resources fail to import, for example due to parsing errors, successfully imported resources are not rolled back. The location and format of the input data is specified by the parameters below. Note that if no format is specified, this method assumes the `BUNDLE` format. When using the `BUNDLE` format this method ignores the `Bundle.type` field, except that `history` bundles are rejected, and does not apply any of the bundle processing semantics for batch or transaction bundles. Unlike in ExecuteBundle, transaction bundles are not executed as a single transaction and bundle-internal references are not rewritten. The bundle is treated as a collection of resources to be written as provided in `Bundle.entry.resource`, ignoring `Bundle.entry.request`. As an example, this allows the import of `searchset` bundles produced by a FHIR search or Patient-everything operation. This method returns an Operation that can be used to track the status of the import by calling GetOperation. Immediate fatal errors appear in the error field, errors are also logged to Cloud Logging (see [Viewing logs](/healthcare/docs/how-tos/logging)). Otherwise, when the operation finishes, a detailed response of type ImportResourcesResponse is returned in the response field. The metadata field type for this operation is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsFhirStoresImportRequest) input message
@@ -2236,10 +1877,7 @@ operation is OperationMetadata.
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsFhirStoresSetIamPolicyRequest) input message
@@ -2266,13 +1904,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsFhirStoresTestIamPermissionsRequest) input message
@@ -2309,23 +1941,7 @@ may "fail open" without warning.
           }
 
     def Export(self, request, global_params=None):
-      r"""Exports the messages to a destination in the store with transformations.
-Only FHIR stores in the same dataset as the source store are supported as
-destinations. Start and/or end time relative to message generation time
-(MSH.7) can be specified to filter messages in a range instead of exporting
-all at once.
-
-This API returns an Operation that can
-be used to track the status of the job by calling
-GetOperation.
-
-Immediate fatal errors appear in the
-error field.
-Otherwise, when the operation finishes, a detailed response of type
-ExportMessagesResponse is returned in the
-response field.
-The metadata field type for this
-operation is OperationMetadata.
+      r"""Exports the messages to a destination in the store with transformations. Only FHIR stores in the same dataset as the source store are supported as destinations. Start and/or end time relative to message generation time (MSH.7) can be specified to filter messages in a range instead of exporting all at once. This API returns an Operation that can be used to track the status of the job by calling GetOperation. Immediate fatal errors appear in the error field. Otherwise, when the operation finishes, a detailed response of type ExportMessagesResponse is returned in the response field. The metadata field type for this operation is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresMessagesExportRequest) input message
@@ -2389,8 +2005,7 @@ operation is OperationMetadata.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified HL7v2 store and removes all messages that it.
-contains.
+      r"""Deletes the specified HL7v2 store and removes all messages that it contains.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresDeleteRequest) input message
@@ -2417,23 +2032,7 @@ contains.
     )
 
     def Export(self, request, global_params=None):
-      r"""Exports the messages to a destination in the store with transformations.
-Only FHIR stores in the same dataset as the source store are supported as
-destinations. Start and/or end time relative to message generation time
-(MSH.7) can be specified to filter messages in a range instead of exporting
-all at once.
-
-This API returns an Operation that can
-be used to track the status of the job by calling
-GetOperation.
-
-Immediate fatal errors appear in the
-error field.
-Otherwise, when the operation finishes, a detailed response of type
-ExportMessagesResponse is returned in the
-response field.
-The metadata field type for this
-operation is OperationMetadata.
+      r"""Exports the messages to a destination in the store with transformations. Only FHIR stores in the same dataset as the source store are supported as destinations. Start and/or end time relative to message generation time (MSH.7) can be specified to filter messages in a range instead of exporting all at once. This API returns an Operation that can be used to track the status of the job by calling GetOperation. Immediate fatal errors appear in the error field. Otherwise, when the operation finishes, a detailed response of type ExportMessagesResponse is returned in the response field. The metadata field type for this operation is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresExportRequest) input message
@@ -2487,9 +2086,7 @@ operation is OperationMetadata.
     )
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresGetIamPolicyRequest) input message
@@ -2516,41 +2113,7 @@ set.
     )
 
     def Import(self, request, global_params=None):
-      r"""Import messages to the HL7v2 store by loading data from the specified.
-sources. This method is optimized to load large quantities of data using
-import semantics that ignore some HL7v2 store configuration options and are
-not suitable for all use cases. It is primarily intended to load data into
-an empty HL7v2 store that is not being used by other clients.
-
-An existing message will be overwritten if a duplicate message is imported.
-A duplicate message is a message with the same raw bytes as a message that
-already exists in this HL7v2 store. When a message is overwritten, its
-labels will also be overwritten.
-
-The import operation is idempotent unless the input data contains multiple
-valid messages with the same raw bytes but different labels. In that case,
-after the import completes, the store contains exactly one message
-with those raw bytes but there is no ordering guarantee on which version
-of the labels it has. The operation result counters do not count
-duplicated raw bytes as an error and count one success for each message in
-the input, which might result in a success count larger than the number
-of messages in the HL7v2 store.
-
-If some messages fail to import, for example due to parsing errors,
-successfully imported messages are not rolled back.
-
-This method returns an Operation that can
-be used to track the status of the import by calling
-GetOperation.
-
-Immediate fatal errors appear in the
-error field, errors are also logged
-to Cloud Logging (see [Viewing
-logs](/healthcare/docs/how-tos/logging)). Otherwise, when the operation
-finishes, a response of type ImportMessagesResponse is returned in the
-response field.
-The metadata field type for this
-operation is OperationMetadata.
+      r"""Import messages to the HL7v2 store by loading data from the specified sources. This method is optimized to load large quantities of data using import semantics that ignore some HL7v2 store configuration options and are not suitable for all use cases. It is primarily intended to load data into an empty HL7v2 store that is not being used by other clients. An existing message will be overwritten if a duplicate message is imported. A duplicate message is a message with the same raw bytes as a message that already exists in this HL7v2 store. When a message is overwritten, its labels will also be overwritten. The import operation is idempotent unless the input data contains multiple valid messages with the same raw bytes but different labels. In that case, after the import completes, the store contains exactly one message with those raw bytes but there is no ordering guarantee on which version of the labels it has. The operation result counters do not count duplicated raw bytes as an error and count one success for each message in the input, which might result in a success count larger than the number of messages in the HL7v2 store. If some messages fail to import, for example due to parsing errors, successfully imported messages are not rolled back. This method returns an Operation that can be used to track the status of the import by calling GetOperation. Immediate fatal errors appear in the error field, errors are also logged to Cloud Logging (see [Viewing logs](/healthcare/docs/how-tos/logging)). Otherwise, when the operation finishes, a response of type ImportMessagesResponse is returned in the response field. The metadata field type for this operation is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresImportRequest) input message
@@ -2631,10 +2194,7 @@ operation is OperationMetadata.
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresSetIamPolicyRequest) input message
@@ -2661,13 +2221,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsHl7V2StoresTestIamPermissionsRequest) input message
@@ -2704,16 +2258,7 @@ may "fail open" without warning.
           }
 
     def Cancel(self, request, global_params=None):
-      r"""Starts asynchronous cancellation on a long-running operation.  The server.
-makes a best effort to cancel the operation, but success is not
-guaranteed.  If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.  Clients can use
-Operations.GetOperation or
-other methods to check whether the cancellation succeeded or whether the
-operation completed despite cancellation. On successful cancellation,
-the operation is not deleted; instead, it becomes an operation with
-an Operation.error value with a google.rpc.Status.code of 1,
-corresponding to `Code.CANCELLED`.
+      r"""Starts asynchronous cancellation on a long-running operation. The server makes a best effort to cancel the operation, but success is not guaranteed. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`. Clients can use Operations.GetOperation or other methods to check whether the cancellation succeeded or whether the operation completed despite cancellation. On successful cancellation, the operation is not deleted; instead, it becomes an operation with an Operation.error value with a google.rpc.Status.code of 1, corresponding to `Code.CANCELLED`.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsOperationsCancelRequest) input message
@@ -2740,9 +2285,7 @@ corresponding to `Code.CANCELLED`.
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the latest state of a long-running operation.  Clients can use this.
-method to poll the operation result at intervals as recommended by the API
-service.
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsOperationsGetRequest) input message
@@ -2769,16 +2312,7 @@ service.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists operations that match the specified filter in the request. If the.
-server doesn't support this method, it returns `UNIMPLEMENTED`.
-
-NOTE: the `name` binding allows API services to override the binding
-to use different resource name schemes, such as `users/*/operations`. To
-override the binding, API services can add a binding such as
-`"/v1/{name=users/*}/operations"` to their service configuration.
-For backwards compatibility, the default name includes the operations
-collection id, however overriding users must ensure the name binding
-is the parent resource, without the operations collection id.
+      r"""Lists operations that match the specified filter in the request. If the server doesn't support this method, it returns `UNIMPLEMENTED`. NOTE: the `name` binding allows API services to override the binding to use different resource name schemes, such as `users/*/operations`. To override the binding, API services can add a binding such as `"/v1/{name=users/*}/operations"` to their service configuration. For backwards compatibility, the default name includes the operations collection id, however overriding users must ensure the name binding is the parent resource, without the operations collection id.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsOperationsListRequest) input message
@@ -2815,13 +2349,7 @@ is the parent resource, without the operations collection id.
           }
 
     def Create(self, request, global_params=None):
-      r"""Creates a new health dataset. Results are returned through the.
-Operation interface which returns either an
-`Operation.response` which contains a Dataset or
-`Operation.error`. The metadata
-field type is OperationMetadata.
-A Google Cloud Platform project can contain up to 500 datasets across all
-regions.
+      r"""Creates a new health dataset. Results are returned through the Operation interface which returns either an `Operation.response` which contains a Dataset or `Operation.error`. The metadata field type is OperationMetadata.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsCreateRequest) input message
@@ -2848,22 +2376,7 @@ regions.
     )
 
     def Deidentify(self, request, global_params=None):
-      r"""Creates a new dataset containing de-identified data from the source.
-dataset. The metadata field type
-is OperationMetadata.
-If the request is successful, the
-response field type is
-DeidentifySummary.
-If errors occur, the
-error
-details field type is
-DeidentifyErrorDetails.
-The LRO result may still be successful if de-identification fails for some
-DICOM instances. The new de-identified dataset will not contain these
-failed resources. Failed resource totals are tracked in
-DeidentifySummary.failure_resource_count.
-Error details are also logged to Cloud Logging. For more information,
-see [Viewing logs](/healthcare/docs/how-tos/logging).
+      r"""Creates a new dataset containing de-identified data from the source dataset. The metadata field type is OperationMetadata. If the request is successful, the response field type is DeidentifySummary. The LRO result may still be successful if de-identification fails for some DICOM instances. The new de-identified dataset will not contain these failed resources. The number of resources processed are tracked in Operation.metadata. Error details are logged to Cloud Logging. For more information, see [Viewing logs](/healthcare/docs/how-tos/logging).
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDeidentifyRequest) input message
@@ -2890,9 +2403,7 @@ see [Viewing logs](/healthcare/docs/how-tos/logging).
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes the specified health dataset and all data contained in the dataset.
-Deleting a dataset does not affect the sources from which the dataset was
-imported (if any).
+      r"""Deletes the specified health dataset and all data contained in the dataset. Deleting a dataset does not affect the sources from which the dataset was imported (if any).
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsDeleteRequest) input message
@@ -2946,9 +2457,7 @@ imported (if any).
     )
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsGetIamPolicyRequest) input message
@@ -3029,10 +2538,7 @@ set.
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsSetIamPolicyRequest) input message
@@ -3059,13 +2565,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsDatasetsTestIamPermissionsRequest) input message
@@ -3102,9 +2602,7 @@ may "fail open" without warning.
           }
 
     def GetIamPolicy(self, request, global_params=None):
-      r"""Gets the access control policy for a resource.
-Returns an empty policy if the resource exists and does not have a policy
-set.
+      r"""Gets the access control policy for a resource. Returns an empty policy if the resource exists and does not have a policy set.
 
       Args:
         request: (HealthcareProjectsLocationsServicesDataEnclaveEnclavesGetIamPolicyRequest) input message
@@ -3131,10 +2629,7 @@ set.
     )
 
     def SetIamPolicy(self, request, global_params=None):
-      r"""Sets the access control policy on the specified resource. Replaces any.
-existing policy.
-
-Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
+      r"""Sets the access control policy on the specified resource. Replaces any existing policy. Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
 
       Args:
         request: (HealthcareProjectsLocationsServicesDataEnclaveEnclavesSetIamPolicyRequest) input message
@@ -3161,13 +2656,7 @@ Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
     )
 
     def TestIamPermissions(self, request, global_params=None):
-      r"""Returns permissions that a caller has on the specified resource.
-If the resource does not exist, this will return an empty set of
-permissions, not a `NOT_FOUND` error.
-
-Note: This operation is designed to be used for building permission-aware
-UIs and command-line tools, not for authorization checking. This operation
-may "fail open" without warning.
+      r"""Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning.
 
       Args:
         request: (HealthcareProjectsLocationsServicesDataEnclaveEnclavesTestIamPermissionsRequest) input message

@@ -149,15 +149,49 @@ def TestCryptoKeyIamPermissions(crypto_key_ref, permissions):
 
 
 def AddPolicyBindingToCryptoKey(crypto_key_ref, member, role):
-  """Does an atomic Read-Modify-Write, adding the member to the role."""
+  """Add an IAM policy binding on the CryptoKey.
+
+  Does an atomic Read-Modify-Write, adding the member to the role.
+
+  Args:
+    crypto_key_ref: A resources.Resource naming the CryptoKey.
+    member: Principal to add to the policy binding.
+    role: List of roles to add to the policy binding.
+
+  Returns:
+    The new IAM Policy.
+  """
+  return AddPolicyBindingsToCryptoKey(crypto_key_ref, [(member, role)])
+
+
+def AddPolicyBindingsToCryptoKey(crypto_key_ref, member_roles):
+  """Add IAM policy bindings on the CryptoKey.
+
+  Does an atomic Read-Modify-Write, adding the members to the roles. Only calls
+  SetIamPolicy if the policy would be different.
+
+  Args:
+    crypto_key_ref: A resources.Resource naming the CryptoKey.
+    member_roles: List of 2-tuples in the form [(member, role), ...].
+
+  Returns:
+    The new IAM Policy.
+  """
   messages = base.GetMessagesModule()
 
   policy = GetCryptoKeyIamPolicy(crypto_key_ref)
   policy.version = iam_util.MAX_LIBRARY_IAM_SUPPORTED_VERSION
 
-  iam_util.AddBindingToIamPolicy(messages.Binding, policy, member, role)
-  return SetCryptoKeyIamPolicy(
-      crypto_key_ref, policy, update_mask='bindings,etag')
+  policy_was_updated = False
+  for member, role in member_roles:
+    if iam_util.AddBindingToIamPolicy(messages.Binding, policy, member, role):
+      policy_was_updated = True
+
+  if policy_was_updated:
+    return SetCryptoKeyIamPolicy(
+        crypto_key_ref, policy, update_mask='bindings,etag')
+
+  return policy
 
 
 def RemovePolicyBindingFromCryptoKey(crypto_key_ref, member, role):

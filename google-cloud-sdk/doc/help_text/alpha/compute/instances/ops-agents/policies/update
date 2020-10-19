@@ -1,13 +1,13 @@
 NAME
     gcloud alpha compute instances ops-agents policies update - update a Google
-        Cloud Operations Suite Agents (Ops Agents) policy
+        Cloud's operations suite agents (Ops Agents) policy
 
 SYNOPSIS
     gcloud alpha compute instances ops-agents policies update POLICY_ID
-        [--agent-rules=[type=TYPE,version=VERSION,package-state=PACKAGE-STATE,
-          enable-autoupgrade=ENABLE-AUTOUPGRADE;...]]
-        [--description=DESCRIPTION]
-        [--os-types=[short-name=SHORT-NAME,version=VERSION;...]]
+        [--agent-rules=type=TYPE,version=VERSION,package-state=PACKAGE-STATE,
+          enable-autoupgrade=ENABLE-AUTOUPGRADE;[...]]
+        [--description=DESCRIPTION] [--etag=ETAG]
+        [--os-types=short-name=SHORT-NAME,version=VERSION;[...]]
         [--clear-group-labels
           | --group-labels=[LABEL_NAME=LABEL_VALUE,
           LABEL_NAME=LABEL_VALUE,...;...]]
@@ -17,13 +17,13 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute instances ops-agents policies update updates a
-    policy that facilitates agent management across Google Cloud Compute
-    instances based on user specified instance filters. This policy installs,
-    specifies versioning, enables autoupgrade, and removes Ops Agents.
+    policy that facilitates agent management across Compute Engine instances
+    based on user specified instance filters. This policy installs, specifies
+    versioning, enables autoupgrade, and removes Ops Agents.
 
     The command returns the content of the updated policy or an error
     indicating why the update fails. The updated policy takes effect
-    asynchronously. It can take 10 ~ 15 minutes for the VMs to enforce the
+    asynchronously. It can take 10-15 minutes for the VMs to enforce the
     updated policy.
 
     The available flags for the update command are similar to the flags for the
@@ -31,13 +31,13 @@ DESCRIPTION
     specified, it retains the original value. The full value of each flag needs
     to be re-stated during update. Take the --agents flag for example:
 
-    If the original policy specified two agents (e.g.
-    --agents="type=logging;type=metrics"), yet only one agent (e.g.
-    --agents="type=logging") is specified in a gcloud alpha compute instances
-    ops-agents policies update command, the other agent will no longer be
-    managed and enforced by the policy. In order to remove the metrics agent in
-    this case, set the package state explicitly to removed (e.g.
-    --agents="type=logging;type=metrics,package-state=removed").
+    If the original policy specified two agents
+    (--agents="type=logging;type=metrics"), and only one agent
+    (--agents="type=logging") is specified in a gcloud alpha compute instances
+    ops-agents policies update command, then the policy stops managing and
+    enforcing the unspecified agent. In order to remove the metrics agent in
+    this case, set the package state explicitly to removed
+    (--agents="type=logging;type=metrics,package-state=removed").
 
     In order to explicitly clear the --group-labels, --instances, and --zones
     instance filters, use the following flags as documented below:
@@ -54,8 +54,8 @@ POSITIONAL ARGUMENTS
         from other generic policies and lower the chance of naming conflicts.
 
 FLAGS
-     --agent-rules=[type=TYPE,version=VERSION,package-state=PACKAGE-STATE,enable-autoupgrade=ENABLE-AUTOUPGRADE;...]
-        A list of agent rules to be enforced by the policy.
+     --agent-rules=type=TYPE,version=VERSION,package-state=PACKAGE-STATE,enable-autoupgrade=ENABLE-AUTOUPGRADE;[...]
+        A non-empty list of agent rules to be enforced by the policy.
 
         This flag must be quoted. Items in the list are separated by ";". Each
         item in the list is a <key, value> map that represents a logging or
@@ -187,8 +187,21 @@ FLAGS
      --description=DESCRIPTION
         Description of the policy.
 
-     --os-types=[short-name=SHORT-NAME,version=VERSION;...]
-        A list of OS types to filter instances that the policy applies to.
+     --etag=ETAG
+        Etag of the policy.
+
+        etag is used for optimistic concurrency control as a way to help
+        prevent simultaneous updates of a policy from overwriting each other.
+        It is strongly suggested that systems make use of the etag in the
+        read-modify-write cycle to perform policy updates in order to avoid
+        race conditions: an etag is returned in the response of a describe
+        command, and systems are expected to put that etag in the request to an
+        update command to ensure that their change will be applied to the same
+        version of the policy.
+
+     --os-types=short-name=SHORT-NAME,version=VERSION;[...]
+        A non-empty list of OS types to filter instances that the policy
+        applies to.
 
         For Alpha, exactly one OS type needs to be specified. The support for
         multiple OS types will be added later for more flexibility. Each OS
@@ -345,9 +358,18 @@ EXAMPLES
             --group-labels="env=prod,product=myapp;env=staging,product=myapp\
         "
 
+    To perform the same update as above, conditionally on the fact that the
+    policy's etag (retrieved by an earlier command) is
+    f59741c8-bb5e-4ee6-bf6f-c4ebeb6b06e0, run:
+
+        $ gcloud alpha compute instances ops-agents policies update \
+            ops-agents-labels-policy --clear-instances \
+            --group-labels="env=prod,product=myapp;env=staging,product=myapp\
+        " --etag f59741c8-bb5e-4ee6-bf6f-c4ebeb6b06e0
+
 NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist.
+    access allowlist.
 

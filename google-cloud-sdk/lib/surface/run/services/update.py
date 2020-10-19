@@ -21,6 +21,7 @@ from __future__ import unicode_literals
 
 from googlecloudsdk.api_lib.run import traffic
 from googlecloudsdk.calliope import base
+from googlecloudsdk.command_lib.run import config_changes
 from googlecloudsdk.command_lib.run import connection_context
 from googlecloudsdk.command_lib.run import exceptions
 from googlecloudsdk.command_lib.run import flags
@@ -61,7 +62,6 @@ class Update(base.Command):
 
     # Flags specific to connecting to a cluster
     cluster_group = flags.GetClusterArgGroup(parser)
-    flags.AddEndpointVisibilityEnum(cluster_group)
     flags.AddSecretsFlags(cluster_group)
     flags.AddConfigMapsFlags(cluster_group)
     flags.AddHttp2Flag(cluster_group)
@@ -86,7 +86,10 @@ class Update(base.Command):
     flags.AddCpuFlag(parser)
     flags.AddNoTrafficFlag(parser)
     flags.AddServiceAccountFlag(parser)
+    flags.AddImageArg(parser, required=False)
     concept_parsers.ConceptParser([service_presentation]).AddToParser(parser)
+    # No output by default, can be overridden by --format
+    parser.display_info.AddFormat('none')
 
   @staticmethod
   def Args(parser):
@@ -95,21 +98,28 @@ class Update(base.Command):
     # Flags only supported on GKE and Knative
     cluster_group = flags.GetClusterArgGroup(parser)
     flags.AddMinInstancesFlag(cluster_group)
+    flags.AddEndpointVisibilityEnum(cluster_group)
 
   def Run(self, args):
-    """Update configuration information about the service.
+    """Update the service resource.
 
-    Does not change the running code.
+       Different from `deploy` in that it can only update the service spec but
+       no IAM or Cloud build changes.
 
     Args:
       args: Args!
+    Returns:
+      googlecloudsdk.api_lib.run.Service, the updated service
     """
     changes = flags.GetConfigurationChanges(args)
     if not changes:
       raise exceptions.NoConfigurationChangeError(
           'No configuration change requested. '
           'Did you mean to include the flags `--update-env-vars`, '
-          '`--memory`, `--concurrency`, `--timeout`, `--connectivity`?')
+          '`--memory`, `--concurrency`, `--timeout`, `--connectivity`, '
+          '`--image`?')
+    changes.append(
+        config_changes.SetLaunchStageAnnotationChange(self.ReleaseTrack()))
 
     conn_context = connection_context.GetConnectionContext(
         args, flags.Product.RUN, self.ReleaseTrack())
@@ -127,14 +137,17 @@ class Update(base.Command):
           deployment_stages,
           failure_message='Deployment failed',
           suppress_output=args.async_) as tracker:
-        client.ReleaseService(
+        service = client.ReleaseService(
             service_ref, changes, tracker, asyn=args.async_, prefetch=service)
+
       if args.async_:
-        pretty_print.Success('Deploying asynchronously.')
+        pretty_print.Success('Service [{{bold}}{serv}{{reset}}] is deploying '
+                             'asynchronously.'.format(serv=service.name))
       else:
+        service = client.GetService(service_ref)
         pretty_print.Success(
-            messages_util.GetSuccessMessageForSynchronousDeploy(
-                client, service_ref))
+            messages_util.GetSuccessMessageForSynchronousDeploy(service))
+      return service
 
 
 @base.ReleaseTracks(base.ReleaseTrack.BETA)
@@ -149,6 +162,7 @@ class BetaUpdate(Update):
     # Flags only supported on GKE and Knative
     cluster_group = flags.GetClusterArgGroup(parser)
     flags.AddMinInstancesFlag(cluster_group)
+    flags.AddEndpointVisibilityEnum(cluster_group)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
@@ -163,9 +177,14 @@ class AlphaUpdate(Update):
     managed_group = flags.GetManagedArgGroup(parser)
     flags.AddEgressSettingsFlag(managed_group)
 
+    # Flags only supported on GKE and Knative
+    cluster_group = flags.GetClusterArgGroup(parser)
+    flags.AddEndpointVisibilityEnum(cluster_group, deprecated=True)
+
     # Flags not specific to any platform
     flags.AddMinInstancesFlag(parser)
     flags.AddDeployTagFlag(parser)
+    flags.AddIngressFlag(parser)
 
 
 AlphaUpdate.__doc__ = Update.__doc__

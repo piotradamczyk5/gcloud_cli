@@ -91,15 +91,19 @@ class GoogleCloudBillingBudgetsV1beta1AllUpdatesRule(_messages.Message):
   and thresholds.
 
   Fields:
+    disableDefaultIamRecipients: Optional. When set to true, disables default
+      notifications sent when a threshold is exceeded. Default notifications
+      are sent to those with Billing Account Administrator and Billing Account
+      User IAM roles for the target account.
     monitoringNotificationChannels: Optional. Targets to send notifications to
       when a threshold is exceeded. This is in addition to default recipients
-      who have billing account roles. The value is the full REST resource name
-      of a monitoring notification channel with the form
+      who have billing account IAM roles. The value is the full REST resource
+      name of a monitoring notification channel with the form
       `projects/{project_id}/notificationChannels/{channel_id}`. A maximum of
       5 channels are allowed. See https://cloud.google.com/billing/docs/how-
       to/budgets-notification-recipients for more details.
-    pubsubTopic: Required. The name of the Cloud Pub/Sub topic where budget
-      related messages will be published, in the form
+    pubsubTopic: Optional. The name of the Pub/Sub topic where budget related
+      messages will be published, in the form
       `projects/{project_id}/topics/{topic_id}`. Updates are sent at regular
       intervals to the topic. The topic needs to be created before the budget
       is created; see https://cloud.google.com/billing/docs/how-
@@ -108,15 +112,16 @@ class GoogleCloudBillingBudgetsV1beta1AllUpdatesRule(_messages.Message):
       for a budget, otherwise, the API call will fail with PERMISSION_DENIED.
       See https://cloud.google.com/billing/docs/how-to/budgets-programmatic-
       notifications for more details on Pub/Sub roles and permissions.
-    schemaVersion: Required. The schema version of the notification sent to
+    schemaVersion: Optional. The schema version of the notification sent to
       `pubsub_topic`. Only "1.0" is accepted. It represents the JSON schema as
       defined in https://cloud.google.com/billing/docs/how-to/budgets-
       programmatic-notifications#notification_format
   """
 
-  monitoringNotificationChannels = _messages.StringField(1, repeated=True)
-  pubsubTopic = _messages.StringField(2)
-  schemaVersion = _messages.StringField(3)
+  disableDefaultIamRecipients = _messages.BooleanField(1)
+  monitoringNotificationChannels = _messages.StringField(2, repeated=True)
+  pubsubTopic = _messages.StringField(3)
+  schemaVersion = _messages.StringField(4)
 
 
 class GoogleCloudBillingBudgetsV1beta1Budget(_messages.Message):
@@ -349,9 +354,9 @@ class GoogleCloudBillingBudgetsV1beta1UpdateBudgetRequest(_messages.Message):
 class GoogleProtobufEmpty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance:      service Foo {
-  rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);     }  The
-  JSON representation for `Empty` is empty JSON object `{}`.
+  or the response type of an API method. For instance: service Foo { rpc
+  Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
+  representation for `Empty` is empty JSON object `{}`.
   """
 
 

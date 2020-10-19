@@ -24,6 +24,34 @@ class ClassItem(_messages.Message):
   value = _messages.StringField(1)
 
 
+class CreateCustomClassRequest(_messages.Message):
+  r"""Message sent by the client for the `CreateCustomClass` method.
+
+  Fields:
+    customClass: Required. The custom class to create.
+    customClassId: The ID to use for the custom class, which will become the
+      final component of the custom class' resource name. This value should be
+      4-63 characters, and valid characters are /a-z-/.
+  """
+
+  customClass = _messages.MessageField('CustomClass', 1)
+  customClassId = _messages.StringField(2)
+
+
+class CreatePhraseSetRequest(_messages.Message):
+  r"""Message sent by the client for the `CreatePhraseSet` method.
+
+  Fields:
+    phraseSet: Required. The phrase set to create.
+    phraseSetId: The ID to use for the phrase set, which will become the final
+      component of the phrase set's resource name. This value should be 4-63
+      characters, and valid characters are /a-z-/.
+  """
+
+  phraseSet = _messages.MessageField('PhraseSet', 1)
+  phraseSetId = _messages.StringField(2)
+
+
 class CustomClass(_messages.Message):
   r"""A set of words or phrases that represents a common concept likely to
   appear in your audio, for example a list of passenger ship names.
@@ -129,24 +157,22 @@ class Dataset(_messages.Message):
       '
     updateTime: Output only. The timestamp this dataset is last updated.
     uri: URI that points to a file in csv file where each row has following
-      format. <gs_path_to_audio>,<gs_path_to_transcript>,<label> label can be
-      HUMAN_TRANSCRIBED or MACHINE_TRANSCRIBED. Rows must comply to the
-      following to be valid: 1. Each row must have at least a label and
-      <gs_path_to_transcript> 2. If a row is marked HUMAN_TRANSCRIBED, then
-      you must specify both <gs_path_to_audio> and <gs_path_to_transcript>.
-      Only WAV file formats which encode linear 16-bit pulse-code modulation
-      (PCM) audio format are supported. The maximum audio file size is 500 MB.
-      Also note that the audio has to be single channel audio. 3. There has to
-      be at least 500 rows labelled HUMAN_TRANSCRIBED covering at least ~10K
-      words in order to get reliable word error rate results. 4. To create a
-      language model, you should provide at least 100,000 words in your
-      transcriptions as training data if you have conversational and captions
-      type of data. You should provide at least 10,000 words if you have short
-      utterances like voice commands and search type of use cases. Currently,
-      only Google Cloud Storage URIs are supported, which must be specified in
-      the following format: `gs://bucket_name/object_name` (other URI formats
-      will be ignored). For more information, see [Request
-      URIs](/storage/docs/reference-uris).
+      format. ,, label can be HUMAN_TRANSCRIBED or MACHINE_TRANSCRIBED. Rows
+      must comply to the following to be valid: 1. Each row must have at least
+      a label and 2. If a row is marked HUMAN_TRANSCRIBED, then you must
+      specify both and . Only WAV file formats which encode linear 16-bit
+      pulse-code modulation (PCM) audio format are supported. The maximum
+      audio file size is 500 MB. Also note that the audio has to be single
+      channel audio. 3. There has to be at least 500 rows labelled
+      HUMAN_TRANSCRIBED covering at least ~10K words in order to get reliable
+      word error rate results. 4. To create a language model, you should
+      provide at least 100,000 words in your transcriptions as training data
+      if you have conversational and captions type of data. You should provide
+      at least 10,000 words if you have short utterances like voice commands
+      and search type of use cases. Currently, only Google Cloud Storage URIs
+      are supported, which must be specified in the following format:
+      `gs://bucket_name/object_name` (other URI formats will be ignored). For
+      more information, see [Request URIs](/storage/docs/reference-uris).
     useLoggedData: If this is true, then use the previously logged data (for
       the project) The logs data for this project will be preprocessed and
       prepared for downstream pipelines (like training). All logs are logged
@@ -176,9 +202,9 @@ class DeployModelRequest(_messages.Message):
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance:      service Foo {
-  rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);     }  The
-  JSON representation for `Empty` is empty JSON object `{}`.
+  or the response type of an API method. For instance: service Foo { rpc
+  Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
+  representation for `Empty` is empty JSON object `{}`.
   """
 
 
@@ -371,8 +397,8 @@ class LongRunningRecognizeRequest(_messages.Message):
     config: Required. Provides information to the recognizer that specifies
       how to process the request.
     name: Use `model` field in RecognitionConfig instead.
-    outputConfig: Optional. If set this field configures how the recognizer
-      will output the final transcript.
+    outputConfig: Optional. Specifies an optional destination for the
+      recognition results.
   """
 
   audio = _messages.MessageField('RecognitionAudio', 1)
@@ -449,17 +475,17 @@ class Operation(_messages.Message):
   a network API call.
 
   Messages:
-    MetadataValue: Service-specific metadata associated with the operation.
-      It typically contains progress information and common metadata such as
-      create time. Some services might not provide such metadata.  Any method
+    MetadataValue: Service-specific metadata associated with the operation. It
+      typically contains progress information and common metadata such as
+      create time. Some services might not provide such metadata. Any method
       that returns a long-running operation should document the metadata type,
       if any.
-    ResponseValue: The normal response of the operation in case of success.
-      If the original method returns no data on success, such as `Delete`, the
-      response is `google.protobuf.Empty`.  If the original method is standard
-      `Get`/`Create`/`Update`, the response should be the resource.  For other
+    ResponseValue: The normal response of the operation in case of success. If
+      the original method returns no data on success, such as `Delete`, the
+      response is `google.protobuf.Empty`. If the original method is standard
+      `Get`/`Create`/`Update`, the response should be the resource. For other
       methods, the response should have the type `XxxResponse`, where `Xxx` is
-      the original method name.  For example, if the original method name is
+      the original method name. For example, if the original method name is
       `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.
 
   Fields:
@@ -468,29 +494,29 @@ class Operation(_messages.Message):
       `response` is available.
     error: The error result of the operation in case of failure or
       cancellation.
-    metadata: Service-specific metadata associated with the operation.  It
+    metadata: Service-specific metadata associated with the operation. It
       typically contains progress information and common metadata such as
-      create time. Some services might not provide such metadata.  Any method
+      create time. Some services might not provide such metadata. Any method
       that returns a long-running operation should document the metadata type,
       if any.
     name: The server-assigned name, which is only unique within the same
       service that originally returns it. If you use the default HTTP mapping,
       the `name` should be a resource name ending with
       `operations/{unique_id}`.
-    response: The normal response of the operation in case of success.  If the
+    response: The normal response of the operation in case of success. If the
       original method returns no data on success, such as `Delete`, the
-      response is `google.protobuf.Empty`.  If the original method is standard
-      `Get`/`Create`/`Update`, the response should be the resource.  For other
+      response is `google.protobuf.Empty`. If the original method is standard
+      `Get`/`Create`/`Update`, the response should be the resource. For other
       methods, the response should have the type `XxxResponse`, where `Xxx` is
-      the original method name.  For example, if the original method name is
+      the original method name. For example, if the original method name is
       `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.
   """
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class MetadataValue(_messages.Message):
-    r"""Service-specific metadata associated with the operation.  It typically
+    r"""Service-specific metadata associated with the operation. It typically
     contains progress information and common metadata such as create time.
-    Some services might not provide such metadata.  Any method that returns a
+    Some services might not provide such metadata. Any method that returns a
     long-running operation should document the metadata type, if any.
 
     Messages:
@@ -516,12 +542,12 @@ class Operation(_messages.Message):
 
   @encoding.MapUnrecognizedFields('additionalProperties')
   class ResponseValue(_messages.Message):
-    r"""The normal response of the operation in case of success.  If the
+    r"""The normal response of the operation in case of success. If the
     original method returns no data on success, such as `Delete`, the response
-    is `google.protobuf.Empty`.  If the original method is standard
-    `Get`/`Create`/`Update`, the response should be the resource.  For other
+    is `google.protobuf.Empty`. If the original method is standard
+    `Get`/`Create`/`Update`, the response should be the resource. For other
     methods, the response should have the type `XxxResponse`, where `Xxx` is
-    the original method name.  For example, if the original method name is
+    the original method name. For example, if the original method name is
     `TakeSnapshot()`, the inferred response type is `TakeSnapshotResponse`.
 
     Messages:
@@ -558,7 +584,7 @@ class Phrase(_messages.Message):
   the accuracy for specific words and phrases, for example, if specific
   commands are typically spoken by the user. This can also be used to add
   additional words to the vocabulary of the recognizer. See [usage
-  limits](https://cloud.google.com/speech-to-text/quotas#content).  List items
+  limits](https://cloud.google.com/speech-to-text/quotas#content). List items
   can also include pre-built or custom classes containing groups of words that
   represent common concepts that occur in natural language. For example,
   rather than providing a phrase hint for every month of the year (e.g. "i was
@@ -727,20 +753,15 @@ class RecognitionConfig(_messages.Message):
     model: Which model to select for the given request. Select the model best
       suited to your domain to get best results. If a model is not explicitly
       specified, then we auto-select a model based on the parameters in the
-      RecognitionConfig. <table>   <tr>     <td><b>Model</b></td>
-      <td><b>Description</b></td>   </tr>   <tr>
-      <td><code>command_and_search</code></td>     <td>Best for short queries
-      such as voice commands or voice search.</td>   </tr>   <tr>
-      <td><code>phone_call</code></td>     <td>Best for audio that originated
-      from a phone call (typically     recorded at an 8khz sampling
-      rate).</td>   </tr>   <tr>     <td><code>video</code></td>     <td>Best
-      for audio that originated from from video or includes multiple
-      speakers. Ideally the audio is recorded at a 16khz or greater
-      sampling rate. This is a premium model that costs more than the
-      standard rate.</td>   </tr>   <tr>     <td><code>default</code></td>
-      <td>Best for audio that is not one of the specific audio models.
-      For example, long-form audio. Ideally the audio is high-fidelity,
-      recorded at a 16khz or greater sampling rate.</td>   </tr> </table>
+      RecognitionConfig. *Model* *Description* command_and_search Best for
+      short queries such as voice commands or voice search. phone_call Best
+      for audio that originated from a phone call (typically recorded at an
+      8khz sampling rate). video Best for audio that originated from from
+      video or includes multiple speakers. Ideally the audio is recorded at a
+      16khz or greater sampling rate. This is a premium model that costs more
+      than the standard rate. default Best for audio that is not one of the
+      specific audio models. For example, long-form audio. Ideally the audio
+      is high-fidelity, recorded at a 16khz or greater sampling rate.
     profanityFilter: If set to `true`, the server will attempt to filter out
       profanities, replacing all but the initial character in each filtered
       word with asterisks, e.g. "f***". If set to `false` or omitted,
@@ -759,7 +780,7 @@ class RecognitionConfig(_messages.Message):
     useEnhanced: Set to true to use an enhanced model for speech recognition.
       If `use_enhanced` is set to true and the `model` field is not set, then
       an appropriate enhanced model is chosen if an enhanced model exists for
-      the audio.  If `use_enhanced` is true and an enhanced version of the
+      the audio. If `use_enhanced` is true and an enhanced version of the
       specified model does not exist, then the speech is recognized using the
       standard version of the specified model.
   """
@@ -803,6 +824,10 @@ class RecognitionConfig(_messages.Message):
         v1p1beta1. Support all standard MP3 bitrates (which range from 32-320
         kbps). When using this encoding, `sample_rate_hertz` has to match the
         sample rate of the file being used.
+      WEBM_OPUS: Opus encoded audio frames in WebM container
+        ([OggOpus](https://wiki.xiph.org/OggOpus)). This is a Beta features
+        and only available in v1p1beta1. `sample_rate_hertz` must be one of
+        8000, 12000, 16000, 24000, or 48000.
     """
     ENCODING_UNSPECIFIED = 0
     LINEAR16 = 1
@@ -813,6 +838,7 @@ class RecognitionConfig(_messages.Message):
     OGG_OPUS = 6
     SPEEX_WITH_HEADER_BYTE = 7
     MP3 = 8
+    WEBM_OPUS = 9
 
   adaptation = _messages.MessageField('SpeechAdaptation', 1)
   alternativeLanguageCodes = _messages.StringField(2, repeated=True)
@@ -854,7 +880,7 @@ class RecognitionMetadata(_messages.Message):
       court hearings from 2012".
     industryNaicsCodeOfAudio: The industry vertical to which this speech
       recognition request most closely applies. This is most indicative of the
-      topics contained in the audio.  Use the 6-digit NAICS code to identify
+      topics contained in the audio. Use the 6-digit NAICS code to identify
       the industry vertical - see https://www.naics.com/search/.
     interactionType: The use case most closely describing the audio content to
       be recognized.
@@ -863,11 +889,11 @@ class RecognitionMetadata(_messages.Message):
     obfuscatedId: Obfuscated (privacy-protected) ID of the user, to identify
       number of unique users using the service.
     originalMediaType: The original media the speech was recorded on.
-    originalMimeType: Mime type of the original audio file.  For example
+    originalMimeType: Mime type of the original audio file. For example
       `audio/m4a`, `audio/x-alaw-basic`, `audio/mp3`, `audio/3gpp`. A list of
       possible audio mime types is maintained at
       http://www.iana.org/assignments/media-types/media-types.xhtml#audio
-    recordingDeviceName: The device used to make the recording.  Examples
+    recordingDeviceName: The device used to make the recording. Examples
       'Nexus 5X' or 'Polycom SoundStation IP 6000' or 'POTS' or 'VoIP' or
       'Cardioid Microphone'.
     recordingDeviceType: The type of device the speech was recorded with.
@@ -1001,16 +1027,15 @@ class RefreshDataRequest(_messages.Message):
 
   Fields:
     uri: Required. URI that points to a file in csv file where each row has
-      following format. <gs_path_to_audio>,<gs_path_to_transcript>,<label>
-      label can be HUMAN_TRANSCRIBED or MACHINE_TRANSCRIBED. Rows must comply
-      to the following to be valid: 1. Each row must have at least a label and
-      <gs_path_to_transcript> 2. If a row is marked HUMAN_TRANSCRIBED, then
-      you must specify both <gs_path_to_audio> and <gs_path_to_transcript>.
-      Only WAV file formats which encode linear 16-bit pulse-code modulation
-      (PCM) audio format are supported. The maximum audio file size is 500 MB.
-      Also note that the audio has to be single channel audio. 3. There has to
-      be at least 500 rows labelled HUMAN_TRANSCRIBED covering at least ~10K
-      words in order to get reliable word error rate results. 4. To create a
+      following format. ,, label can be HUMAN_TRANSCRIBED or
+      MACHINE_TRANSCRIBED. Rows must comply to the following to be valid: 1.
+      Each row must have at least a label and 2. If a row is marked
+      HUMAN_TRANSCRIBED, then you must specify both and . Only WAV file
+      formats which encode linear 16-bit pulse-code modulation (PCM) audio
+      format are supported. The maximum audio file size is 500 MB. Also note
+      that the audio has to be single channel audio. 3. There has to be at
+      least 500 rows labelled HUMAN_TRANSCRIBED covering at least ~10K words
+      in order to get reliable word error rate results. 4. To create a
       language model, you should provide at least 100,000 words in your
       transcriptions as training data if you have conversational and captions
       type of data. You should provide at least 10,000 words if you have short
@@ -1087,7 +1112,7 @@ class SpeechContext(_messages.Message):
       example, if specific commands are typically spoken by the user. This can
       also be used to add additional words to the vocabulary of the
       recognizer. See [usage limits](https://cloud.google.com/speech-to-
-      text/quotas#content).  List items can also be set to classes for groups
+      text/quotas#content). List items can also be set to classes for groups
       of words that represent common concepts that occur in natural language.
       For example, rather than providing phrase hints for every month of the
       year, using the $MONTH class improves the likelihood of correctly
@@ -1147,27 +1172,23 @@ class SpeechProjectsLocationsCustomClassesCreateRequest(_messages.Message):
   r"""A SpeechProjectsLocationsCustomClassesCreateRequest object.
 
   Fields:
-    customClass: A CustomClass resource to be passed as the request body.
-    customClassId: The ID to use for the custom class, which will become the
-      final component of the custom class' resource name.  This value should
-      be 4-63 characters, and valid characters are /a-z-/.
+    createCustomClassRequest: A CreateCustomClassRequest resource to be passed
+      as the request body.
     parent: Required. The parent resource where this custom class will be
       created. Format:
       {api_version}/projects/{project}/locations/{location}/customClasses
   """
 
-  customClass = _messages.MessageField('CustomClass', 1)
-  customClassId = _messages.StringField(2)
-  parent = _messages.StringField(3, required=True)
+  createCustomClassRequest = _messages.MessageField('CreateCustomClassRequest', 1)
+  parent = _messages.StringField(2, required=True)
 
 
 class SpeechProjectsLocationsCustomClassesDeleteRequest(_messages.Message):
   r"""A SpeechProjectsLocationsCustomClassesDeleteRequest object.
 
   Fields:
-    name: Required. The name of the custom class to delete. Format:  {api_vers
-      ion}/projects/{project}/locations/{location}/customClasses/{custom_class
-      }
+    name: Required. The name of the custom class to delete. Format: {api_versi
+      on}/projects/{project}/locations/{location}/customClasses/{custom_class}
   """
 
   name = _messages.StringField(1, required=True)
@@ -1177,9 +1198,9 @@ class SpeechProjectsLocationsCustomClassesGetRequest(_messages.Message):
   r"""A SpeechProjectsLocationsCustomClassesGetRequest object.
 
   Fields:
-    name: Required. The name of the custom class to retrieve. Format:  {api_ve
-      rsion}/projects/{project}/locations/{location}/customClasses/{custom_cla
-      ss}
+    name: Required. The name of the custom class to retrieve. Format: {api_ver
+      sion}/projects/{project}/locations/{location}/customClasses/{custom_clas
+      s}
   """
 
   name = _messages.StringField(1, required=True)
@@ -1194,8 +1215,8 @@ class SpeechProjectsLocationsCustomClassesListRequest(_messages.Message):
       will be returned. The maximum value is 1000; values above 1000 will be
       coerced to 1000.
     pageToken: A page token, received from a previous `ListCustomClass` call.
-      Provide this to retrieve the subsequent page.  When paginating, all
-      other parameters provided to `ListCustomClass` must match the call that
+      Provide this to retrieve the subsequent page. When paginating, all other
+      parameters provided to `ListCustomClass` must match the call that
       provided the page token.
     parent: Required. The parent, which owns this collection of custom
       classes. Format:
@@ -1426,26 +1447,23 @@ class SpeechProjectsLocationsPhraseSetsCreateRequest(_messages.Message):
   r"""A SpeechProjectsLocationsPhraseSetsCreateRequest object.
 
   Fields:
+    createPhraseSetRequest: A CreatePhraseSetRequest resource to be passed as
+      the request body.
     parent: Required. The parent resource where this phrase set will be
       created. Format:
       {api_version}/projects/{project}/locations/{location}/phraseSets
-    phraseSet: A PhraseSet resource to be passed as the request body.
-    phraseSetId: The ID to use for the phrase set, which will become the final
-      component of the phrase set's resource name.  This value should be 4-63
-      characters, and valid characters are /a-z-/.
   """
 
-  parent = _messages.StringField(1, required=True)
-  phraseSet = _messages.MessageField('PhraseSet', 2)
-  phraseSetId = _messages.StringField(3)
+  createPhraseSetRequest = _messages.MessageField('CreatePhraseSetRequest', 1)
+  parent = _messages.StringField(2, required=True)
 
 
 class SpeechProjectsLocationsPhraseSetsDeleteRequest(_messages.Message):
   r"""A SpeechProjectsLocationsPhraseSetsDeleteRequest object.
 
   Fields:
-    name: Required. The name of the phrase set to delete. Format:  {api_versio
-      n}/projects/{project}/locations/{location}/phraseSets/{phrase_set}
+    name: Required. The name of the phrase set to delete. Format: {api_version
+      }/projects/{project}/locations/{location}/phraseSets/{phrase_set}
   """
 
   name = _messages.StringField(1, required=True)
@@ -1455,8 +1473,8 @@ class SpeechProjectsLocationsPhraseSetsGetRequest(_messages.Message):
   r"""A SpeechProjectsLocationsPhraseSetsGetRequest object.
 
   Fields:
-    name: Required. The name of the phrase set to retrieve. Format:  {api_vers
-      ion}/projects/{project}/locations/{location}/phraseSets/{phrase_set}
+    name: Required. The name of the phrase set to retrieve. Format: {api_versi
+      on}/projects/{project}/locations/{location}/phraseSets/{phrase_set}
   """
 
   name = _messages.StringField(1, required=True)
@@ -1471,9 +1489,9 @@ class SpeechProjectsLocationsPhraseSetsListRequest(_messages.Message):
       will be returned. The maximum value is 1000; values above 1000 will be
       coerced to 1000.
     pageToken: A page token, received from a previous `ListPhraseSet` call.
-      Provide this to retrieve the subsequent page.  When paginating, all
-      other parameters provided to `ListPhraseSet` must match the call that
-      provided the page token.
+      Provide this to retrieve the subsequent page. When paginating, all other
+      parameters provided to `ListPhraseSet` must match the call that provided
+      the page token.
     parent: Required. The parent, which owns this collection of phrase set.
       Format: {api_version}/projects/{project}/locations/{location}/phraseSets
   """
@@ -1609,7 +1627,7 @@ class Status(_messages.Message):
   r"""The `Status` type defines a logical error model that is suitable for
   different programming environments, including REST APIs and RPC APIs. It is
   used by [gRPC](https://github.com/grpc). Each `Status` message contains
-  three pieces of data: error code, error message, and error details.  You can
+  three pieces of data: error code, error message, and error details. You can
   find out more about this error model and how to work with it in the [API
   Design Guide](https://cloud.google.com/apis/design/errors).
 
@@ -1618,7 +1636,7 @@ class Status(_messages.Message):
 
   Fields:
     code: The status code, which should be an enum value of google.rpc.Code.
-    details: A list of messages that carry the error details.  There is a
+    details: A list of messages that carry the error details. There is a
       common set of message types for APIs to use.
     message: A developer-facing error message, which should be in English. Any
       user-facing error message should be localized and sent in the
@@ -1657,14 +1675,11 @@ class Status(_messages.Message):
 
 
 class TranscriptOutputConfig(_messages.Message):
-  r"""Provides information to the recognizer that specifies the transcript
-  output.
+  r"""Specifies an optional destination for the recognition results.
 
   Fields:
-    gcsUri: Specifies a Cloud Storage URI for the final transcript. Returns
-      INVALID_ARGUMENT if not in the format: `gs://bucket_name/object_name`.
-      If the write attempt fails, relevant error information will be stored in
-      the response object.
+    gcsUri: Specifies a Cloud Storage URI for the recognition results. Must be
+      specified in the format: `gs://bucket_name/object_name`
   """
 
   gcsUri = _messages.StringField(1)

@@ -24,6 +24,7 @@ import collections
 from googlecloudsdk.api_lib.events import iam_util
 from googlecloudsdk.api_lib.events import trigger
 from googlecloudsdk.calliope import arg_parsers
+from googlecloudsdk.calliope import base
 from googlecloudsdk.calliope import exceptions as calliope_exceptions
 from googlecloudsdk.command_lib.events import exceptions
 from googlecloudsdk.command_lib.iam import iam_util as core_iam_util
@@ -43,11 +44,13 @@ def AddSourceFlag(parser):
       help='Events source kind by which to filter results.')
 
 
-def AddEventTypePositionalArg(parser):
+def AddEventTypePositionalArg(parser, release_track):
   """Adds event type positional arg."""
-  parser.add_argument(
-      'event_type',
-      help='Type of event (e.g. com.google.cloud.auditlog.event).')
+  if release_track == base.ReleaseTrack.ALPHA:
+    help_text = 'Type of event (e.g. com.google.cloud.auditlog.event).'
+  else:
+    help_text = 'Type of event (e.g. google.cloud.audit.log.v1.written).'
+  parser.add_argument('event_type', help=help_text)
 
 
 def AddTargetServiceFlag(parser, required=False):
@@ -59,12 +62,13 @@ def AddTargetServiceFlag(parser, required=False):
       'events should be received.')
 
 
-def AddEventTypeFlagArg(parser):
+def AddEventTypeFlagArg(parser, release_track):
   """Adds event type flag arg."""
-  parser.add_argument(
-      '--type',
-      required=True,
-      help='Type of event (e.g. com.google.cloud.auditlog.event).')
+  if release_track == base.ReleaseTrack.ALPHA:
+    help_text = 'Type of event (e.g. com.google.cloud.auditlog.event).'
+  else:
+    help_text = 'Type of event (e.g. google.cloud.audit.log.v1.written).'
+  parser.add_argument('--type', required=True, help=help_text)
 
 
 def AddBrokerFlag(parser):
@@ -83,7 +87,7 @@ def AddBrokerArg(parser):
       help='Name of the Broker to create.')
 
 
-def AddServiceAccountFlag(parser):
+def AddControlPlaneServiceAccountFlag(parser):
   """Adds service account flag."""
   parser.add_argument(
       '--service-account',
@@ -91,7 +95,27 @@ def AddServiceAccountFlag(parser):
       help='Email address of an existing IAM service account which '
       'represents the identity of the internal events operator. If no '
       'service account is provided, a default service account ({}) will be '
-      'created.'.format(iam_util.DEFAULT_EVENTS_SERVICE_ACCOUNT))
+      'created.'.format(iam_util.EVENTS_CONTROL_PLANE_SERVICE_ACCOUNT))
+
+
+def AddBrokerServiceAccountFlag(parser):
+  """Adds broker service account flag."""
+  parser.add_argument(
+      '--broker-service-account',
+      type=core_iam_util.GetIamAccountFormatValidator(),
+      help='Email address of an existing events broker IAM service account. '
+      'If no service account is provided, a default service account ({}) will '
+      'be created.'.format(iam_util.EVENTS_BROKER_SERVICE_ACCOUNT))
+
+
+def AddSourcesServiceAccountFlag(parser):
+  """Adds sources service account flag."""
+  parser.add_argument(
+      '--sources-service-account',
+      type=core_iam_util.GetIamAccountFormatValidator(),
+      help='Email address of an existing events sources IAM service account. '
+      'If no service account is provided, a default service account ({}) will '
+      'be created.'.format(iam_util.EVENTS_SOURCES_SERVICE_ACCOUNT))
 
 
 def AddCustomEventTypeFlag(parser):
@@ -160,6 +184,19 @@ def AddSecretsFlag(parser):
       'reference. Parameter names must be one of the secret parameters shown '
       'when describing the event type.',
       metavar='PARAMETER=NAME:KEY')
+
+
+_COPY_DEFAULT_SECRET = 'copy-default-secret'
+
+
+def AddCopyDefaultSecret(parser):
+  """Adds copy default secret flag."""
+  parser.add_argument(
+      '--{}'.format(_COPY_DEFAULT_SECRET),
+      action='store_true',
+      required=True,
+      help='Copy default secret google-cloud-sources-key from cloud-run-events'
+      ' namespace.')
 
 
 def _ParseSecretParameters(args):

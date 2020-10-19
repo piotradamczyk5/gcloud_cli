@@ -353,6 +353,14 @@ CLOUD_SQL_MACHINE_TYPE = base.Argument(
     Cloud SQL machine type used by the Airflow database.
     """)
 
+WEB_SERVER_MACHINE_TYPE = base.Argument(
+    '--web-server-machine-type',
+    type=str,
+    help="""\
+    machine type used by the Airflow web server. The list of available machine
+    types is available here: https://cloud.google.com/composer/pricing.
+    """)
+
 
 def _IsValidIpv4CidrBlock(ipv4_cidr_block):
   """Validates that IPV4 CIDR block arg has valid format.
@@ -522,6 +530,27 @@ CLOUD_SQL_IPV4_CIDR_FLAG = base.Argument(
     Cannot be specified unless '--enable-private-environment' is also
     specified.
     """)
+
+
+def GetAndValidateKmsEncryptionKey(args):
+  """Validates the KMS key name.
+
+  Args:
+    args: list of all the arguments
+
+  Returns:
+    string, a fully qualified KMS resource name
+
+  Raises:
+    exceptions.InvalidArgumentException: key name not fully specified
+  """
+  kms_ref = args.CONCEPTS.kms_key.Parse()
+  if kms_ref:
+    return kms_ref.RelativeName()
+  for keyword in ['kms-key', 'kms-keyring', 'kms-location', 'kms-project']:
+    if getattr(args, keyword.replace('-', '_'), None):
+      raise exceptions.InvalidArgumentException(
+          '--kms-key', 'Encryption key not fully specified.')
 
 
 def AddImportSourceFlag(parser, folder):
@@ -728,8 +757,7 @@ def AddIpAliasEnvironmentFlags(update_type_group):
   SERVICES_SECONDARY_RANGE_NAME_FLAG.AddToParser(group)
 
 
-def AddPrivateIpEnvironmentFlags(update_type_group,
-                                 web_server_cloud_sql_flags):
+def AddPrivateIpEnvironmentFlags(update_type_group):
   """Adds flags related to private clusters to parser.
 
   Private cluster flags are related to similar flags found within GKE SDK:
@@ -737,15 +765,13 @@ def AddPrivateIpEnvironmentFlags(update_type_group,
 
   Args:
     update_type_group: argument group, the group to which flag should be added.
-    web_server_cloud_sql_flags: boolean, indicates if API includes new flags.
   """
   group = update_type_group.add_group(help='Private Clusters')
   ENABLE_PRIVATE_ENVIRONMENT_FLAG.AddToParser(group)
   ENABLE_PRIVATE_ENDPOINT_FLAG.AddToParser(group)
   MASTER_IPV4_CIDR_FLAG.AddToParser(group)
-  if web_server_cloud_sql_flags:
-    WEB_SERVER_IPV4_CIDR_FLAG.AddToParser(group)
-    CLOUD_SQL_IPV4_CIDR_FLAG.AddToParser(group)
+  WEB_SERVER_IPV4_CIDR_FLAG.AddToParser(group)
+  CLOUD_SQL_IPV4_CIDR_FLAG.AddToParser(group)
 
 
 def AddPypiUpdateFlagsToGroup(update_type_group):

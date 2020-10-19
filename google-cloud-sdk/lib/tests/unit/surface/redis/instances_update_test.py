@@ -247,12 +247,14 @@ class UpdateTestBeta(UpdateTest):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.BETA
+    self.api_version = 'v1beta1'
 
 
 class UpdateTestAlpha(UpdateTestBeta):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.ALPHA
+    self.api_version = 'v1alpha1'
 
 
 class RemoveRedisConfigsTest(InstancesUpdateUnitTestBase):
@@ -356,12 +358,14 @@ class RemoveRedisConfigsTestBeta(RemoveRedisConfigsTest):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.BETA
+    self.api_version = 'v1beta1'
 
 
 class RemoveRedisConfigsTestAlpha(RemoveRedisConfigsTestBeta):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.ALPHA
+    self.api_version = 'v1alpha1'
 
 
 class LabelsTest(InstancesUpdateUnitTestBase):
@@ -474,12 +478,14 @@ class LabelsTestBeta(LabelsTest):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.BETA
+    self.api_version = 'v1beta1'
 
 
 class LabelsTestAlpha(LabelsTestBeta):
 
   def PreSetUp(self):
     self.track = calliope_base.ReleaseTrack.ALPHA
+    self.api_version = 'v1alpha1'
 
 
 if __name__ == '__main__':

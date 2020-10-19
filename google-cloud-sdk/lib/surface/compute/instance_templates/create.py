@@ -38,6 +38,7 @@ from googlecloudsdk.command_lib.compute.instance_templates import service_proxy_
 from googlecloudsdk.command_lib.compute.instances import flags as instances_flags
 from googlecloudsdk.command_lib.compute.sole_tenancy import flags as sole_tenancy_flags
 from googlecloudsdk.command_lib.compute.sole_tenancy import util as sole_tenancy_util
+from googlecloudsdk.command_lib.util.apis import arg_utils
 from googlecloudsdk.command_lib.util.args import labels_util
 
 import six
@@ -52,25 +53,24 @@ _INSTANTIATE_FROM_VALUES = [
 ]
 
 
-def _CommonArgs(
-    parser,
-    release_track,
-    support_source_instance,
-    support_local_ssd_size=False,
-    support_kms=False,
-    support_resource_policy=False,
-    support_min_node_cpu=False,
-    support_location_hint=False,
-    support_multi_writer=True
-):
+def _CommonArgs(parser,
+                release_track,
+                support_source_instance,
+                support_local_ssd_size=False,
+                support_kms=False,
+                support_resource_policy=False,
+                support_location_hint=False,
+                support_multi_writer=True):
   """Adding arguments applicable for creating instance templates."""
   parser.display_info.AddFormat(instance_templates_flags.DEFAULT_LIST_FORMAT)
   metadata_utils.AddMetadataArgs(parser)
   instances_flags.AddDiskArgs(parser, enable_kms=support_kms)
-  instances_flags.AddCreateDiskArgs(parser, enable_kms=support_kms,
-                                    resource_policy=support_resource_policy,
-                                    support_boot=True,
-                                    support_multi_writer=support_multi_writer)
+  instances_flags.AddCreateDiskArgs(
+      parser,
+      enable_kms=support_kms,
+      resource_policy=support_resource_policy,
+      support_boot=True,
+      support_multi_writer=support_multi_writer)
   if support_local_ssd_size:
     instances_flags.AddLocalSsdArgsWithSize(parser)
   else:
@@ -92,19 +92,17 @@ def _CommonArgs(
   labels_util.AddCreateLabelsFlags(parser)
   instances_flags.AddNetworkTierArgs(parser, instance=True)
   instances_flags.AddPrivateNetworkIpArgs(parser)
+  instances_flags.AddMinNodeCpuArg(parser)
+
+  instance_templates_flags.AddServiceProxyConfigArgs(parser)
 
   sole_tenancy_flags.AddNodeAffinityFlagToParser(parser)
-
-  if support_min_node_cpu:
-    instances_flags.AddMinNodeCpuArg(parser)
 
   if support_location_hint:
     instances_flags.AddLocationHintArg(parser)
 
   flags.AddRegionFlag(
-      parser,
-      resource_type='subnetwork',
-      operation_type='attach')
+      parser, resource_type='subnetwork', operation_type='attach')
 
   parser.add_argument(
       '--description',
@@ -123,8 +121,7 @@ def _CommonArgs(
                 'device-name': str,
                 'instantiate-from': str,
                 'custom-image': str,
-            },
-        ),
+            },),
         metavar='PROPERTY=VALUE',
         action='append',
         help="""\
@@ -160,7 +157,10 @@ The type of reservation for instances created from this template.
   parser.display_info.AddCacheUpdater(completers.InstanceTemplatesCompleter)
 
 
-def _ValidateInstancesFlags(args, support_kms=False,):
+def _ValidateInstancesFlags(
+    args,
+    support_kms=False,
+):
   """Validate flags for instance template that affects instance creation.
 
   Args:
@@ -178,8 +178,8 @@ def _ValidateInstancesFlags(args, support_kms=False,):
   instances_flags.ValidateReservationAffinityGroup(args)
 
 
-def _AddSourceInstanceToTemplate(
-    compute_api, args, instance_template, support_source_instance):
+def _AddSourceInstanceToTemplate(compute_api, args, instance_template,
+                                 support_source_instance):
   """Set the source instance for the template."""
 
   if not support_source_instance or not args.source_instance:
@@ -281,7 +281,8 @@ def PackageLabels(labels_cls, labels):
   # Sorted for test stability
   return labels_cls(additionalProperties=[
       labels_cls.AdditionalProperty(key=key, value=value)
-      for key, value in sorted(six.iteritems(labels))])
+      for key, value in sorted(six.iteritems(labels))
+  ])
 
 
 # Function copied from labels_util.
@@ -384,9 +385,10 @@ def _RunCreate(compute_api,
                args,
                support_source_instance,
                support_kms=False,
-               support_min_node_cpu=False,
                support_confidential_compute=False,
-               support_location_hint=False):
+               support_location_hint=False,
+               support_post_key_revocation_action_type=False,
+               support_enable_nested_virtualization=False):
   """Common routine for creating instance template.
 
   This is shared between various release tracks.
@@ -397,17 +399,18 @@ def _RunCreate(compute_api,
         arguments specified in the .Args() method.
       support_source_instance: indicates whether source instance is supported.
       support_kms: Indicate whether KMS is integrated or not.
-      support_min_node_cpu: Indicate whether the --min-node-cpu flag for
-        sole tenancy overcommit is supported.
       support_confidential_compute: Indicate whether confidential compute is
         supported.
       support_location_hint: Indicate whether location hint is supported.
+      support_post_key_revocation_action_type: Indicate whether
+        post_key_revocation_action_type is supported.
+      support_enable_nested_virtualization: Indicate whether enabling and
+        disabling nested virtualization is supported.
 
   Returns:
       A resource object dispatched by display.Displayer().
   """
-  _ValidateInstancesFlags(
-      args, support_kms=support_kms)
+  _ValidateInstancesFlags(args, support_kms=support_kms)
   instances_flags.ValidateNetworkTierArgs(args)
 
   instance_templates_flags.ValidateServiceProxyFlags(args)
@@ -418,8 +421,7 @@ def _RunCreate(compute_api,
   utils.WarnIfDiskSizeIsTooSmall(boot_disk_size_gb, args.boot_disk_type)
 
   instance_template_ref = (
-      Create.InstanceTemplateArg.ResolveAsResource(
-          args, compute_api.resources))
+      Create.InstanceTemplateArg.ResolveAsResource(args, compute_api.resources))
 
   AddScopesForServiceProxy(args)
   AddServiceProxyArgsToMetadata(args)
@@ -449,8 +451,8 @@ def _RunCreate(compute_api,
             region=args.region,
             subnet=args.subnet,
             address=(instance_template_utils.EPHEMERAL_ADDRESS
-                     if not args.no_address and not args.address
-                     else args.address),
+                     if not args.no_address and not args.address else
+                     args.address),
             network_tier=network_tier)
     ]
 
@@ -466,10 +468,6 @@ def _RunCreate(compute_api,
   node_affinities = sole_tenancy_util.GetSchedulingNodeAffinityListFromArgs(
       args, client.messages)
 
-  min_node_cpu = None
-  if support_min_node_cpu and args.IsSpecified('min_node_cpu'):
-    min_node_cpu = args.min_node_cpu
-
   location_hint = None
   if support_location_hint and args.IsSpecified('location_hint'):
     location_hint = args.location_hint
@@ -480,7 +478,7 @@ def _RunCreate(compute_api,
       preemptible=args.preemptible,
       restart_on_failure=args.restart_on_failure,
       node_affinities=node_affinities,
-      min_node_cpu=min_node_cpu,
+      min_node_cpu=args.min_node_cpu,
       location_hint=location_hint)
 
   if args.no_service_account:
@@ -531,8 +529,11 @@ def _RunCreate(compute_api,
 
   persistent_create_disks = (
       instance_template_utils.CreatePersistentCreateDiskMessages(
-          client, compute_api.resources, instance_template_ref.project,
-          getattr(args, 'create_disk', []), support_kms=support_kms))
+          client,
+          compute_api.resources,
+          instance_template_ref.project,
+          getattr(args, 'create_disk', []),
+          support_kms=support_kms))
 
   if create_boot_disk:
     boot_disk_list = [
@@ -544,7 +545,8 @@ def _RunCreate(compute_api,
             disk_size_gb=boot_disk_size_gb,
             image_uri=image_uri,
             kms_args=args,
-            support_kms=support_kms)]
+            support_kms=support_kms)
+    ]
   else:
     boot_disk_list = []
 
@@ -562,8 +564,7 @@ def _RunCreate(compute_api,
 
   disks = (
       boot_disk_list + persistent_disks + persistent_create_disks +
-      local_nvdimms + local_ssds
-  )
+      local_nvdimms + local_ssds)
 
   machine_type = instance_utils.InterpretMachineType(
       machine_type=args.machine_type,
@@ -602,21 +603,32 @@ def _RunCreate(compute_api,
     instance_template.properties.confidentialInstanceConfig = (
         confidential_instance_config_message)
 
+  if support_post_key_revocation_action_type and args.IsSpecified(
+      'post_key_revocation_action_type'):
+    instance_template.properties.postKeyRevocationActionType = arg_utils.ChoiceToEnum(
+        args.post_key_revocation_action_type, client.messages.InstanceProperties
+        .PostKeyRevocationActionTypeValueValuesEnum)
+
   if args.private_ipv6_google_access_type is not None:
     instance_template.properties.privateIpv6GoogleAccess = (
         instances_flags.GetPrivateIpv6GoogleAccessTypeFlagMapperForTemplate(
             client.messages).GetEnumForChoice(
                 args.private_ipv6_google_access_type))
 
+  if (support_enable_nested_virtualization and
+      args.enable_nested_virtualization is not None):
+    instance_template.properties.advancedMachineFeatures = (
+        instance_utils.CreateAdvancedMachineFeaturesMessage(
+            client.messages, args.enable_nested_virtualization))
+
   request = client.messages.ComputeInstanceTemplatesInsertRequest(
-      instanceTemplate=instance_template,
-      project=instance_template_ref.project)
+      instanceTemplate=instance_template, project=instance_template_ref.project)
 
   request.instanceTemplate.properties.labels = ParseCreateArgsWithServiceProxy(
       args, client.messages.InstanceProperties.LabelsValue)
 
-  _AddSourceInstanceToTemplate(
-      compute_api, args, instance_template, support_source_instance)
+  _AddSourceInstanceToTemplate(compute_api, args, instance_template,
+                               support_source_instance)
 
   return client.MakeRequests([(client.apitools_client.instanceTemplates,
                                'Insert', request)])
@@ -638,8 +650,9 @@ class Create(base.CreateCommand):
   """
   _support_source_instance = True
   _support_kms = True
-  _support_min_node_cpu = False
   _support_location_hint = False
+  _support_post_key_revocation_action_type = False
+  _support_enable_nested_virtualization = False
 
   @classmethod
   def Args(cls, parser):
@@ -648,10 +661,8 @@ class Create(base.CreateCommand):
         release_track=base.ReleaseTrack.GA,
         support_source_instance=cls._support_source_instance,
         support_kms=cls._support_kms,
-        support_min_node_cpu=cls._support_min_node_cpu,
         support_location_hint=cls._support_location_hint,
-        support_multi_writer=False
-    )
+        support_multi_writer=False)
     instances_flags.AddMinCpuPlatformArgs(parser, base.ReleaseTrack.GA)
     instances_flags.AddPrivateIpv6GoogleAccessArgForTemplate(
         parser, utils.COMPUTE_GA_API_VERSION)
@@ -661,7 +672,7 @@ class Create(base.CreateCommand):
 
     Args:
       args: argparse.Namespace, An object that contains the values for the
-          arguments specified in the .Args() method.
+        arguments specified in the .Args() method.
 
     Returns:
       A resource object dispatched by display.Displayer().
@@ -671,8 +682,11 @@ class Create(base.CreateCommand):
         args,
         support_source_instance=self._support_source_instance,
         support_kms=self._support_kms,
-        support_min_node_cpu=self._support_min_node_cpu,
-        support_location_hint=self._support_location_hint)
+        support_location_hint=self._support_location_hint,
+        support_post_key_revocation_action_type=self
+        ._support_post_key_revocation_action_type,
+        support_enable_nested_virtualization=self
+        ._support_enable_nested_virtualization)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.BETA)
@@ -692,9 +706,10 @@ class CreateBeta(Create):
   _support_source_instance = True
   _support_kms = True
   _support_resource_policy = True
-  _support_min_node_cpu = True
   _support_location_hint = False
   _support_confidential_compute = True
+  _support_post_key_revocation_action_type = False
+  _support_enable_nested_virtualization = False
 
   @classmethod
   def Args(cls, parser):
@@ -705,21 +720,18 @@ class CreateBeta(Create):
         support_source_instance=cls._support_source_instance,
         support_kms=cls._support_kms,
         support_resource_policy=cls._support_resource_policy,
-        support_min_node_cpu=cls._support_min_node_cpu,
-        support_location_hint=cls._support_location_hint
-    )
+        support_location_hint=cls._support_location_hint)
     instances_flags.AddMinCpuPlatformArgs(parser, base.ReleaseTrack.BETA)
     instances_flags.AddPrivateIpv6GoogleAccessArgForTemplate(
         parser, utils.COMPUTE_BETA_API_VERSION)
     instances_flags.AddConfidentialComputeArgs(parser)
-    instance_templates_flags.AddServiceProxyConfigArgs(parser)
 
   def Run(self, args):
     """Creates and runs an InstanceTemplates.Insert request.
 
     Args:
       args: argparse.Namespace, An object that contains the values for the
-          arguments specified in the .Args() method.
+        arguments specified in the .Args() method.
 
     Returns:
       A resource object dispatched by display.Displayer().
@@ -729,9 +741,12 @@ class CreateBeta(Create):
         args=args,
         support_source_instance=self._support_source_instance,
         support_kms=self._support_kms,
-        support_min_node_cpu=self._support_min_node_cpu,
         support_location_hint=self._support_location_hint,
-        support_confidential_compute=self._support_confidential_compute)
+        support_confidential_compute=self._support_confidential_compute,
+        support_post_key_revocation_action_type=self
+        ._support_post_key_revocation_action_type,
+        support_enable_nested_virtualization=self
+        ._support_enable_nested_virtualization)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
@@ -751,9 +766,10 @@ class CreateAlpha(Create):
   _support_source_instance = True
   _support_kms = True
   _support_resource_policy = True
-  _support_min_node_cpu = True
   _support_confidential_compute = True
   _support_location_hint = True
+  _support_post_key_revocation_action_type = True
+  _support_enable_nested_virtualization = True
 
   @classmethod
   def Args(cls, parser):
@@ -764,22 +780,21 @@ class CreateAlpha(Create):
         support_source_instance=cls._support_source_instance,
         support_kms=cls._support_kms,
         support_resource_policy=cls._support_resource_policy,
-        support_min_node_cpu=cls._support_min_node_cpu,
-        support_location_hint=cls._support_location_hint
-    )
+        support_location_hint=cls._support_location_hint)
     instances_flags.AddLocalNvdimmArgs(parser)
     instances_flags.AddMinCpuPlatformArgs(parser, base.ReleaseTrack.ALPHA)
     instances_flags.AddConfidentialComputeArgs(parser)
-    instance_templates_flags.AddServiceProxyConfigArgs(parser)
     instances_flags.AddPrivateIpv6GoogleAccessArgForTemplate(
         parser, utils.COMPUTE_ALPHA_API_VERSION)
+    instances_flags.AddPostKeyRevocationActionTypeArgs(parser)
+    instances_flags.AddNestedVirtualizationArgs(parser)
 
   def Run(self, args):
     """Creates and runs an InstanceTemplates.Insert request.
 
     Args:
       args: argparse.Namespace, An object that contains the values for the
-          arguments specified in the .Args() method.
+        arguments specified in the .Args() method.
 
     Returns:
       A resource object dispatched by display.Displayer().
@@ -789,9 +804,12 @@ class CreateAlpha(Create):
         args=args,
         support_source_instance=self._support_source_instance,
         support_kms=self._support_kms,
-        support_min_node_cpu=self._support_min_node_cpu,
         support_confidential_compute=self._support_confidential_compute,
-        support_location_hint=self._support_location_hint)
+        support_location_hint=self._support_location_hint,
+        support_post_key_revocation_action_type=self
+        ._support_post_key_revocation_action_type,
+        support_enable_nested_virtualization=self
+        ._support_enable_nested_virtualization)
 
 
 DETAILED_HELP = {
@@ -810,6 +828,5 @@ DETAILED_HELP = {
           $ {command} INSTANCE-TEMPLATE --custom-vm-type=n2 --custom-cpu=2 --custom-memory=9GB
         """
 }
-
 
 Create.detailed_help = DETAILED_HELP

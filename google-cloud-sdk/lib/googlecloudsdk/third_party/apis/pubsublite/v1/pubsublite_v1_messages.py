@@ -26,6 +26,47 @@ class Capacity(_messages.Message):
   subscribeMibPerSec = _messages.IntegerField(2, variant=_messages.Variant.INT32)
 
 
+class ComputeMessageStatsRequest(_messages.Message):
+  r"""Compute statistics about a range of messages in a given topic and
+  partition.
+
+  Fields:
+    endCursor: The exclusive end of the range. The range is empty if
+      end_cursor <= start_cursor. Specifying a start_cursor before the first
+      message and an end_cursor after the last message will retrieve all
+      messages.
+    partition: Required. The partition for which we should compute message
+      stats.
+    startCursor: The inclusive start of the range.
+  """
+
+  endCursor = _messages.MessageField('Cursor', 1)
+  partition = _messages.IntegerField(2)
+  startCursor = _messages.MessageField('Cursor', 3)
+
+
+class ComputeMessageStatsResponse(_messages.Message):
+  r"""Response containing stats for messages in the requested topic and
+  partition.
+
+  Fields:
+    messageBytes: The number of quota bytes accounted to these messages.
+    messageCount: The count of messages.
+    minimumEventTime: The minimum event timestamp across these messages. For
+      the purposes of this computation, if a message does not have an event
+      time, we use the publish time. The timestamp will be unset if there are
+      no messages.
+    minimumPublishTime: The minimum publish timestamp across these messages.
+      Note that publish timestamps within a partition are non-decreasing. The
+      timestamp will be unset if there are no messages.
+  """
+
+  messageBytes = _messages.IntegerField(1)
+  messageCount = _messages.IntegerField(2)
+  minimumEventTime = _messages.StringField(3)
+  minimumPublishTime = _messages.StringField(4)
+
+
 class Cursor(_messages.Message):
   r"""A cursor that describes the position of a message within a topic
   partition.
@@ -72,9 +113,9 @@ class DeliveryConfig(_messages.Message):
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance:      service Foo {
-  rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);     }  The
-  JSON representation for `Empty` is empty JSON object `{}`.
+  or the response type of an API method. For instance: service Foo { rpc
+  Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
+  representation for `Empty` is empty JSON object `{}`.
   """
 
 
@@ -143,11 +184,12 @@ class PartitionConfig(_messages.Message):
   Fields:
     capacity: The capacity configuration.
     count: The number of partitions in the topic. Must be at least 1.
-    scale: Every partition in the topic is allocated throughput equivalent to
-      `scale` times the standard partition throughput (4 MiB/s). This is also
-      reflected in the cost of this topic; a topic with `scale` of 2 and count
-      of 10 is charged for 20 partitions. This value must be in the range
-      [1,4].
+    scale: DEPRECATED: Use capacity instead which can express a superset of
+      configurations. Every partition in the topic is allocated throughput
+      equivalent to `scale` times the standard partition throughput (4 MiB/s).
+      This is also reflected in the cost of this topic; a topic with `scale`
+      of 2 and count of 10 is charged for 20 partitions. This value must be in
+      the range [1,4].
   """
 
   capacity = _messages.MessageField('Capacity', 1)
@@ -175,7 +217,7 @@ class PubsubliteAdminProjectsLocationsSubscriptionsCreateRequest(_messages.Messa
       Structured like `projects/{project_number}/locations/{location}`.
     subscription: A Subscription resource to be passed as the request body.
     subscriptionId: Required. The ID to use for the subscription, which will
-      become the final component of the subscription's name.  This value is
+      become the final component of the subscription's name. This value is
       structured like: `my-sub-name`.
   """
 
@@ -213,8 +255,8 @@ class PubsubliteAdminProjectsLocationsSubscriptionsListRequest(_messages.Message
       return fewer than this value. If unset or zero, all subscriptions for
       the parent will be returned.
     pageToken: A page token, received from a previous `ListSubscriptions`
-      call. Provide this to retrieve the subsequent page.  When paginating,
-      all other parameters provided to `ListSubscriptions` must match the call
+      call. Provide this to retrieve the subsequent page. When paginating, all
+      other parameters provided to `ListSubscriptions` must match the call
       that provided the page token.
     parent: Required. The parent whose subscriptions are to be listed.
       Structured like `projects/{project_number}/locations/{location}`.
@@ -248,8 +290,8 @@ class PubsubliteAdminProjectsLocationsTopicsCreateRequest(_messages.Message):
       Structured like `projects/{project_number}/locations/{location}`.
     topic: A Topic resource to be passed as the request body.
     topicId: Required. The ID to use for the topic, which will become the
-      final component of the topic's name.  This value is structured like:
-      `my-topic-name`.
+      final component of the topic's name. This value is structured like: `my-
+      topic-name`.
   """
 
   parent = _messages.StringField(1, required=True)
@@ -295,9 +337,9 @@ class PubsubliteAdminProjectsLocationsTopicsListRequest(_messages.Message):
       fewer than this value. If unset or zero, all topics for the parent will
       be returned.
     pageToken: A page token, received from a previous `ListTopics` call.
-      Provide this to retrieve the subsequent page.  When paginating, all
-      other parameters provided to `ListTopics` must match the call that
-      provided the page token.
+      Provide this to retrieve the subsequent page. When paginating, all other
+      parameters provided to `ListTopics` must match the call that provided
+      the page token.
     parent: Required. The parent whose topics are to be listed. Structured
       like `projects/{project_number}/locations/{location}`.
   """
@@ -331,8 +373,8 @@ class PubsubliteAdminProjectsLocationsTopicsSubscriptionsListRequest(_messages.M
       return fewer than this value. If unset or zero, all subscriptions for
       the given topic will be returned.
     pageToken: A page token, received from a previous `ListTopicSubscriptions`
-      call. Provide this to retrieve the subsequent page.  When paginating,
-      all other parameters provided to `ListTopicSubscriptions` must match the
+      call. Provide this to retrieve the subsequent page. When paginating, all
+      other parameters provided to `ListTopicSubscriptions` must match the
       call that provided the page token.
   """
 
@@ -350,9 +392,9 @@ class PubsubliteCursorProjectsLocationsSubscriptionsCursorsListRequest(_messages
       fewer than this value. If unset or zero, all cursors for the parent will
       be returned.
     pageToken: A page token, received from a previous `ListPartitionCursors`
-      call. Provide this to retrieve the subsequent page.  When paginating,
-      all other parameters provided to `ListPartitionCursors` must match the
-      call that provided the page token.
+      call. Provide this to retrieve the subsequent page. When paginating, all
+      other parameters provided to `ListPartitionCursors` must match the call
+      that provided the page token.
     parent: Required. The subscription for which to retrieve cursors.
       Structured like `projects/{project_number}/locations/{location}/subscrip
       tions/{subscription_id}`.
@@ -361,6 +403,20 @@ class PubsubliteCursorProjectsLocationsSubscriptionsCursorsListRequest(_messages
   pageSize = _messages.IntegerField(1, variant=_messages.Variant.INT32)
   pageToken = _messages.StringField(2)
   parent = _messages.StringField(3, required=True)
+
+
+class PubsubliteTopicStatsProjectsLocationsTopicsComputeMessageStatsRequest(_messages.Message):
+  r"""A PubsubliteTopicStatsProjectsLocationsTopicsComputeMessageStatsRequest
+  object.
+
+  Fields:
+    computeMessageStatsRequest: A ComputeMessageStatsRequest resource to be
+      passed as the request body.
+    topic: Required. The topic for which we should compute message stats.
+  """
+
+  computeMessageStatsRequest = _messages.MessageField('ComputeMessageStatsRequest', 1)
+  topic = _messages.StringField(2, required=True)
 
 
 class RetentionConfig(_messages.Message):

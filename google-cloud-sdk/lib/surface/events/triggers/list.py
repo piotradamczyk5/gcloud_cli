@@ -19,17 +19,21 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from googlecloudsdk.api_lib.events import trigger
+from googlecloudsdk.calliope import base
 from googlecloudsdk.command_lib.events import eventflow_operations
 from googlecloudsdk.command_lib.events import flags
 from googlecloudsdk.command_lib.events import resource_args
+from googlecloudsdk.command_lib.events import util
 from googlecloudsdk.command_lib.run import commands
 from googlecloudsdk.command_lib.run import connection_context
 from googlecloudsdk.command_lib.run import flags as serverless_flags
 from googlecloudsdk.command_lib.run import pretty_print
 from googlecloudsdk.command_lib.util.concepts import concept_parsers
 from googlecloudsdk.command_lib.util.concepts import presentation_specs
+from googlecloudsdk.core import resources
 
 
+@base.ReleaseTracks(base.ReleaseTrack.BETA, base.ReleaseTrack.ALPHA)
 class List(commands.List):
   """List existing triggers."""
 
@@ -77,7 +81,14 @@ class List(commands.List):
         args, serverless_flags.Product.EVENTS, self.ReleaseTrack())
 
     namespace_ref = args.CONCEPTS.namespace.Parse()
+
     with eventflow_operations.Connect(conn_context) as client:
+      if client.IsCluster():
+        namespace_ref = resources.REGISTRY.Parse(
+            namespace_ref.Name(),
+            collection=util.ANTHOS_NAMESPACE_COLLECTION_NAME,
+            api_version=client.api_version)
+
       self.SetCompleteApiEndpoint(conn_context.endpoint)
       triggers = client.ListTriggers(namespace_ref)
       if args.target_service:

@@ -22,9 +22,12 @@ from googlecloudsdk.api_lib.compute import base_classes
 from googlecloudsdk.api_lib.compute import daisy_utils
 from googlecloudsdk.api_lib.compute import image_utils
 from googlecloudsdk.api_lib.storage import storage_api
+from googlecloudsdk.api_lib.storage import storage_util
 from googlecloudsdk.calliope import base
+from googlecloudsdk.calliope import exceptions
 from googlecloudsdk.command_lib.compute.images import flags
 from googlecloudsdk.core import properties
+from googlecloudsdk.core import resources as core_resources
 
 _OUTPUT_FILTER = ['[Daisy', '[image-export', '  image', 'ERROR']
 
@@ -90,6 +93,14 @@ class Export(base.CreateCommand):
     parser.display_info.AddCacheUpdater(flags.ImagesCompleter)
 
   def Run(self, args):
+    try:
+      gcs_uri = daisy_utils.MakeGcsObjectUri(args.destination_uri)
+    except (storage_util.InvalidObjectNameError,
+            core_resources.UnknownCollectionException):
+      raise exceptions.InvalidArgumentException(
+          'destination-uri',
+          'must be a path to an object in Google Cloud Storage')
+
     tags = ['gce-daisy-image-export']
     export_args = []
     daisy_utils.AppendNetworkAndSubnetArgs(args, export_args)
@@ -105,14 +116,20 @@ class Export(base.CreateCommand):
     source_image = self._GetSourceImage(args.image, args.image_family,
                                         args.image_project)
     daisy_utils.AppendArg(export_args, 'source_image', source_image)
-    daisy_utils.AppendArg(export_args, 'destination_uri', args.destination_uri)
+    daisy_utils.AppendArg(export_args, 'destination_uri', gcs_uri)
     if args.export_format:
       daisy_utils.AppendArg(export_args, 'format', args.export_format.lower())
 
     return self._RunImageExport(args, export_args, tags, _OUTPUT_FILTER)
 
   def _RunImageExport(self, args, export_args, tags, output_filter):
-    return daisy_utils.RunImageExport(args, export_args, tags, _OUTPUT_FILTER)
+    return daisy_utils.RunImageExport(
+        args,
+        export_args,
+        tags,
+        _OUTPUT_FILTER,
+        release_track=self.ReleaseTrack().id.lower()
+        if self.ReleaseTrack() else None)
 
   def _GetSourceImage(self, image, image_family, image_project):
     holder = base_classes.ComputeApiHolder(self.ReleaseTrack())
@@ -131,10 +148,8 @@ class Export(base.CreateCommand):
     storage_client = storage_api.StorageClient()
     bucket_location = storage_client.GetBucketLocationForFile(
         args.destination_uri)
-    bucket_name = daisy_utils.GetDaisyBucketName(bucket_location)
-    storage_client.CreateBucketIfNotExists(bucket_name,
-                                           location=bucket_location)
-    return bucket_name
+    return daisy_utils.CreateDaisyBucketInProject(bucket_location,
+                                                  storage_client)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.BETA)
@@ -147,8 +162,14 @@ class ExportBeta(Export):
     daisy_utils.AddExtraCommonDaisyArgs(parser)
 
   def _RunImageExport(self, args, export_args, tags, output_filter):
-    return daisy_utils.RunImageExport(args, export_args, tags, _OUTPUT_FILTER,
-                                      args.docker_image_tag)
+    return daisy_utils.RunImageExport(
+        args,
+        export_args,
+        tags,
+        _OUTPUT_FILTER,
+        release_track=self.ReleaseTrack().id.lower()
+        if self.ReleaseTrack() else None,
+        docker_image_tag=args.docker_image_tag)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)

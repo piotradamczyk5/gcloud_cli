@@ -88,12 +88,15 @@ class DeploymentTest(base.ApigeeServiceAccountTest):
         deploy_output = self.GetJsonOutput()
         self.assertIn("deployStartTime", deploy_output)
         del deploy_output["deployStartTime"]
+        # TODO(b/168247570) The basepath field is deprecated and hidden from
+        # the public API. It's safe to ignore until b/168247570 maybe repurposes
+        # the field.
+        del deploy_output["basePath"]
         self.assertEqual(
             deploy_output, {
                 "environment": environment,
                 "apiProxy": api,
                 "revision": "3",
-                "basePath": "/"
             })
 
         self.RunApigee("deployments describe --format=json %s 3" %
@@ -133,7 +136,7 @@ class DeploymentTest(base.ApigeeServiceAccountTest):
             self.RunApigee("products list --organization=%s --format=json" %
                            organization)
             prod_list = self.GetJsonOutput()
-            self.assertIn(product_name, prod_list)
+            self.assertIn({"name": product_name}, prod_list)
 
           finally:
             try:
@@ -144,7 +147,7 @@ class DeploymentTest(base.ApigeeServiceAccountTest):
               self.RunApigee("products list --organization=%s --format=json" %
                              organization)
               prod_list = self.GetJsonOutput()
-              self.assertNotIn(product_name, prod_list)
+              self.assertNotIn({"name": product_name}, prod_list)
             except errors.EntityNotFoundError:
               # If the product doesn't exist, there's nothing to be done.
               pass

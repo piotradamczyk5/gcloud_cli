@@ -12,7 +12,8 @@ SYNOPSIS
         [--can-ip-forward] [--confidential-compute] [--count=COUNT]
         [--create-disk=[PROPERTY=VALUE,...]] [--deletion-protection]
         [--description=DESCRIPTION] [--enable-display-device]
-        [--erase-windows-vss-signature] [--labels=[KEY=VALUE,...]]
+        [--[no-]enable-nested-virtualization] [--erase-windows-vss-signature]
+        [--labels=[KEY=VALUE,...]]
         [--local-ssd=[device-name=DEVICE-NAME],
           [interface=INTERFACE],[size=SIZE]] [--machine-type=MACHINE_TYPE]
         [--metadata=KEY=VALUE,[KEY=VALUE,...]]
@@ -41,8 +42,8 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute instances bulk create facilitates the creation
-    of multiple Google Compute Engine virtual machines with a single command.
-    They offer a number of advantages compared to the single instance creation
+    of multiple Compute Engine virtual machines with a single command. They
+    offer a number of advantages compared to the single instance creation
     command. This includes the ability to automatically pick a zone in which to
     create instances based on resource availability, the ability to specify
     that the request be atomic or best-effort, and a faster rate of instance
@@ -245,6 +246,11 @@ OPTIONAL FLAGS
 
      --enable-display-device
         Enable a display device on VM instances. Disabled by default.
+
+     --[no-]enable-nested-virtualization
+        If set to true, enables nested virtualization for the instance. Use
+        --enable-nested-virtualization to enable and
+        --no-enable-nested-virtualization to disable.
 
      --erase-windows-vss-signature
         Specifies whether the disk restored from source snapshots or source
@@ -658,5 +664,5 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist.
+    access allowlist.
 

@@ -183,6 +183,8 @@ class CreateTestGA(parameterized.TestCase, base.GATestBase,
                 type=self.msgs.SandboxConfig.TypeValueValuesEnum.GVISOR),
         'bootDiskKmsKey':
             'projects/bing/locations/baz/keyRings/bar/cryptoKeys/foo',
+        'nodeGroup':
+            'test-node-group',
     }
 
     self.ExpectCreateNodePool(
@@ -228,23 +230,8 @@ class CreateTestGA(parameterized.TestCase, base.GATestBase,
         ' --metadata key=value,key2=value2'
         ' --max-pods-per-node=30'
         ' --sandbox type=gvisor'
-        ' --boot-disk-kms-key={bootDiskKmsKey}'.format(**pool_kwargs))
-    # pylint: disable=line-too-long
-    self.AssertErrContains(
-        """WARNING: Starting in 1.12, new node pools will be created with \
-their legacy Compute Engine instance metadata APIs disabled by default. To \
-create a node pool with legacy instance metadata endpoints disabled, run \
-`node-pools create` with the flag `--metadata disable-legacy-endpoints=true`.
-This will enable the autorepair feature for \
-nodes. Please see \
-https://cloud.google.com/kubernetes-engine/docs/node-auto-repair for more \
-information on node autorepairs.
-{{"ux": "PROGRESS_TRACKER", "message": "Creating node pool my-custom-pool", \
-"status": "SUCCESS"}}
-Created \
-[https://container.googleapis.com/{0}/projects/fake-project-id/zones/us-central1-f/clusters/my-cluster/nodePools/my-custom-pool].
-""".format(self.API_VERSION))
-    # pylint: enable=line-too-long
+        ' --boot-disk-kms-key={bootDiskKmsKey}'
+        ' --node-group={nodeGroup}'.format(**pool_kwargs))
     self.AssertOutputMatches(
         (r'NAME MACHINE_TYPE DISK_SIZE_GB NODE_VERSION\n'
          '{name} {machine_type} {disk_size} {version}\\n').format(
@@ -257,7 +244,8 @@ Created \
   @parameterized.parameters(
       ('', '', True),
       ('--image-type', 'COS', True),
-      ('--image-type', 'UBUNTU', False),
+      ('--image-type', 'UBUNTU', True),
+      ('--image-type', 'WINDOWS_LTSC', False)
   )
   def testAutoRepairDefaults(self, image_flag, image_value, expect_autorepair):
     pool_kwargs = {
@@ -839,6 +827,8 @@ class CreateTestBeta(base.BetaTestBase, CreateTestGA):
                                      .NodeMetadataValueValuesEnum.SECURE),
         'bootDiskKmsKey':
             'projects/bing/locations/baz/keyRings/bar/cryptoKeys/foo',
+        'nodeGroup':
+            'test-node-group',
     }
 
     self.ExpectCreateNodePool(
@@ -857,7 +847,8 @@ class CreateTestBeta(base.BetaTestBase, CreateTestGA):
         self.node_pools_command_base.format(self.ZONE) + ' create {name}'
         ' --cluster={clusterId}'
         ' --workload-metadata-from-node=secure'
-        ' --boot-disk-kms-key={bootDiskKmsKey}'.format(**pool_kwargs))
+        ' --boot-disk-kms-key={bootDiskKmsKey}'
+        ' --node-group {nodeGroup}'.format(**pool_kwargs))
     self.AssertOutputEquals(
         ('NAME MACHINE_TYPE DISK_SIZE_GB NODE_VERSION\n'
          '{name} {version}\n').format(name=pool.name, version=pool.version),
@@ -961,6 +952,18 @@ class CreateTestBeta(base.BetaTestBase, CreateTestGA):
           ' create {name} --cluster={clusterId} {upgradeFlag}'.format(
               **pool_kwargs))
     self.AssertErrContains(c_util.INVALIID_SURGE_UPGRADE_SETTINGS)
+
+  def testEnableGcfs(self):
+    pool_kwargs = {'gcfsConfig': self.messages.GcfsConfig(enabled=True)}
+    expected_pool, return_pool = self.makeExpectedAndReturnNodePools(
+        pool_kwargs)
+    self.ExpectCreateNodePool(expected_pool, self._MakeNodePoolOperation())
+    self.ExpectGetOperation(self._MakeOperation(status=self.op_done))
+    self.ExpectGetNodePool(return_pool.name, response=return_pool)
+    self.Run(
+        self.node_pools_command_base.format(self.ZONE) +
+        ' create {0} --cluster={1} --enable-gcfs'.format(
+            self.NODE_POOL_NAME, self.CLUSTER_NAME))
 
 
 # Mixin class must come in first to have the correct multi-inheritance behavior.

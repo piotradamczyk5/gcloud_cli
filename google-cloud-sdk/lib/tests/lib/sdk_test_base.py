@@ -237,7 +237,7 @@ class SdkBase(test_case.Base):
     elif hasattr(self, 'dirs_size_limit_class'):
       size_limit = getattr(self, '_dirs_size_limit_class')
     else:
-      size_limit = 2<<20  # 2MB default
+      size_limit = 2<<21  # 4MB default
     self.assertLess(size, size_limit)
 
     # Remove the root directory and its contents
@@ -670,12 +670,9 @@ class WithFakeAuth(SdkBase):
     self._load_mock = self.StartObjectPatch(c_store, 'Load')
     self.FakeAuthSetCredentialsPresent(True)
     if self.use_google_auth:
-      refresh_mock = self.StartObjectPatch(credentials.Credentials, 'refresh')
+      self.StartObjectPatch(credentials.Credentials, 'refresh')
     else:
-      refresh_mock = self.StartObjectPatch(client.OAuth2Credentials, 'refresh')
-    refresh_mock.side_effect = ValueError(
-        'TESTING ERROR: You are attempting to refresh a fake credential.  '
-        'This probably means you are about to use it, and you should not be.')
+      self.StartObjectPatch(client.OAuth2Credentials, 'refresh')
 
 
 class WithFakeComputeAuth(SdkBase):
@@ -684,6 +681,10 @@ class WithFakeComputeAuth(SdkBase):
   It will allow all code that needs credentials to run as long as it doesn't
   actually make a real API request.
   """
+
+  def PreSetUp(self):
+    """Set use_google_auth to True to test google auth."""
+    self.use_google_auth = False
 
   def FakeAuthAccount(self):
     """Override this method to change the account that is used for credentials.
@@ -709,8 +710,8 @@ class WithFakeComputeAuth(SdkBase):
     """
     return 'fake-project'
 
-  def _FakeAuthCredential(self, use_google_auth):
-    if use_google_auth:
+  def _FakeAuthCredential(self):
+    if self.use_google_auth:
       cred = gce_google_auth.Credentials()
       cred.token = self.FakeAuthAccessToken()
       return cred
@@ -731,8 +732,8 @@ class WithFakeComputeAuth(SdkBase):
                     scopes=None,
                     prevent_refresh=False,
                     allow_account_impersonation=True,
-                    use_google_auth=False):
-        return self._FakeAuthCredential(use_google_auth)
+                    use_google_auth=self.use_google_auth):
+        return self._FakeAuthCredential()
 
       # pylint:enable=unused-argument
 
@@ -746,10 +747,7 @@ class WithFakeComputeAuth(SdkBase):
     properties.VALUES.core.account.Set(self.FakeAuthAccount())
     self._load_mock = self.StartObjectPatch(c_store, 'Load')
     self.FakeAuthSetCredentialsPresent(True)
-    refresh_mock = self.StartObjectPatch(gce.AppAssertionCredentials, 'refresh')
-    refresh_mock.side_effect = ValueError(
-        'TESTING ERROR: You are attempting to refresh a fake credential.  '
-        'This probably means you are about to use it, and you should not be.')
+    self.StartObjectPatch(gce.AppAssertionCredentials, 'refresh')
 
 
 class _BundledLocations(object):
@@ -817,14 +815,13 @@ class BundledBase(SdkBase):
     Returns:
       A copy of env with Python specific path vars added.
     """
-    env_with_pythonpaths = encoding.EncodeEnv(dict(env if env else os.environ))
     # sys.path was initialized from PYTHONPATH at startup so we don't have to
     # check PYTHONPATH here. The result will be the original PYTHONPATH dirs
     # plus and dirs inserted/appened by Python startup and test runner
     # initialization.
     encoding.SetEncodedValue(
-        env_with_pythonpaths, 'PYTHONPATH', os.pathsep.join(sys.path))
-    return env_with_pythonpaths
+        env, 'PYTHONPATH', os.pathsep.join(sys.path))
+    return env
 
   @classmethod
   def ExecuteScript(cls, script_name, args, timeout=None, stdin=None,
@@ -847,6 +844,7 @@ class BundledBase(SdkBase):
       An ExecutionResult object.
     """
     args = exec_utils.GetArgsForScript(script_name, args)
+    env = encoding.EncodeEnv(dict(env if env else os.environ.copy()))
     if add_python_paths:
       env = cls._AddPythonPathsToEnv(env)
     # pylint: disable=protected-access
@@ -876,6 +874,7 @@ class BundledBase(SdkBase):
     """
     args = exec_utils.GetArgsForLegacyScript(
         script_name, args, interpreter=interpreter)
+    env = encoding.EncodeEnv(dict(env if env else os.environ.copy()))
     if add_python_paths:
       env = cls._AddPythonPathsToEnv(env)
     # pylint: disable=protected-access
@@ -911,6 +910,7 @@ class BundledBase(SdkBase):
       A context manager that will kill the process once the scope exists.
     """
     args = exec_utils.GetArgsForScript(script_name, args)
+    env = encoding.EncodeEnv(dict(env if env else os.environ.copy()))
     if add_python_paths:
       env = cls._AddPythonPathsToEnv(env)
     # pylint: disable=protected-access
@@ -948,6 +948,7 @@ class BundledBase(SdkBase):
     """
     args = exec_utils.GetArgsForLegacyScript(
         script_name, args, interpreter=interpreter)
+    env = encoding.EncodeEnv(dict(env if env else os.environ.copy()))
     if add_python_paths:
       env = cls._AddPythonPathsToEnv(env)
     # pylint: disable=protected-access

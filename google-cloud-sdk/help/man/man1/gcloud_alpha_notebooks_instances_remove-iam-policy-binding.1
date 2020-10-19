@@ -108,9 +108,8 @@ To remove an IAM policy binding for the role of 'roles/editor' for the user
 
 .RS 2m
 $ gcloud alpha notebooks instances remove\-iam\-policy\-binding \e
-    /projects/example\-project/locations/us\-central1\-b/instances/\e
-example\-instance \-\-member='user:test\-user@gmail.com' \e
-    \-\-role='roles/editor'
+    example\-instance \-\-member='user:test\-user@gmail.com' \e
+    \-\-role='roles/editor' \-\-location=us\-central1\-a
 .RE
 
 See https://cloud.google.com/iam/docs/managing\-policies for details of policy
@@ -123,7 +122,7 @@ role and member types.
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist. This variant is also available:
+allowlist. This variant is also available:
 
 .RS 2m
 $ gcloud beta notebooks instances remove\-iam\-policy\-binding

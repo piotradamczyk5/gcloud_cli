@@ -16,8 +16,8 @@ DESCRIPTION
 
     For a quick introduction to the gcloud command-line tool, a list of
     commonly used commands, and a look at how these commands are structured,
-    refer to the gcloud command-line tool cheat sheet,
-    https://cloud.google.com/sdk/docs/cheatsheet, or run gcloud cheat-sheet.
+    run gcloud cheat-sheet or refer to the gcloud command-line tool cheat
+    sheet: https://cloud.google.com/sdk/docs/cheatsheet
 
 GLOBAL FLAGS
      --account=ACCOUNT
@@ -215,6 +215,9 @@ GROUPS
      functions
         Manage Google Cloud Functions.
 
+     game
+        Managed Cloud Game Services.
+
      healthcare
         Manage Cloud Healthcare resources.
 
@@ -223,6 +226,9 @@ GROUPS
 
      iap
         Manage IAP policies.
+
+     identity
+        Manage Cloud Identity Groups and Memberships resources.
 
      iot
         Manage Cloud IoT resources.
@@ -268,6 +274,9 @@ GROUPS
 
      run
         Manage your Cloud Run applications.
+
+     scc
+        Manage Cloud SCC resources.
 
      scheduler
         Manage Cloud Scheduler jobs and schedules.

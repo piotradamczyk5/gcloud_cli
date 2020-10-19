@@ -30,36 +30,40 @@ from googlecloudsdk.command_lib.run import connection_context
 from googlecloudsdk.command_lib.run import flags as serverless_flags
 from googlecloudsdk.command_lib.util.concepts import concept_parsers
 from googlecloudsdk.command_lib.util.concepts import presentation_specs
+from googlecloudsdk.core import resources
 from googlecloudsdk.core.console import progress_tracker
 
 
 _SOURCE_NAME_PATTERN = 'source-for-{trigger}'
 
 
+@base.ReleaseTracks(base.ReleaseTrack.BETA)
 class Create(base.Command):
   """Create a trigger."""
 
   detailed_help = {
-      'DESCRIPTION': """\
+      'DESCRIPTION':
+          """
           {description}
           """,
-      'EXAMPLES': """\
+      'EXAMPLES':
+          """
           To create a trigger for a Cloud Pub/Sub event type:
 
-              $ {command} TRIGGER --type=com.google.cloud.pubsub.topic.publish
+              $ {command} TRIGGER --type=google.cloud.pubsub.topic.v1.messagePublished
                   --parameters="topic=my-topic" --target-service=my-service
           """,
   }
 
-  @staticmethod
-  def CommonArgs(parser):
+  @classmethod
+  def CommonArgs(cls, parser):
     # Flags specific to connecting to a cluster
     cluster_group = serverless_flags.GetClusterArgGroup(parser)
     flags.AddBrokerFlag(cluster_group)
     flags.AddFiltersFlags(cluster_group)
 
     # Flags not specific to any platform
-    flags.AddEventTypeFlagArg(parser)
+    flags.AddEventTypeFlagArg(parser, cls.ReleaseTrack())
     flags.AddTargetServiceFlag(parser, required=True)
     mutual_with_source_group = parser.add_mutually_exclusive_group()
     flags.AddCustomEventTypeFlag(mutual_with_source_group)
@@ -75,9 +79,9 @@ class Create(base.Command):
         required=True)
     concept_parsers.ConceptParser([trigger_presentation]).AddToParser(parser)
 
-  @staticmethod
-  def Args(parser):
-    Create.CommonArgs(parser)
+  @classmethod
+  def Args(cls, parser):
+    cls.CommonArgs(parser)
 
   def Run(self, args):
     conn_context = connection_context.GetConnectionContext(
@@ -86,6 +90,13 @@ class Create(base.Command):
     trigger_ref = args.CONCEPTS.trigger.Parse()
     namespace_ref = trigger_ref.Parent()
     with eventflow_operations.Connect(conn_context) as client:
+      if client.IsCluster():
+        trigger_ref = resources.REGISTRY.Parse(
+            trigger_ref.RelativeName(),
+            collection=util.ANTHOS_TRIGGER_COLLECTION_NAME,
+            api_version=client.api_version)
+
+        namespace_ref = trigger_ref.Parent()
       if args.custom_type:
         event_type = args.type
         source_obj = None
@@ -120,8 +131,8 @@ class Create(base.Command):
                 'matching this event type.'.format(trigger_obj.name))
           # If the trigger has the right attributes, check if there's already
           # a source that matches the attributes as well.
-          source_ref = util.GetSourceRef(
-              source_obj.name, source_obj.namespace, event_type.crd)
+          source_ref = util.GetSourceRef(source_obj.name, source_obj.namespace,
+                                         event_type.crd, client.IsCluster())
           if client.GetSource(source_ref, event_type.crd) is not None:
             raise exceptions.TriggerCreationError(
                 'Trigger [{}] already exists.'.format(trigger_obj.name))
@@ -141,3 +152,22 @@ class Create(base.Command):
                               namespace_ref, args.broker, parameters)
           client.PollSource(source_obj, event_type, tracker)
         client.PollTrigger(trigger_ref, tracker)
+
+
+@base.ReleaseTracks(base.ReleaseTrack.ALPHA)
+class CreateALPHA(Create):
+  """Create a trigger."""
+
+  detailed_help = {
+      'DESCRIPTION':
+          """
+          {description}
+          """,
+      'EXAMPLES':
+          """
+          To create a trigger for a Cloud Pub/Sub event type:
+
+              $ {command} TRIGGER --type=com.google.cloud.pubsub.topic.publish
+                  --parameters="topic=my-topic" --target-service=my-service
+          """,
+  }

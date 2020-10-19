@@ -47,7 +47,7 @@ from six.moves import zip
 DETAILED_HELP = {
     'DESCRIPTION':
         """
-        *{command}* facilitates the creation of Google Compute Engine
+        *{command}* facilitates the creation of Compute Engine
         virtual machines.
 
         When an instance is in RUNNING state and the system begins to boot,
@@ -95,12 +95,12 @@ def _CommonArgs(parser,
                 enable_kms=False,
                 deprecate_maintenance_policy=False,
                 enable_resource_policy=False,
-                supports_min_node_cpu=False,
                 supports_location_hint=False,
                 supports_erase_vss=False,
                 snapshot_csek=False,
                 image_csek=False,
-                support_multi_writer=True):
+                support_multi_writer=True,
+                support_replica_zones=False):
   """Register parser args common to all tracks."""
   metadata_utils.AddMetadataArgs(parser)
   instances_flags.AddDiskArgs(parser, enable_regional, enable_kms=enable_kms)
@@ -112,7 +112,8 @@ def _CommonArgs(parser,
       source_snapshot_csek=snapshot_csek,
       image_csek=image_csek,
       support_boot=True,
-      support_multi_writer=support_multi_writer)
+      support_multi_writer=support_multi_writer,
+      support_replica_zones=support_replica_zones)
   instances_flags.AddCanIpForwardArgs(parser)
   instances_flags.AddAddressArgs(parser, instances=True)
   instances_flags.AddAcceleratorArgs(parser)
@@ -143,6 +144,7 @@ def _CommonArgs(parser,
   instances_flags.AddNetworkTierArgs(parser, instance=True)
   instances_flags.AddShieldedInstanceConfigArgs(parser)
   instances_flags.AddDisplayDeviceArg(parser)
+  instances_flags.AddMinNodeCpuArg(parser)
 
   instances_flags.AddReservationAffinityGroup(
       parser,
@@ -152,9 +154,6 @@ def _CommonArgs(parser,
   maintenance_flags.AddResourcePoliciesArgs(parser, 'added to', 'instance')
 
   sole_tenancy_flags.AddNodeAffinityFlagToParser(parser)
-
-  if supports_min_node_cpu:
-    instances_flags.AddMinNodeCpuArg(parser)
 
   if supports_location_hint:
     instances_flags.AddLocationHintArg(parser)
@@ -181,7 +180,7 @@ def _CommonArgs(parser,
 
 @base.ReleaseTracks(base.ReleaseTrack.GA)
 class Create(base.CreateCommand):
-  """Create Google Compute Engine virtual machine instances."""
+  """Create Compute Engine virtual machine instances."""
 
   _support_regional = False
   _support_kms = True
@@ -190,7 +189,6 @@ class Create(base.CreateCommand):
   _support_disk_resource_policy = False
   _support_erase_vss = False
   _support_machine_image_key = False
-  _support_min_node_cpu = False
   _support_location_hint = False
   _support_source_snapshot_csek = False
   _support_image_csek = False
@@ -200,17 +198,24 @@ class Create(base.CreateCommand):
   _deprecate_maintenance_policy = False
   _support_create_disk_snapshots = True
   _support_boot_snapshot_uri = True
+  _enable_pd_interface = False
+  _support_enable_nested_virtualization = False
+  _support_replica_zones = False
 
   @classmethod
   def Args(cls, parser):
-    _CommonArgs(parser, enable_kms=cls._support_kms, support_multi_writer=False)
+    _CommonArgs(
+        parser,
+        enable_kms=cls._support_kms,
+        support_multi_writer=False,
+        support_replica_zones=cls._support_replica_zones)
     cls.SOURCE_INSTANCE_TEMPLATE = (
         instances_flags.MakeSourceInstanceTemplateArg())
     cls.SOURCE_INSTANCE_TEMPLATE.AddArgument(parser)
     instances_flags.AddLocalSsdArgs(parser)
     instances_flags.AddMinCpuPlatformArgs(parser, base.ReleaseTrack.GA)
-    instances_flags.AddPrivateIpv6GoogleAccessArg(
-        parser, utils.COMPUTE_GA_API_VERSION)
+    instances_flags.AddPrivateIpv6GoogleAccessArg(parser,
+                                                  utils.COMPUTE_GA_API_VERSION)
 
   def Collection(self):
     return 'compute.instances'
@@ -245,7 +250,6 @@ class Create(base.CreateCommand):
         compute_client,
         skip_defaults,
         support_node_affinity=True,
-        support_min_node_cpu=self._support_min_node_cpu,
         support_location_hint=self._support_location_hint)
     tags = instance_utils.GetTags(args, compute_client)
     labels = instance_utils.GetLabels(args, compute_client)
@@ -263,9 +267,9 @@ class Create(base.CreateCommand):
         skip_defaults=skip_defaults,
         support_public_dns=self._support_public_dns)
 
-    confidential_vm = (self._support_confidential_compute and
-                       args.IsSpecified('confidential_compute') and
-                       args.confidential_compute)
+    confidential_vm = (
+        self._support_confidential_compute and
+        args.IsSpecified('confidential_compute') and args.confidential_compute)
 
     create_boot_disk = not (
         instance_utils.UseExistingBootDisk((args.disk or []) +
@@ -307,13 +311,15 @@ class Create(base.CreateCommand):
             image_uri=image_uri,
             create_boot_disk=create_boot_disk,
             csek_keys=csek_keys,
+            holder=holder,
             support_kms=self._support_kms,
             support_nvdimm=self._support_nvdimm,
             support_disk_resource_policy=self._support_disk_resource_policy,
             support_source_snapshot_csek=self._support_source_snapshot_csek,
             support_boot_snapshot_uri=self._support_boot_snapshot_uri,
             support_image_csek=self._support_image_csek,
-            support_create_disk_snapshots=self._support_create_disk_snapshots)
+            support_create_disk_snapshots=self._support_create_disk_snapshots,
+            support_replica_zones=self._support_replica_zones)
 
       machine_type_uri = None
       if instance_utils.CheckSpecifiedMachineTypeArgs(args, skip_defaults):
@@ -323,7 +329,8 @@ class Create(base.CreateCommand):
             resource_parser=resource_parser,
             project=instance_ref.project,
             location=instance_ref.zone,
-            scope=compute_scopes.ScopeEnum.ZONE)
+            scope=compute_scopes.ScopeEnum.ZONE,
+            confidential_vm=confidential_vm)
 
       can_ip_forward = instance_utils.GetCanIpForward(args, skip_defaults)
       guest_accelerators = create_utils.GetAccelerators(
@@ -356,6 +363,13 @@ class Create(base.CreateCommand):
             instances_flags.GetPrivateIpv6GoogleAccessTypeFlagMapper(
                 compute_client.messages).GetEnumForChoice(
                     args.private_ipv6_google_access_type))
+
+      if (self._support_enable_nested_virtualization and
+          args.enable_nested_virtualization is not None):
+        instance.advancedMachineFeatures = (
+            instance_utils.CreateAdvancedMachineFeaturesMessage(
+                compute_client.messages,
+                args.enable_nested_virtualization))
 
       resource_policies = getattr(args, 'resource_policies', None)
       if resource_policies:
@@ -490,7 +504,7 @@ class Create(base.CreateCommand):
 
 @base.ReleaseTracks(base.ReleaseTrack.BETA)
 class CreateBeta(Create):
-  """Create Google Compute Engine virtual machine instances."""
+  """Create Compute Engine virtual machine instances."""
 
   _support_regional = True
   _support_kms = True
@@ -499,7 +513,6 @@ class CreateBeta(Create):
   _support_disk_resource_policy = True
   _support_erase_vss = True
   _support_machine_image_key = True
-  _support_min_node_cpu = True
   _support_location_hint = False
   _support_source_snapshot_csek = False
   _support_image_csek = False
@@ -509,6 +522,7 @@ class CreateBeta(Create):
   _deprecate_maintenance_policy = False
   _support_create_disk_snapshots = True
   _support_boot_snapshot_uri = True
+  _support_replica_zones = False
 
   def GetSourceMachineImage(self, args, resources):
     """Retrieves the specified source machine image's selflink.
@@ -534,7 +548,7 @@ class CreateBeta(Create):
         enable_kms=cls._support_kms,
         enable_resource_policy=cls._support_disk_resource_policy,
         supports_erase_vss=cls._support_erase_vss,
-        supports_min_node_cpu=cls._support_min_node_cpu)
+        support_replica_zones=cls._support_replica_zones)
     cls.SOURCE_INSTANCE_TEMPLATE = (
         instances_flags.MakeSourceInstanceTemplateArg())
     cls.SOURCE_INSTANCE_TEMPLATE.AddArgument(parser)
@@ -550,7 +564,7 @@ class CreateBeta(Create):
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
 class CreateAlpha(CreateBeta):
-  """Create Google Compute Engine virtual machine instances."""
+  """Create Compute Engine virtual machine instances."""
 
   _support_regional = True
   _support_kms = True
@@ -559,7 +573,6 @@ class CreateAlpha(CreateBeta):
   _support_disk_resource_policy = True
   _support_erase_vss = True
   _support_machine_image_key = True
-  _support_min_node_cpu = True
   _support_location_hint = True
   _support_source_snapshot_csek = True
   _support_image_csek = True
@@ -569,6 +582,9 @@ class CreateAlpha(CreateBeta):
   _deprecate_maintenance_policy = True
   _support_create_disk_snapshots = True
   _support_boot_snapshot_uri = True
+  _enable_pd_interface = True
+  _support_enable_nested_virtualization = True
+  _support_replica_zones = True
 
   @classmethod
   def Args(cls, parser):
@@ -578,11 +594,11 @@ class CreateAlpha(CreateBeta):
         enable_kms=cls._support_kms,
         deprecate_maintenance_policy=cls._deprecate_maintenance_policy,
         enable_resource_policy=cls._support_disk_resource_policy,
-        supports_min_node_cpu=cls._support_min_node_cpu,
         supports_location_hint=cls._support_location_hint,
         supports_erase_vss=cls._support_erase_vss,
         snapshot_csek=cls._support_source_snapshot_csek,
-        image_csek=cls._support_image_csek)
+        image_csek=cls._support_image_csek,
+        support_replica_zones=cls._support_replica_zones)
     CreateAlpha.SOURCE_INSTANCE_TEMPLATE = (
         instances_flags.MakeSourceInstanceTemplateArg())
     CreateAlpha.SOURCE_INSTANCE_TEMPLATE.AddArgument(parser)
@@ -597,6 +613,8 @@ class CreateAlpha(CreateBeta):
     instances_flags.AddPostKeyRevocationActionTypeArgs(parser)
     instances_flags.AddPrivateIpv6GoogleAccessArg(
         parser, utils.COMPUTE_ALPHA_API_VERSION)
+    instances_flags.AddMaintenanceFreezeDuration(parser)
+    instances_flags.AddNestedVirtualizationArgs(parser)
 
 
 Create.detailed_help = DETAILED_HELP

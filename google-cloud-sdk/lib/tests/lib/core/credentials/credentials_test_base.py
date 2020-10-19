@@ -26,11 +26,23 @@ from googlecloudsdk.core.credentials import google_auth_credentials as c_google_
 from tests.lib import test_case
 
 from oauth2client import client
+from oauth2client import crypt
 import six
+
+from google.auth import crypt as google_auth_crypt
+from google.auth import jwt
 
 
 class CredentialsTestBase(test_case.Base):
   """A base class for tests of credentials."""
+
+  def SetUp(self):
+    signer = self.StartPatch('oauth2client.crypt.Signer', autospec=True)
+    self.StartObjectPatch(crypt, 'OpenSSLSigner', new=signer)
+    self.StartObjectPatch(google_auth_crypt.RSASigner,
+                          'from_service_account_info')
+    self.StartObjectPatch(crypt, 'make_signed_jwt')
+    self.StartObjectPatch(jwt, 'encode', return_value=b'fake_assertion')
 
   # JSON representation for user credentials.
   USER_CREDENTIALS_JSON = textwrap.dedent("""\
@@ -41,7 +53,7 @@ class CredentialsTestBase(test_case.Base):
           "type": "authorized_user"
         }""")
 
-  # JSON representation for extened user credentials.
+  # JSON representation for extended user credentials.
   EXTENDED_USER_CREDENTIALS_JSON = textwrap.dedent("""\
         {
           "client_id": "foo.apps.googleusercontent.com",
@@ -51,7 +63,7 @@ class CredentialsTestBase(test_case.Base):
           "type": "authorized_user"
         }""")
 
-  # JSON representation for serivce account credentials.
+  # JSON representation for service account credentials.
   SERVICE_ACCOUNT_CREDENTIALS_JSON = textwrap.dedent("""\
         {
           "client_email": "bar@developer.gserviceaccount.com",
@@ -61,10 +73,10 @@ class CredentialsTestBase(test_case.Base):
           "type": "service_account"
         }""")
 
-  # JSON representation for exteneded serivce account credentials.
-  # For testing google-auth credentials serialiaztion and deserialiaztion.
-  # Unlike oauth2client credentials, google-auth serialiaztion and
-  # deserialiaztion includes token URI and project ID.
+  # JSON representation for extended service account credentials.
+  # For testing google-auth credentials serialization and deserialization.
+  # Unlike oauth2client credentials, google-auth serialization and
+  # deserialization includes token URI and project ID.
   EXTENDED_SERVICE_ACCOUNT_CREDENTIALS_JSON = textwrap.dedent("""\
         {
           "client_email": "bar@developer.gserviceaccount.com",
@@ -76,7 +88,7 @@ class CredentialsTestBase(test_case.Base):
           "type": "service_account"
         }""")
 
-  # Returns a JSON representation for P12 serivce account credentials.
+  # Returns a JSON representation for P12 service account credentials.
   P12_SERVICE_ACCOUNT_CREDENTIALS_JSON = textwrap.dedent("""\
         {
           "client_email": "p12owner@developer.gserviceaccount.com",

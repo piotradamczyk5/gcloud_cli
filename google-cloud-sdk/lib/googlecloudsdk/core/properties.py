@@ -18,11 +18,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import enum
 import functools
 import os
 import re
 import sys
-import enum
 
 from googlecloudsdk.core import argv_utils
 from googlecloudsdk.core import config
@@ -244,6 +244,7 @@ class _Sections(object):
       manager properties for the Cloud SDK.
     accessibility: Section, The section containing accessibility properties for
       the Cloud SDK.
+    ai: Section, The section containing ai properties for the Cloud SDK.
     api_client_overrides: Section, The section containing API client override
       properties for the Cloud SDK.
     api_endpoint_overrides: Section, The section containing API endpoint
@@ -266,6 +267,7 @@ class _Sections(object):
     context_aware: Section, The section containing context aware access
       configurations for the Cloud SDK.
     core: Section, The section containing core properties for the Cloud SDK.
+    ssh: Section, The section containing ssh-related properties.
     scc: Section, The section containing scc properties for the Cloud SDK.
     dataproc: Section, The section containing dataproc properties for the Cloud
       SDK.
@@ -282,6 +284,8 @@ class _Sections(object):
       Cloud SDK.
     emulator: Section, The section containing emulator properties for the Cloud
       SDK.
+    eventarc: Section, The section containing eventarc properties for the Cloud
+      SDK.
     experimental: Section, The section containing experimental properties for
       the Cloud SDK.
     filestore: Section, The section containing filestore properties for the
@@ -296,15 +300,21 @@ class _Sections(object):
       Cloud SDK.
     interactive: Section, The section containing interactive properties for the
       Cloud SDK.
+    kuberun: Section, The section containing kuberun properties for the Cloud
+      SDK.
     lifesciences: Section, The section containing lifesciencs properties for the
       Cloud SDK.
     memcache: Section, The section containing memcache properties for the Cloud
       SDK.
+    metastore: Section, The section containing metastore properties for the
+      Cloud SDK.
     metrics: Section, The section containing metrics properties for the Cloud
       SDK.
     ml_engine: Section, The section containing ml_engine properties for the
       Cloud SDK.
     notebooks: Section, The section containing notebook properties for the
+      Cloud SDK.
+    privateca: Section, The section containing privateca properties for the
       Cloud SDK.
     proxy: Section, The section containing proxy properties for the Cloud SDK.
     pubsub: Section, The section containing pubsub properties for the Cloud SDK.
@@ -318,6 +328,8 @@ class _Sections(object):
       SDK.
     survey: Section, The section containing survey properties for the Cloud SDK.
     test: Section, The section containing test properties for the Cloud SDK.
+    transport: Section, The section containing transport properties for the
+      Cloud SDK.
     vmware: Section, The section containing vmware properties for the Cloud SDK.
     workflows: Section, The section containing workflows properties for the
       Cloud SDK.
@@ -332,6 +344,7 @@ class _Sections(object):
   def __init__(self):
     self.access_context_manager = _SectionAccessContextManager()
     self.accessibility = _SectionAccessibility()
+    self.ai = _SectionAi()
     self.api_client_overrides = _SectionApiClientOverrides()
     self.api_endpoint_overrides = _SectionApiEndpointOverrides()
     self.app = _SectionApp()
@@ -345,6 +358,7 @@ class _Sections(object):
     self.container = _SectionContainer()
     self.context_aware = _SectionContextAware()
     self.core = _SectionCore()
+    self.ssh = _SectionSsh()
     self.scc = _SectionScc()
     self.dataproc = _SectionDataproc()
     self.dataflow = _SectionDataflow()
@@ -353,6 +367,7 @@ class _Sections(object):
     self.devshell = _SectionDevshell()
     self.diagnostics = _SectionDiagnostics()
     self.emulator = _SectionEmulator()
+    self.eventarc = _SectionEventarc()
     self.experimental = _SectionExperimental()
     self.filestore = _SectionFilestore()
     self.functions = _SectionFunctions()
@@ -360,11 +375,14 @@ class _Sections(object):
     self.gcloudignore = _SectionGcloudignore()
     self.healthcare = _SectionHealthcare()
     self.interactive = _SectionInteractive()
+    self.kuberun = _SectionKubeRun()
     self.lifesciences = _SectionLifeSciences()
     self.memcache = _SectionMemcache()
+    self.metastore = _SectionMetastore()
     self.metrics = _SectionMetrics()
     self.ml_engine = _SectionMlEngine()
     self.notebooks = _SectionNotebooks()
+    self.privateca = _SectionPrivateCa()
     self.proxy = _SectionProxy()
     self.pubsub = _SectionPubsub()
     self.redis = _SectionRedis()
@@ -374,12 +392,14 @@ class _Sections(object):
     self.storage = _SectionStorage()
     self.survey = _SectionSurvey()
     self.test = _SectionTest()
+    self.transport = _SectionTransport()
     self.vmware = _SectionVmware()
     self.workflows = _SectionWorkflows()
 
     sections = [
         self.access_context_manager,
         self.accessibility,
+        self.ai,
         self.api_client_overrides,
         self.api_endpoint_overrides,
         self.app,
@@ -393,6 +413,7 @@ class _Sections(object):
         self.container,
         self.context_aware,
         self.core,
+        self.ssh,
         self.scc,
         self.dataproc,
         self.dataflow,
@@ -401,6 +422,7 @@ class _Sections(object):
         self.devshell,
         self.diagnostics,
         self.emulator,
+        self.eventarc,
         self.experimental,
         self.filestore,
         self.functions,
@@ -408,12 +430,15 @@ class _Sections(object):
         self.gcloudignore,
         self.healthcare,
         self.interactive,
+        self.kuberun,
         self.lifesciences,
         self.memcache,
+        self.metastore,
         self.metrics,
         self.ml_engine,
         self.notebooks,
         self.pubsub,
+        self.privateca,
         self.proxy,
         self.redis,
         self.run,
@@ -421,6 +446,7 @@ class _Sections(object):
         self.spanner,
         self.survey,
         self.test,
+        self.transport,
         self.vmware,
         self.workflows,
     ]
@@ -730,6 +756,18 @@ class _Section(object):
       # Always include if value is set (even if hidden)
       result[prop.name] = value
     return result
+
+
+class _SectionKubeRun(_Section):
+  """Contains the properties for the 'kuberun' section."""
+
+  def __init__(self):
+    super(_SectionKubeRun, self).__init__('kuberun')
+    self.enable_experimental_commands = self._AddBool(
+        'enable_experimental_commands',
+        help_text='If True, experimental KubeRun commands will not prompt to '
+        'continue.',
+        hidden=True)
 
 
 class _SectionRun(_Section):
@@ -1180,7 +1218,8 @@ class _SectionCore(_Section):
         'verbosity',
         help_text='Default logging verbosity for `gcloud` commands.  This is '
         'the equivalent of using the global `--verbosity` flag. Supported '
-        'verbosity levels: `debug`, `info`, `warning`, `error`, and `none`.')
+        'verbosity levels: `debug`, `info`, `warning`, `error`, `critical`, '
+        'and `none`.')
     self.user_output_enabled = self._AddBool(
         'user_output_enabled',
         help_text='True, by default. If False, messages to the user and command'
@@ -1342,6 +1381,30 @@ class _SectionCore(_Section):
         'credentialed_hosted_repo_domains', hidden=True)
 
 
+class _SectionSsh(_Section):
+  """Contains SSH-related properties."""
+
+  def __init__(self):
+    super(_SectionSsh, self).__init__('ssh')
+    self.putty_force_connect = self._AddBool(
+        'putty_force_connect',
+        default=True,  # For backwards compatibility only.
+        help_text='Whether or not `gcloud` should automatically accept new or '
+        'changed host keys when executing plink/pscp commands on Windows. '
+        'Defaults to True, but can be set to False to present these '
+        'interactive prompts to the user for host key checking.')
+    self.verify_internal_ip = self._AddBool(
+        'verify_internal_ip',
+        default=True,
+        help_text='Whether or not `gcloud` should perform an initial SSH '
+        'connection to verify an instance ID is correct when connecting via '
+        'its internal IP. Without this check, `gcloud` will simply connect to '
+        'the internal IP of the desired instance, which may be wrong if the '
+        'desired instance is in a different subnet but happens to share the '
+        'same internal IP as an instance in the current subnet. Defaults to '
+        'True.')
+
+
 class _SectionScc(_Section):
   """Contains the properties for the 'scc' section."""
 
@@ -1354,13 +1417,15 @@ class _SectionScc(_Section):
 
 class _SectionAuth(_Section):
   """Contains the properties for the 'auth' section."""
+  DEFAULT_AUTH_HOST = 'https://accounts.google.com/o/oauth2/auth'
+  DEFAULT_TOKEN_HOST = 'https://oauth2.googleapis.com/token'
 
   def __init__(self):
     super(_SectionAuth, self).__init__('auth')
     self.auth_host = self._Add(
         'auth_host',
         hidden=True,
-        default='https://accounts.google.com/o/oauth2/auth')
+        default=self.DEFAULT_AUTH_HOST)
     self.disable_credentials = self._AddBool(
         'disable_credentials',
         default=False,
@@ -1370,7 +1435,7 @@ class _SectionAuth(_Section):
     self.token_host = self._Add(
         'token_host',
         hidden=True,
-        default='https://www.googleapis.com/oauth2/v4/token')
+        default=self.DEFAULT_TOKEN_HOST)
     self.disable_ssl_validation = self._AddBool(
         'disable_ssl_validation', hidden=True)
     self.client_id = self._Add(
@@ -1402,12 +1467,13 @@ class _SectionAuth(_Section):
                   'google-auth. Users can use it to switch back to the old '
                   'mode if google-auth breaks users.'
     )
-    self.google_auth_allowed = self._AddBool(
-        'google_auth_allowed',
+    self.opt_out_google_auth = self._AddBool(
+        'opt_out_google_auth',
         default=False,
         hidden=True,
-        help_text='A switch to opt in a surface or a command group '
-                  'to google-auth.'
+        help_text='A switch to disable google-auth for a surface or a command '
+                  'group, in case there are some edge cases or google-auth '
+                  'does not work for some surface.'
     )
     self.disable_activate_service_account_google_auth = self._AddBool(
         'disable_activate_service_account_google_auth',
@@ -1422,6 +1488,7 @@ class _SectionBilling(_Section):
 
   LEGACY = 'LEGACY'
   CURRENT_PROJECT = 'CURRENT_PROJECT'
+  CURRENT_PROJECT_WITH_FALLBACK = 'CURRENT_PROJECT_WITH_FALLBACK'
 
   def __init__(self):
     super(_SectionBilling, self).__init__('billing')
@@ -1503,6 +1570,26 @@ class _SectionTest(_Section):
     self.results_base_url = self._Add('results_base_url', hidden=True)
     self.matrix_status_interval = self._Add(
         'matrix_status_interval', hidden=True)
+
+
+class _SectionTransport(_Section):
+  """Contains the properties for the 'transport' section."""
+
+  def __init__(self):
+    super(_SectionTransport, self).__init__('transport', hidden=True)
+    self.disable_requests_override = self._AddBool(
+        'disable_requests_override',
+        default=False,
+        hidden=True,
+        help_text='Global switch to turn off using requests as a'
+                  'transport. Users can use it to switch back to the old '
+                  'mode if requests breaks users.')
+    self.opt_in_requests = self._AddBool(
+        'opt_in_requests',
+        default=False,
+        hidden=True,
+        help_text='A switch to opt in a surface or a command group '
+                  'to requests.')
 
 
 class _SectionMlEngine(_Section):
@@ -1695,6 +1782,18 @@ class _SectionInteractive(_Section):
         help_text='If True, add command line suggestions based on history.')
 
 
+class _SectionPrivateCa(_Section):
+  """Contains the properties for the 'privateca' section."""
+
+  def __init__(self):
+    super(_SectionPrivateCa, self).__init__('privateca')
+    self.location = self._Add(
+        'location',
+        help_text='Default location to use when working with Private CA '
+        'resources. When a `--location` flag is required but not provided, the '
+        'command will fall back to this value, if set.')
+
+
 class _SectionProxy(_Section):
   """Contains the properties for the 'proxy' section."""
 
@@ -1777,9 +1876,12 @@ class _SectionApiEndpointOverrides(_Section):
     self.remotebuildexecution = self._Add('remotebuildexecution')
     self.accessapproval = self._Add('accessapproval')
     self.accesscontextmanager = self._Add('accesscontextmanager')
+    self.anthosevents = self._Add('anthosevents')
+    self.aiplatform = self._Add('aiplatform')
     self.apigateway = self._Add('apigateway')
     self.apigee = self._Add('apigee')
     self.appengine = self._Add('appengine')
+    self.assuredworkloads = self._Add('assuredworkloads')
     self.bigtableadmin = self._Add('bigtableadmin')
     self.binaryauthorization = self._Add('binaryauthorization')
     self.artifactregistry = self._Add('artifactregistry')
@@ -1788,6 +1890,8 @@ class _SectionApiEndpointOverrides(_Section):
     self.cloudasset = self._Add('cloudasset')
     self.cloudbilling = self._Add('cloudbilling')
     self.cloudbuild = self._Add('cloudbuild')
+    self.cloudcommerceconsumerprocurement = self._Add(
+        'cloudcommerceconsumerprocurement')
     self.clouddebugger = self._Add('clouddebugger')
     self.clouderrorreporting = self._Add('clouderrorreporting')
     self.cloudfunctions = self._Add('cloudfunctions')
@@ -1805,6 +1909,7 @@ class _SectionApiEndpointOverrides(_Section):
     self.datacatalog = self._Add('datacatalog')
     self.dataflow = self._Add('dataflow')
     self.datafusion = self._Add('datafusion')
+    self.datamigration = self._Add('datamigration')
     self.datapol = self._Add('datapol')
     self.dataproc = self._Add('dataproc')
     self.datastore = self._Add('datastore')
@@ -1812,6 +1917,7 @@ class _SectionApiEndpointOverrides(_Section):
     self.discovery = self._Add('discovery')
     self.dns = self._Add('dns')
     self.domains = self._Add('domains')
+    self.eventarc = self._Add('eventarc')
     self.events = self._Add('events')
     self.file = self._Add('file')
     self.firestore = self._Add('firestore')
@@ -1829,12 +1935,15 @@ class _SectionApiEndpointOverrides(_Section):
     self.managedidentities = self._Add('managedidentities')
     self.manager = self._Add('manager')
     self.memcache = self._Add('memcache')
+    self.metastore = self._Add('metastore')
     self.ml = self._Add('ml')
     self.monitoring = self._Add('monitoring')
+    self.networkconnectivity = self._Add('networkconnectivity')
     self.networkmanagement = self._Add('networkmanagement')
     self.networkservices = self._Add('networkservices')
     self.networksecurity = self._Add('networksecurity')
     self.notebooks = self._Add('notebooks')
+    self.ondemandscanning = self._Add('ondemandscanning')
     self.orgpolicy = self._Add('orgpolicy')
     self.osconfig = self._Add('osconfig')
     self.oslogin = self._Add('oslogin')
@@ -1848,7 +1957,7 @@ class _SectionApiEndpointOverrides(_Section):
     self.runtimeconfig = self._Add('runtimeconfig')
     self.redis = self._Add('redis')
     self.run = self._Add('run')
-    self.scc = self._Add('scc')
+    self.scc = self._Add('securitycenter')
     self.servicemanagement = self._Add('servicemanagement')
     self.serviceregistry = self._Add('serviceregistry')
     self.serviceusage = self._Add('serviceusage')
@@ -1904,6 +2013,7 @@ class _SectionApiClientOverrides(_Section):
     self.speech = self._Add('speech')
     self.sql = self._Add('sql')
     self.run = self._Add('run')
+    self.scc = self._Add('securitycenter')
 
 
 class _SectionEmulator(_Section):
@@ -1971,6 +2081,19 @@ class _SectionContextAware(_Section):
         hidden=True)
 
 
+class _SectionEventarc(_Section):
+  """Contains the properties for the 'eventarc' section."""
+
+  def __init__(self):
+    super(_SectionEventarc, self).__init__('eventarc', hidden=True)
+    self.location = self._Add(
+        'location',
+        help_text="The default location to use when working with Eventarc "
+        "resources. This should be either ``global'' or one of the supported "
+        "regions. When a `--location` flag is required but not provided, the "
+        "command will fall back to this value, if set.")
+
+
 class _SectionMemcache(_Section):
   """Contains the properties for the 'memcache' section."""
 
@@ -1981,6 +2104,43 @@ class _SectionMemcache(_Section):
         help_text='Default region to use when working with Cloud Memorystore '
         'for Memcached resources. When a `region` is required but not provided '
         'by a flag, the command will fall back to this value, if set.')
+
+
+class _SectionMetastore(_Section):
+  """Contains the properties for the 'metastore' section."""
+
+  class Tier(enum.Enum):
+    enterprise = 3
+
+  def TierValidator(self, tier):
+    if tier is None:
+      return
+
+    if tier not in [x.name for x in list(_SectionMetastore.Tier)]:
+      raise InvalidValueError(
+          ('tier `{0}` must be one of: [enterprise]'.format(tier)))
+
+  def __init__(self):
+    super(_SectionMetastore, self).__init__('metastore')
+    self.location = self._Add(
+        'location',
+        help_text='Default location to use when working with Dataproc '
+        'Metastore. When a `location` is required but not provided by a flag, '
+        'the command will fall back to this value, if set.',
+        hidden=True)
+    self.tier = self._Add(
+        'tier',
+        validator=self.TierValidator,
+        help_text="""\
+        Default tier to use when creating Dataproc Metastore services.
+        When a `tier` is required but not provided by a flag,
+        the command will fall back to this value, if set.
+
+        Valid values are:
+            *   `enterprise` - The enterprise tier combines a powerful metastore
+            serving layer with a highly scalable data storage layer.""",
+        hidden=True,
+        choices=[x.name for x in list(_SectionMetastore.Tier)])
 
 
 class _SectionRedis(_Section):
@@ -2036,6 +2196,18 @@ class _SectionWorkflows(_Section):
         default='us-central1',
         help_text='The default region to use when working with Cloud '
         'Workflows resources. When a `--location` flag is required '
+        'but not provided, the command will fall back to this value, if set.')
+
+
+class _SectionAi(_Section):
+  """Contains the properties for the command group 'ai' section."""
+
+  def __init__(self):
+    super(_SectionAi, self).__init__('ai')
+    self.region = self._Add(
+        'region',
+        help_text='Default region to use when working with'
+        'AI Platform resources. When a `--region` flag is required '
         'but not provided, the command will fall back to this value, if set.')
 
 

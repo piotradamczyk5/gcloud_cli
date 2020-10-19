@@ -33,19 +33,19 @@ COMMANDS
         (ALPHA) Delete VPN tunnels.
 
      describe
-        (ALPHA) Describe a Google Compute Engine VPN tunnel.
+        (ALPHA) Describe a Compute Engine VPN tunnel.
 
      list
         (ALPHA) List Google Compute Engine VPN tunnels.
 
      update
-        (ALPHA) Update a Google Compute Engine VPN tunnel.
+        (ALPHA) Update a Compute Engine VPN tunnel.
 
 NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute vpn-tunnels
         $ gcloud beta compute vpn-tunnels

@@ -17,12 +17,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import json
+from apitools.base.py import encoding
 
 from googlecloudsdk.api_lib.util import apis
-from googlecloudsdk.core.credentials import http
-
-from six.moves import urllib
 
 API_NAME = 'cloudidentity'
 
@@ -51,6 +48,22 @@ def GetMessages(version):
   return apis.GetMessagesModule(API_NAME, version)
 
 
+def GetGroup(version, group):
+  """Get a Cloud Identity Group.
+
+  Args:
+    version: Release track information.
+    group: Name of group as returned by LookupGroupName()
+      (i.e. 'groups/{group_id}').
+  Returns:
+    Group resource object.
+  """
+  client = GetClient(version)
+  messages = GetMessages(version)
+  return client.groups.Get(
+      messages.CloudidentityGroupsGetRequest(name=group))
+
+
 def LookupGroupName(version, email):
   """Lookup Group Name for a specified group key id.
 
@@ -65,16 +78,14 @@ def LookupGroupName(version, email):
   """
 
   client = GetClient(version)
+  messages = GetMessages(version)
 
-  # Following part is added to resolve the gcloud known issue described
-  # in this bug: b/141658179
-  query_params = [('groupKey.id', email)]
-  base_url = client.url
-  url = '{}{}/groups:lookup?{}'.format(
-      base_url, version, urllib.parse.urlencode(query_params))
-  unused_response, raw_content = http.Http().request(uri=url)
-
-  return json.loads(raw_content.decode('utf-8'))
+  # TODO: (b/124063772) Kluge for fixing inconsistency in python message
+  encoding.AddCustomJsonFieldMapping(
+      messages.CloudidentityGroupsLookupRequest,
+      'groupKey_id', 'groupKey.id')
+  return client.groups.Lookup(
+      messages.CloudidentityGroupsLookupRequest(groupKey_id=email))
 
 
 def LookupMembershipName(version, group_id, member_email):
@@ -92,13 +103,12 @@ def LookupMembershipName(version, group_id, member_email):
   """
 
   client = GetClient(version)
+  messages = GetMessages(version)
 
-  # Following part is added to resolve the gcloud known issue described
-  # in this bug: b/141658179
-  query_params = [('parent', group_id), ('memberKey.id', member_email)]
-  base_url = client.url
-  url = '{}{}/{}/memberships:lookup?{}'.format(
-      base_url, version, group_id, urllib.parse.urlencode(query_params))
-  unused_response, raw_content = http.Http().request(uri=url)
-
-  return json.loads(raw_content.decode('utf-8'))
+  # TODO: (b/124063772) Kluge for fixing inconsistency in python message
+  encoding.AddCustomJsonFieldMapping(
+      messages.CloudidentityGroupsMembershipsLookupRequest,
+      'memberKey_id', 'memberKey.id')
+  return client.groups_memberships.Lookup(
+      messages.CloudidentityGroupsMembershipsLookupRequest(
+          memberKey_id=member_email, parent=group_id))

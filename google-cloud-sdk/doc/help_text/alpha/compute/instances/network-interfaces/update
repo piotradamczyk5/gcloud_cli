@@ -1,6 +1,6 @@
 NAME
-    gcloud alpha compute instances network-interfaces update - update a Google
-        Compute Engine virtual machine network interface
+    gcloud alpha compute instances network-interfaces update - update a Compute
+        Engine virtual machine network interface
 
 SYNOPSIS
     gcloud alpha compute instances network-interfaces update INSTANCE_NAME
@@ -11,7 +11,7 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute instances network-interfaces update updates
-    network interfaces of a Google Compute Engine virtual machine. For example:
+    network interfaces of a Compute Engine virtual machine. For example:
 
         $ gcloud alpha compute instances network-interfaces update \
             example-instance --zone us-central1-a --aliases r1:172.16.0.1/32
@@ -31,10 +31,11 @@ FLAGS
         multiple IP alias ranges, they are separated by semicolons.
 
         Can be specified together with --network and/or --subnetwork to choose
-        IP alias ranges in the new subnetwork. If unspecified, then old IP
-        alias ranges will be allocated in the new subnetwork. If old IP alias
-        ranges are not available in the new subnetwork, then other available IP
-        alias ranges of the same size will be allocated in the new subnetwork.
+        IP alias ranges in the new subnetwork. If unspecified, then the
+        previous IP alias ranges will be allocated in the new subnetwork. If
+        the previous IP alias ranges are not available in the new subnetwork,
+        then other available IP alias ranges of the same size will be allocated
+        in the new subnetwork.
 
         For example:
 
@@ -47,10 +48,10 @@ FLAGS
         The name of the network interface to update.
 
      --private-network-ip=PRIVATE_NETWORK_IP
-        Assign the given RFC1918 IP address to the interface. Can be specified
-        only together with --network and/or --subnetwork to choose the IP
-        address in the new subnetwork. If unspecified, then the old IP address
-        will be allocated in the new subnetwork. If the old IP address is not
+        Assign the given IP address to the interface. Can be specified only
+        together with --network and/or --subnetwork to choose the IP address in
+        the new subnetwork. If unspecified, then the previous IP address will
+        be allocated in the new subnetwork. If the previous IP address is not
         available in the new subnetwork, then another available IP address will
         be allocated automatically from the new subnetwork CIDR range.
 
@@ -92,7 +93,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute instances network-interfaces update
         $ gcloud beta compute instances network-interfaces update

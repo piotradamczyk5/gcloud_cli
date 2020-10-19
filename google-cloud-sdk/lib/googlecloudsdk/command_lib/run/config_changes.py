@@ -25,6 +25,7 @@ import copy
 from googlecloudsdk.api_lib.run import k8s_object
 from googlecloudsdk.api_lib.run import revision
 from googlecloudsdk.api_lib.run import service
+from googlecloudsdk.calliope import base
 from googlecloudsdk.command_lib.run import exceptions
 from googlecloudsdk.command_lib.run import name_generator
 from googlecloudsdk.command_lib.util.args import labels_util
@@ -53,6 +54,8 @@ class ConfigChanger(six.with_metaclass(abc.ABCMeta, object)):
 class LabelChanges(ConfigChanger):
   """Represents the user intent to modify metadata labels."""
 
+  LABELS_NOT_ALLOWED_IN_REVISION = ([service.ENDPOINT_VISIBILITY])
+
   def __init__(self, diff, copy_to_revision=True):
     super(LabelChanges, self).__init__()
     self._diff = diff
@@ -73,6 +76,9 @@ class LabelChanges(ConfigChanger):
         # However, we need to preserve the nonce if there is one.
         nonce = resource.template.labels.get(revision.NONCE_LABEL)
         resource.template.metadata.labels = copy.deepcopy(maybe_new_labels)
+        for label_to_remove in self.LABELS_NOT_ALLOWED_IN_REVISION:
+          if label_to_remove in resource.template.labels:
+            del resource.template.labels[label_to_remove]
         if nonce:
           resource.template.labels[revision.NONCE_LABEL] = nonce
     return resource
@@ -106,7 +112,10 @@ class ReplaceServiceChange(ConfigChanger):
 
 
 class EndpointVisibilityChange(LabelChanges):
-  """Represents the user intent to modify the endpoint visibility."""
+  """Represents the user intent to modify the endpoint visibility.
+
+  Only applies to Cloud Run for Anthos.
+  """
 
   def __init__(self, endpoint_visibility):
     """Determine label changes for modifying endpoint visibility.
@@ -124,6 +133,19 @@ class EndpointVisibilityChange(LabelChanges):
     # Don't copy this label to the revision because it's not supported there.
     # See b/154664962.
     super(EndpointVisibilityChange, self).__init__(diff, False)
+
+
+class SetAnnotationChange(ConfigChanger):
+  """Represents the user intent to set an annotation."""
+
+  def __init__(self, key, value):
+    super(SetAnnotationChange, self).__init__()
+    self._key = key
+    self._value = value
+
+  def Adjust(self, resource):
+    resource.annotations[self._key] = self._value
+    return resource
 
 
 class SetTemplateAnnotationChange(ConfigChanger):
@@ -154,6 +176,23 @@ class DeleteTemplateAnnotationChange(ConfigChanger):
     if self._key in annotations:
       del annotations[self._key]
     return resource
+
+
+class SetLaunchStageAnnotationChange(ConfigChanger):
+  """Sets a VPC connector annotation on the service."""
+
+  def __init__(self, launch_stage):
+    super(SetLaunchStageAnnotationChange, self).__init__()
+    self._launch_stage = launch_stage
+
+  def Adjust(self, resource):
+    if self._launch_stage == base.ReleaseTrack.GA:
+      return resource
+    else:
+      annotations = k8s_object.AnnotationsFromMetadata(
+          resource.MessagesModule(), resource.metadata)
+      annotations[revision.LAUNCH_STAGE_ANNOTATION] = (self._launch_stage.id)
+      return resource
 
 
 class VpcConnectorChange(ConfigChanger):
@@ -494,6 +533,9 @@ class ServiceAccountChanges(ConfigChanger):
     return resource
 
 
+_MAX_RESOURCE_NAME_LENGTH = 63
+
+
 class RevisionNameChanges(ConfigChanger):
   """Represents the user intent to change revision name."""
 
@@ -503,7 +545,9 @@ class RevisionNameChanges(ConfigChanger):
 
   def Adjust(self, resource):
     """Mutates the given config's revision name to match what's desired."""
-    resource.template.name = '{}-{}'.format(resource.name,
+    max_prefix_length = (
+        _MAX_RESOURCE_NAME_LENGTH - len(self._revision_suffix) - 1)
+    resource.template.name = '{}-{}'.format(resource.name[:max_prefix_length],
                                             self._revision_suffix)
     return resource
 

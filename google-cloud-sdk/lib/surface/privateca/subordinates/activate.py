@@ -25,7 +25,6 @@ from googlecloudsdk.calliope import exceptions
 from googlecloudsdk.command_lib.privateca import operations
 from googlecloudsdk.command_lib.privateca import pem_utils
 from googlecloudsdk.command_lib.privateca import resource_args
-from googlecloudsdk.core import log
 from googlecloudsdk.core.util import files
 
 
@@ -95,14 +94,9 @@ class Activate(base.SilentCommand):
             name=ca_ref.RelativeName(),
             activateCertificateAuthorityRequest=messages
             .ActivateCertificateAuthorityRequest(
-                pemCaCertificate=pem_cert, pemCaCertificateChain=pem_chain)))
+                pemCaCertificate=pem_cert,
+                subordinateConfig=messages.SubordinateConfig(
+                    pemIssuerChain=messages.SubordinateConfigChain(
+                        pemCertificates=pem_chain)))))
 
     operations.Await(operation, 'Activating Certificate Authority.')
-
-    log.status.Print('Creating the initial Certificate Revocation List.')
-    client.projects_locations_certificateAuthorities.PublishCrl(
-        messages
-        .PrivatecaProjectsLocationsCertificateAuthoritiesPublishCrlRequest(
-            name=ca_ref.RelativeName(),
-            publishCertificateRevocationListRequest=messages
-            .PublishCertificateRevocationListRequest()))

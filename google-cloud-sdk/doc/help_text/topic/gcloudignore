@@ -19,7 +19,7 @@ DESCRIPTION
       o gcloud builds submit
       o gcloud composer environments storage {dags, data, plugins} import
       o gcloud container builds submit
-      o gcloud beta debug source upload
+      o gcloud alpha run deploy
 
     To globally disable .gcloudignore parsing (including default file-ignore
     behavior), run:
@@ -93,7 +93,7 @@ EXAMPLES
     This .gcloudignore would prevent the upload of the node_modules/ directory
     and any files ending in ~:
 
-        node_modules/
+        /node_modules/
         *~
 
     This .gcloudignore (similar to the one generated when Git files are

@@ -23,6 +23,7 @@ import os
 
 from googlecloudsdk.api_lib.container import kubeconfig
 from googlecloudsdk.api_lib.run import k8s_object
+from googlecloudsdk.api_lib.run import revision
 from googlecloudsdk.api_lib.run import service
 from googlecloudsdk.api_lib.run import traffic
 from googlecloudsdk.api_lib.services import enable_api
@@ -129,7 +130,8 @@ class GetConfigurationChangesTest(base.ServerlessSurfaceBase,
         remove_tags=None,
         clear_tags=None,
         to_latest=None,
-        to_revisions=None)
+        to_revisions=None,
+        ingress=None)
     self.service = service.Service.New(self.mock_serverless_client,
                                        self.namespace.namespacesId)
     self.service.name = 'myservice'
@@ -196,6 +198,20 @@ class GetConfigurationChangesTest(base.ServerlessSurfaceBase,
     labels = k8s_object.LabelsFromMetadata(self.serverless_messages,
                                            self.metadata)
     self.assertEqual(dict(**labels), {'ghi': 'baz'})
+
+  def testImageFlag(self):
+    container_image = 'gcr.io/example/image'
+    self.args.image = container_image
+
+    self._GetAndApplyChanges()
+
+    self.assertEqual(self.service.template.container.image, container_image)
+    self.assertEqual(
+        self.service.annotations.get(revision.USER_IMAGE_ANNOTATION),
+        container_image)
+    self.assertEqual(
+        self.service.template.annotations.get(revision.USER_IMAGE_ANNOTATION),
+        container_image)
 
   @parameterized.parameters([('4s', 4), ('8m16s', 8 * 60 + 16)])
   def testValidTimeoutDuration(self, timeout, expect_seconds):
@@ -516,6 +532,44 @@ class GetConfigurationChangesTest(base.ServerlessSurfaceBase,
         {'run.googleapis.com/vpc-access-egress': egress},
         self.service.template_annotations)
 
+  @parameterized.parameters('all', 'internal',
+                            'internal-and-cloud-load-balancing')
+  def testIngressFullyManaged(self, ingress):
+    self.StartObjectPatch(self.args, 'IsSpecified', return_value=True)
+    properties.VALUES.run.platform.Set('managed')
+    self.args.ingress = ingress
+    self._GetAndApplyChanges()
+    self.assertDictContainsSubset({'run.googleapis.com/ingress': ingress},
+                                  self.service.annotations)
+
+  @parameterized.parameters('gke', 'kubernetes')
+  def testIngressInternalAnthos(self, platform):
+    self.StartObjectPatch(self.args, 'IsSpecified', return_value=True)
+    properties.VALUES.run.platform.Set(platform)
+    self.args.ingress = 'internal'
+    self._GetAndApplyChanges()
+    self.assertDictContainsSubset(
+        {'serving.knative.dev/visibility': 'cluster-local'},
+        self.service.labels)
+
+  @parameterized.parameters('gke', 'kubernetes')
+  def testIngressAllAnthos(self, platform):
+    self.StartObjectPatch(self.args, 'IsSpecified', return_value=True)
+    properties.VALUES.run.platform.Set(platform)
+    self.service.labels['serving.knative.dev/visibility'] = 'cluster-local'
+    self.args.ingress = 'all'
+    self._GetAndApplyChanges()
+    self.assertNotIn(
+        'serving.knative.dev/visibility', self.service.labels)
+
+  @parameterized.parameters('gke', 'kubernetes')
+  def testIngressInternalAndCloudLoadBalancingAnthos(self, platform):
+    self.StartObjectPatch(self.args, 'IsSpecified', return_value=True)
+    properties.VALUES.run.platform.Set(platform)
+    self.args.ingress = 'internal-and-cloud-load-balancing'
+    with self.assertRaises(exceptions.ConfigurationError):
+      self._GetAndApplyChanges()
+
 
 class GetRegionTest(base.ServerlessBase, cli_test_base.CliTestBase,
                     sdk_test_base.WithFakeAuth):
@@ -634,6 +688,13 @@ class ValidationsTestGA(test_case.TestCase):
       args.allow_unauthenticated = True
       flags.VerifyGKEFlags(args, self.track, flags.Product.RUN)
 
+  def testVerifyGKEFlagsConnectivityAndIngress(self):
+    args = parser_extensions.Namespace(connectivity=None, ingress=None)
+    with self.assertRaises(exceptions.ConfigurationError):
+      args.connectivity = 'internal'
+      args.ingress = 'internal'
+      flags.VerifyGKEFlags(args, self.track, flags.Product.RUN)
+
   def testVerifyGKEFlagsRegion(self):
     args = parser_extensions.Namespace(region=None)
     with self.assertRaises(exceptions.ConfigurationError):
@@ -741,6 +802,13 @@ class ValidationsTestGA(test_case.TestCase):
     args = parser_extensions.Namespace(allow_unauthenticated=None)
     with self.assertRaises(exceptions.ConfigurationError):
       args.allow_unauthenticated = True
+      flags.VerifyKubernetesFlags(args, self.track, flags.Product.RUN)
+
+  def testVerifyKubernetesFlagsConnectivityAndIngress(self):
+    args = parser_extensions.Namespace(connectivity=None, ingress=None)
+    with self.assertRaises(exceptions.ConfigurationError):
+      args.connectivity = 'internal'
+      args.ingress = 'internal'
       flags.VerifyKubernetesFlags(args, self.track, flags.Product.RUN)
 
   def testVerifyKubernetesFlagsRegion(self):

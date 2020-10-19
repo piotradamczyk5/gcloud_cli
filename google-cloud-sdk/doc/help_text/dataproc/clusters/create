@@ -13,11 +13,13 @@ SYNOPSIS
         [--master-boot-disk-type=MASTER_BOOT_DISK_TYPE]
         [--master-machine-type=MASTER_MACHINE_TYPE]
         [--master-min-cpu-platform=PLATFORM] [--max-idle=MAX_IDLE]
+        [--node-group=NODE_GROUP]
         [--num-master-local-ssds=NUM_MASTER_LOCAL_SSDS]
         [--num-masters=NUM_MASTERS]
         [--num-secondary-worker-local-ssds=NUM_SECONDARY_WORKER_LOCAL_SSDS]
         [--num-worker-local-ssds=NUM_WORKER_LOCAL_SSDS]
         [--optional-components=[COMPONENT,...]]
+        [--private-ipv6-google-access-type=PRIVATE_IPV6_GOOGLE_ACCESS_TYPE]
         [--properties=[PREFIX:PROPERTY=VALUE,...]]
         [--secondary-worker-accelerator=[type=TYPE,[count=COUNT],...]]
         [--secondary-worker-boot-disk-size=SECONDARY_WORKER_BOOT_DISK_SIZE]
@@ -34,8 +36,8 @@ SYNOPSIS
           --gce-pd-kms-key-location=GCE_PD_KMS_KEY_LOCATION
           --gce-pd-kms-key-project=GCE_PD_KMS_KEY_PROJECT]
         [--image=IMAGE | --image-version=VERSION]
-        [--kerberos-config-file=KERBEROS_CONFIG_FILE
-          | --kerberos-root-principal-password-uri=KERBEROS_ROOT_PRINCIPAL_PASSWORD_URI (--kerberos-kms-key=KERBEROS_KMS_KEY : --kerberos-kms-key-keyring=KERBEROS_KMS_KEY_KEYRING --kerberos-kms-key-location=KERBEROS_KMS_KEY_LOCATION --kerberos-kms-key-project=KERBEROS_KMS_KEY_PROJECT)]
+        [--kerberos-config-file=KERBEROS_CONFIG_FILE | --enable-kerberos
+          --kerberos-root-principal-password-uri=KERBEROS_ROOT_PRINCIPAL_PASSWORD_URI [--kerberos-kms-key=KERBEROS_KMS_KEY : --kerberos-kms-key-keyring=KERBEROS_KMS_KEY_KEYRING --kerberos-kms-key-location=KERBEROS_KMS_KEY_LOCATION --kerberos-kms-key-project=KERBEROS_KMS_KEY_PROJECT]]
         [--metadata=KEY=VALUE,[KEY=VALUE,...] --scopes=SCOPE,[SCOPE,...]
           --service-account=SERVICE_ACCOUNT
           --tags=TAG,[TAG,...] --network=NETWORK | --subnet=SUBNET
@@ -160,6 +162,11 @@ FLAGS
         such as "2h" or "1d". See $ gcloud topic datetimes for information on
         duration formats.
 
+     --node-group=NODE_GROUP
+        The name of the sole-tenant node group to create the cluster on. Can be
+        a short name ("node-group-name") or in the format
+        "projects/{project-id}/zones/{zone}/nodeGroups/{node-group-name}".
+
      --num-master-local-ssds=NUM_MASTER_LOCAL_SSDS
         The number of local SSDs to attach to the master in a cluster.
 
@@ -183,6 +190,11 @@ FLAGS
         The following page documents the optional components that can be
         installed:
         https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/optional-components.
+
+     --private-ipv6-google-access-type=PRIVATE_IPV6_GOOGLE_ACCESS_TYPE
+        The private IPv6 Google access type for the cluster.
+        PRIVATE_IPV6_GOOGLE_ACCESS_TYPE must be one of: inherit-subnetwork,
+        outbound, bidirectional.
 
      --properties=[PREFIX:PROPERTY=VALUE,...]
         Specifies configuration properties for installed packages, such as
@@ -417,17 +429,19 @@ FLAGS
                 # the uppercased domain name of the cluster will be used.
                 realm: REALM.NAME
 
+       --enable-kerberos
+          Enable Kerberos on the cluster.
+
        --kerberos-root-principal-password-uri=KERBEROS_ROOT_PRINCIPAL_PASSWORD_URI
           Google Cloud Storage URI of a KMS encrypted file containing the root
-          principal password. Must be a URL beginning with 'gs://'. This flag
-          must be specified if any of the other arguments in this group are
-          specified.
+          principal password. Must be a Cloud Storage URL beginning with
+          'gs://'.
 
        Key resource - The Cloud KMS (Key Management Service) cryptokey that
        will be used to protect the password. The 'Compute Engine Service Agent'
        service account must hold permission 'Cloud KMS CryptoKey
        Encrypter/Decrypter'. The arguments in this group can be used to specify
-       the attributes of this resource. This must be specified.
+       the attributes of this resource.
 
          --kerberos-kms-key=KERBEROS_KMS_KEY
             ID of the key or fully qualified identifier for the key. This flag

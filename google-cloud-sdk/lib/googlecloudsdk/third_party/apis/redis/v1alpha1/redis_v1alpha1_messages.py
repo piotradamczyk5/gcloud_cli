@@ -14,6 +14,39 @@ from apitools.base.py import extra_types
 package = 'redis'
 
 
+class CategoryHealth(_messages.Message):
+  r"""Category health, such as CPU/memory
+
+  Enums:
+    StateValueValuesEnum: Health state, such as unhealthy/warning/healthy
+
+  Fields:
+    category: Name of this category
+    metrics: Associated metrics
+    state: Health state, such as unhealthy/warning/healthy
+  """
+
+  class StateValueValuesEnum(_messages.Enum):
+    r"""Health state, such as unhealthy/warning/healthy
+
+    Values:
+      HEALTH_STATE_UNSPECIFIED: Invalid
+      UNKNOWN: Unknown. May indicate exceptions.
+      HEALTHY: Healthy
+      WARNING: Warning
+      UNHEALTHY: Unhealthy
+    """
+    HEALTH_STATE_UNSPECIFIED = 0
+    UNKNOWN = 1
+    HEALTHY = 2
+    WARNING = 3
+    UNHEALTHY = 4
+
+  category = _messages.StringField(1)
+  metrics = _messages.MessageField('MetricHealth', 2, repeated=True)
+  state = _messages.EnumField('StateValueValuesEnum', 3)
+
+
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
@@ -82,401 +115,6 @@ class GoogleCloudCommonOperationMetadata(_messages.Message):
   verb = _messages.StringField(7)
 
 
-class GoogleCloudSaasacceleratorManagementProvidersV1Instance(_messages.Message):
-  r"""A GoogleCloudSaasacceleratorManagementProvidersV1Instance object.
-
-  Enums:
-    StateValueValuesEnum: Output only. Current lifecycle state of the resource
-      (e.g. if it's being created or ready to use).
-
-  Messages:
-    LabelsValue: Optional. Resource labels to represent user provided
-      metadata. Each label is a key-value pair, where both the key and the
-      value are arbitrary strings provided by the user.
-    MaintenancePolicyNamesValue: The MaintenancePolicies that have been
-      attached to the instance. The key must be of the type name of the oneof
-      policy name defined in MaintenancePolicy, and the referenced policy must
-      define the same policy type. For complete details of MaintenancePolicy,
-      please refer to go/cloud-saas-mw-ug.
-    MaintenanceSchedulesValue: The MaintenanceSchedule contains the scheduling
-      information of published maintenance schedule.
-    ProducerMetadataValue: Output only. Custom string attributes used
-      primarily to expose producer-specific information in monitoring
-      dashboards. See go/get-instance-metadata.
-    SoftwareVersionsValue: Software versions that are used to deploy this
-      instance. This can be mutated by rollout services.
-
-  Fields:
-    consumerDefinedName: consumer_defined_name is the name that is set by the
-      consumer. On the other hand Name field represents system-assigned id of
-      an instance so consumers are not necessarily aware of it.
-      consumer_defined_name is used for notification/UI purposes for consumer
-      to recognize their instances.
-    createTime: Output only. Timestamp when the resource was created.
-    labels: Optional. Resource labels to represent user provided metadata.
-      Each label is a key-value pair, where both the key and the value are
-      arbitrary strings provided by the user.
-    maintenancePolicyNames: The MaintenancePolicies that have been attached to
-      the instance. The key must be of the type name of the oneof policy name
-      defined in MaintenancePolicy, and the referenced policy must define the
-      same policy type. For complete details of MaintenancePolicy, please
-      refer to go/cloud-saas-mw-ug.
-    maintenanceSchedules: The MaintenanceSchedule contains the scheduling
-      information of published maintenance schedule.
-    maintenanceSettings: Optional. The MaintenanceSettings associated with
-      instance.
-    name: Unique name of the resource. It uses the form:
-      `projects/{project_id}/locations/{location_id}/instances/{instance_id}`
-    producerMetadata: Output only. Custom string attributes used primarily to
-      expose producer-specific information in monitoring dashboards. See
-      go/get-instance-metadata.
-    provisionedResources: Output only. The list of data plane resources
-      provisioned for this instance, e.g. compute VMs. See go/get-instance-
-      metadata.
-    slmInstanceTemplate: Link to the SLM instance template. Only populated
-      when updating SLM instances via SSA's Actuation service adaptor. Service
-      producers with custom control plane (e.g. Cloud SQL) doesn't need to
-      populate this field. Instead they should use software_versions.
-    sloMetadata: Output only. SLO metadata for instance classification in the
-      Standardized dataplane SLO platform. See go/cloud-ssa-standard-slo for
-      feature description.
-    softwareVersions: Software versions that are used to deploy this instance.
-      This can be mutated by rollout services.
-    state: Output only. Current lifecycle state of the resource (e.g. if it's
-      being created or ready to use).
-    tenantProjectId: Output only. ID of the associated GCP tenant project. See
-      go/get-instance-metadata.
-    updateTime: Output only. Timestamp when the resource was last modified.
-  """
-
-  class StateValueValuesEnum(_messages.Enum):
-    r"""Output only. Current lifecycle state of the resource (e.g. if it's
-    being created or ready to use).
-
-    Values:
-      STATE_UNSPECIFIED: Unspecified state.
-      CREATING: Instance is being created.
-      READY: Instance has been created and is ready to use.
-      UPDATING: Instance is being updated.
-      REPAIRING: Instance is unheathy and under repair.
-      DELETING: Instance is being deleted.
-      ERROR: Instance encountered an error and is in indeterministic state.
-    """
-    STATE_UNSPECIFIED = 0
-    CREATING = 1
-    READY = 2
-    UPDATING = 3
-    REPAIRING = 4
-    DELETING = 5
-    ERROR = 6
-
-  @encoding.MapUnrecognizedFields('additionalProperties')
-  class LabelsValue(_messages.Message):
-    r"""Optional. Resource labels to represent user provided metadata. Each
-    label is a key-value pair, where both the key and the value are arbitrary
-    strings provided by the user.
-
-    Messages:
-      AdditionalProperty: An additional property for a LabelsValue object.
-
-    Fields:
-      additionalProperties: Additional properties of type LabelsValue
-    """
-
-    class AdditionalProperty(_messages.Message):
-      r"""An additional property for a LabelsValue object.
-
-      Fields:
-        key: Name of the additional property.
-        value: A string attribute.
-      """
-
-      key = _messages.StringField(1)
-      value = _messages.StringField(2)
-
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
-
-  @encoding.MapUnrecognizedFields('additionalProperties')
-  class MaintenancePolicyNamesValue(_messages.Message):
-    r"""The MaintenancePolicies that have been attached to the instance. The
-    key must be of the type name of the oneof policy name defined in
-    MaintenancePolicy, and the referenced policy must define the same policy
-    type. For complete details of MaintenancePolicy, please refer to go/cloud-
-    saas-mw-ug.
-
-    Messages:
-      AdditionalProperty: An additional property for a
-        MaintenancePolicyNamesValue object.
-
-    Fields:
-      additionalProperties: Additional properties of type
-        MaintenancePolicyNamesValue
-    """
-
-    class AdditionalProperty(_messages.Message):
-      r"""An additional property for a MaintenancePolicyNamesValue object.
-
-      Fields:
-        key: Name of the additional property.
-        value: A string attribute.
-      """
-
-      key = _messages.StringField(1)
-      value = _messages.StringField(2)
-
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
-
-  @encoding.MapUnrecognizedFields('additionalProperties')
-  class MaintenanceSchedulesValue(_messages.Message):
-    r"""The MaintenanceSchedule contains the scheduling information of
-    published maintenance schedule.
-
-    Messages:
-      AdditionalProperty: An additional property for a
-        MaintenanceSchedulesValue object.
-
-    Fields:
-      additionalProperties: Additional properties of type
-        MaintenanceSchedulesValue
-    """
-
-    class AdditionalProperty(_messages.Message):
-      r"""An additional property for a MaintenanceSchedulesValue object.
-
-      Fields:
-        key: Name of the additional property.
-        value: A
-          GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule
-          attribute.
-      """
-
-      key = _messages.StringField(1)
-      value = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule', 2)
-
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
-
-  @encoding.MapUnrecognizedFields('additionalProperties')
-  class ProducerMetadataValue(_messages.Message):
-    r"""Output only. Custom string attributes used primarily to expose
-    producer-specific information in monitoring dashboards. See go/get-
-    instance-metadata.
-
-    Messages:
-      AdditionalProperty: An additional property for a ProducerMetadataValue
-        object.
-
-    Fields:
-      additionalProperties: Additional properties of type
-        ProducerMetadataValue
-    """
-
-    class AdditionalProperty(_messages.Message):
-      r"""An additional property for a ProducerMetadataValue object.
-
-      Fields:
-        key: Name of the additional property.
-        value: A string attribute.
-      """
-
-      key = _messages.StringField(1)
-      value = _messages.StringField(2)
-
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
-
-  @encoding.MapUnrecognizedFields('additionalProperties')
-  class SoftwareVersionsValue(_messages.Message):
-    r"""Software versions that are used to deploy this instance. This can be
-    mutated by rollout services.
-
-    Messages:
-      AdditionalProperty: An additional property for a SoftwareVersionsValue
-        object.
-
-    Fields:
-      additionalProperties: Additional properties of type
-        SoftwareVersionsValue
-    """
-
-    class AdditionalProperty(_messages.Message):
-      r"""An additional property for a SoftwareVersionsValue object.
-
-      Fields:
-        key: Name of the additional property.
-        value: A string attribute.
-      """
-
-      key = _messages.StringField(1)
-      value = _messages.StringField(2)
-
-    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
-
-  consumerDefinedName = _messages.StringField(1)
-  createTime = _messages.StringField(2)
-  labels = _messages.MessageField('LabelsValue', 3)
-  maintenancePolicyNames = _messages.MessageField('MaintenancePolicyNamesValue', 4)
-  maintenanceSchedules = _messages.MessageField('MaintenanceSchedulesValue', 5)
-  maintenanceSettings = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSettings', 6)
-  name = _messages.StringField(7)
-  producerMetadata = _messages.MessageField('ProducerMetadataValue', 8)
-  provisionedResources = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1ProvisionedResource', 9, repeated=True)
-  slmInstanceTemplate = _messages.StringField(10)
-  sloMetadata = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1SloMetadata', 11)
-  softwareVersions = _messages.MessageField('SoftwareVersionsValue', 12)
-  state = _messages.EnumField('StateValueValuesEnum', 13)
-  tenantProjectId = _messages.StringField(14)
-  updateTime = _messages.StringField(15)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule(_messages.Message):
-  r"""Maintenance schedule which is exposed to customer and potentially end
-  user, indicating published upcoming future maintenance schedule
-
-  Fields:
-    canReschedule: Can this scheduled update be rescheduled? By default, it's
-      true and API needs to do explicitly check whether it's set, if it's set
-      as false explicitly, it's false
-    endTime: The scheduled end time for the maintenance.
-    rolloutManagementPolicy: The rollout management policy this maintenance
-      schedule is associated with. When doing reschedule update request, the
-      reschedule should be against this given policy.
-    startTime: The scheduled start time for the maintenance.
-  """
-
-  canReschedule = _messages.BooleanField(1)
-  endTime = _messages.StringField(2)
-  rolloutManagementPolicy = _messages.StringField(3)
-  startTime = _messages.StringField(4)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSettings(_messages.Message):
-  r"""Maintenance settings associated with instance. Allows service producers
-  and end users to assign settings that controls maintenance on this instance.
-
-  Fields:
-    exclude: Optional. Exclude instance from maintenance. When true, rollout
-      service will not attempt maintenance on the instance. Rollout service
-      will include the instance in reported rollout progress as not attempted.
-  """
-
-  exclude = _messages.BooleanField(1)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata(_messages.Message):
-  r"""Node information for custom per-node SLO implementations. SSA does not
-  support per-node SLO, but producers can populate per-node information in
-  SloMetadata for custom precomputations. SSA Eligibility Exporter will emit
-  per-node metric based on this information.
-
-  Fields:
-    exclusions: By default node is eligible if instance is eligible. But
-      individual node might be excluded from SLO by adding entry here. For
-      semantic see SloMetadata.exclusions. If both instance and node level
-      exclusions are present for time period, the node level's reason will be
-      reported by Eligibility Exporter.
-    location: The location of the node, if different from instance location.
-    nodeId: The id of the node. This should be equal to
-      SaasInstanceNode.node_id.
-  """
-
-  exclusions = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion', 1, repeated=True)
-  location = _messages.StringField(2)
-  nodeId = _messages.StringField(3)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1ProvisionedResource(_messages.Message):
-  r"""Describes provisioned dataplane resources.
-
-  Fields:
-    resourceType: Type of the resource. This can be either a GCP resource or a
-      custom one (e.g. another cloud provider's VM). For GCP compute resources
-      use singular form of the names listed in GCP compute API documentation
-      (https://cloud.google.com/compute/docs/reference/rest/v1/), prefixed
-      with 'compute-', for example: 'compute-instance', 'compute-disk',
-      'compute-autoscaler'.
-    resourceUrl: URL identifying the resource, e.g.
-      "https://www.googleapis.com/compute/v1/projects/...)".
-  """
-
-  resourceType = _messages.StringField(1)
-  resourceUrl = _messages.StringField(2)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1SloEligibility(_messages.Message):
-  r"""SloEligibility is a tuple containing eligibility value: true if an
-  instance is eligible for SLO calculation or false if it should be excluded
-  from all SLO-related calculations along with a user-defined reason.
-
-  Fields:
-    eligible: Whether an instance is eligible or ineligible.
-    reason: User-defined reason for the current value of instance eligibility.
-      Usually, this can be directly mapped to the internal state. An empty
-      reason is allowed.
-  """
-
-  eligible = _messages.BooleanField(1)
-  reason = _messages.StringField(2)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion(_messages.Message):
-  r"""SloExclusion represents an exclusion in SLI calculation applies to all
-  SLOs.
-
-  Fields:
-    duration: Exclusion duration. No restrictions on the possible values. When
-      an ongoing operation is taking longer than initially expected, an
-      existing entry in the exclusion list can be updated by extending the
-      duration. This is supported by the subsystem exporting eligibility data
-      as long as such extension is committed at least 10 minutes before the
-      original exclusion expiration - otherwise it is possible that there will
-      be "gaps" in the exclusion application in the exported timeseries.
-    reason: Human-readable reason for the exclusion. This should be a static
-      string (e.g. "Disruptive update in progress") and should not contain
-      dynamically generated data (e.g. instance name). Can be left empty.
-    sliName: Name of an SLI that this exclusion applies to. Can be left empty,
-      signaling that the instance should be excluded from all SLIs defined in
-      the service SLO configuration.
-    startTime: Start time of the exclusion. No alignment (e.g. to a full
-      minute) needed.
-  """
-
-  duration = _messages.StringField(1)
-  reason = _messages.StringField(2)
-  sliName = _messages.StringField(3)
-  startTime = _messages.StringField(4)
-
-
-class GoogleCloudSaasacceleratorManagementProvidersV1SloMetadata(_messages.Message):
-  r"""SloMetadata contains resources required for proper SLO classification of
-  the instance.
-
-  Fields:
-    eligibility: Optional. User-defined instance eligibility.
-    exclusions: List of SLO exclusion windows. When multiple entries in the
-      list match (matching the exclusion time-window against current time
-      point) the exclusion reason used in the first matching entry will be
-      published. It is not needed to include expired exclusion in this list,
-      as only the currently applicable exclusions are taken into account by
-      the eligibility exporting subsystem (the historical state of exclusions
-      will be reflected in the historically produced timeseries regardless of
-      the current state). This field can be used to mark the instance as
-      temporary ineligible for the purpose of SLO calculation. For permanent
-      instance SLO exclusion, use of custom instance eligibility is
-      recommended. See 'eligibility' field below.
-    nodes: Optional. List of nodes. Some producers need to use per-node
-      metadata to calculate SLO. This field allows such producers to publish
-      per-node SLO meta data, which will be consumed by SSA Eligibility
-      Exporter and published in the form of per node metric to Monarch.
-    tier: Name of the SLO tier the Instance belongs to. This name will be
-      expected to match the tiers specified in the service SLO configuration.
-      Field is mandatory and must not be empty.
-  """
-
-  eligibility = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1SloEligibility', 1)
-  exclusions = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion', 2, repeated=True)
-  nodes = _messages.MessageField('GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata', 3, repeated=True)
-  tier = _messages.StringField(4)
-
-
 class ImportInstanceRequest(_messages.Message):
   r"""Request for Import.
 
@@ -506,6 +144,11 @@ class Instance(_messages.Message):
       DIRECT_PEERING.
     StateValueValuesEnum: Output only. The current state of this instance.
     TierValueValuesEnum: Required. The service tier of the instance.
+    TlsModeValueValuesEnum: Optional. The TLS mode of Redis instance. If not
+      provided, default one will be used. Current default: DISABLED.
+    TransitEncryptionModeValueValuesEnum: Optional. The In-transit encryption
+      mode of Redis instance. If not provided, in-transit encryption is
+      disabled for instance.
 
   Messages:
     LabelsValue: Resource labels to represent user provided metadata
@@ -519,6 +162,9 @@ class Instance(_messages.Message):
       protects the instance against zonal failures by provisioning it across
       two zones. If provided, it must be a different zone from the one
       provided in [location_id].
+    authEnabled: Optional. Indicates whether OSS Redis AUTH is enabled for the
+      instance. If set to "true" AUTH is enabled on the instance. Default
+      value is "false" meaning AUTH is disabled.
     authorizedNetwork: Optional. The full name of the Google Compute Engine
       [network](/compute/docs/networks-and-firewalls#networks) to which the
       instance is connected. If left unspecified, the `default` network will
@@ -551,6 +197,7 @@ class Instance(_messages.Message):
       which specific zone (or collection of zones for cross zone instances) an
       instance should be provisioned in. Refer to [location_id] and
       [alternative_location_id] fields for more details.
+    persistenceConfig: Optional. Persistence configuration parameters
     persistenceIamIdentity: Output only. Cloud IAM identity used by import /
       export operations to transfer data to/from Cloud Storage. Format is
       "serviceAccount:". The value may change over time for a given instance
@@ -569,10 +216,19 @@ class Instance(_messages.Message):
       reserved for this instance. If not provided, the service will choose an
       unused /29 block, for example, 10.0.0.0/29 or 192.168.0.0/29. Ranges
       must be unique and non-overlapping with existing subnets in a network.
+    serverCaCerts: Output only. List of server CA certificates for the
+      instance. The visibility of this data will be controlled by a
+      GetInstanceRequest.view field once CCFE support partial view of
+      GetInstance. https://google.aip.dev/157.
     state: Output only. The current state of this instance.
     statusMessage: Output only. Additional information about the current
       status of this instance, if available.
     tier: Required. The service tier of the instance.
+    tlsMode: Optional. The TLS mode of Redis instance. If not provided,
+      default one will be used. Current default: DISABLED.
+    transitEncryptionMode: Optional. The In-transit encryption mode of Redis
+      instance. If not provided, in-transit encryption is disabled for
+      instance.
   """
 
   class ConnectModeValueValuesEnum(_messages.Enum):
@@ -633,6 +289,31 @@ class Instance(_messages.Message):
     BASIC = 1
     STANDARD_HA = 2
 
+  class TlsModeValueValuesEnum(_messages.Enum):
+    r"""Optional. The TLS mode of Redis instance. If not provided, default one
+    will be used. Current default: DISABLED.
+
+    Values:
+      TLS_MODE_UNSPECIFIED: Not set.
+      DISABLED: TLS is disabled for instance.
+      BASIC_TLS: Basic TLS mode with server authentication
+    """
+    TLS_MODE_UNSPECIFIED = 0
+    DISABLED = 1
+    BASIC_TLS = 2
+
+  class TransitEncryptionModeValueValuesEnum(_messages.Enum):
+    r"""Optional. The In-transit encryption mode of Redis instance. If not
+    provided, in-transit encryption is disabled for instance.
+
+    Values:
+      TRANSIT_ENCRYPTION_MODE_UNSPECIFIED: Not set.
+      SERVER_AUTHENTICATION: In-transit encryption enabled with server
+        authentication
+    """
+    TRANSIT_ENCRYPTION_MODE_UNSPECIFIED = 0
+    SERVER_AUTHENTICATION = 1
+
   @encoding.MapUnrecognizedFields('additionalProperties')
   class LabelsValue(_messages.Message):
     r"""Resource labels to represent user provided metadata
@@ -686,24 +367,39 @@ class Instance(_messages.Message):
     additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
 
   alternativeLocationId = _messages.StringField(1)
-  authorizedNetwork = _messages.StringField(2)
-  connectMode = _messages.EnumField('ConnectModeValueValuesEnum', 3)
-  createTime = _messages.StringField(4)
-  currentLocationId = _messages.StringField(5)
-  displayName = _messages.StringField(6)
-  host = _messages.StringField(7)
-  labels = _messages.MessageField('LabelsValue', 8)
-  locationId = _messages.StringField(9)
-  memorySizeGb = _messages.IntegerField(10, variant=_messages.Variant.INT32)
-  name = _messages.StringField(11)
-  persistenceIamIdentity = _messages.StringField(12)
-  port = _messages.IntegerField(13, variant=_messages.Variant.INT32)
-  redisConfigs = _messages.MessageField('RedisConfigsValue', 14)
-  redisVersion = _messages.StringField(15)
-  reservedIpRange = _messages.StringField(16)
-  state = _messages.EnumField('StateValueValuesEnum', 17)
-  statusMessage = _messages.StringField(18)
-  tier = _messages.EnumField('TierValueValuesEnum', 19)
+  authEnabled = _messages.BooleanField(2)
+  authorizedNetwork = _messages.StringField(3)
+  connectMode = _messages.EnumField('ConnectModeValueValuesEnum', 4)
+  createTime = _messages.StringField(5)
+  currentLocationId = _messages.StringField(6)
+  displayName = _messages.StringField(7)
+  host = _messages.StringField(8)
+  labels = _messages.MessageField('LabelsValue', 9)
+  locationId = _messages.StringField(10)
+  memorySizeGb = _messages.IntegerField(11, variant=_messages.Variant.INT32)
+  name = _messages.StringField(12)
+  persistenceConfig = _messages.MessageField('PersistenceConfig', 13)
+  persistenceIamIdentity = _messages.StringField(14)
+  port = _messages.IntegerField(15, variant=_messages.Variant.INT32)
+  redisConfigs = _messages.MessageField('RedisConfigsValue', 16)
+  redisVersion = _messages.StringField(17)
+  reservedIpRange = _messages.StringField(18)
+  serverCaCerts = _messages.MessageField('TlsCertificate', 19, repeated=True)
+  state = _messages.EnumField('StateValueValuesEnum', 20)
+  statusMessage = _messages.StringField(21)
+  tier = _messages.EnumField('TierValueValuesEnum', 22)
+  tlsMode = _messages.EnumField('TlsModeValueValuesEnum', 23)
+  transitEncryptionMode = _messages.EnumField('TransitEncryptionModeValueValuesEnum', 24)
+
+
+class InstanceAuthString(_messages.Message):
+  r"""Instance AUTH string details.
+
+  Fields:
+    authString: AUTH string set on the instance.
+  """
+
+  authString = _messages.StringField(1)
 
 
 class ListInstancesResponse(_messages.Message):
@@ -714,10 +410,10 @@ class ListInstancesResponse(_messages.Message):
       location, or across all locations. If the `location_id` in the parent
       field of the request is "-", all regions available to the project are
       queried, and the results aggregated. If in such an aggregated query a
-      location is unavailable, a dummy Redis entry is included in the response
-      with the "name" field set to a value of the form
-      projects/{project_id}/locations/{location_id}/instances/- and the
-      "status" field set to ERROR and "status_message" field set to "location
+      location is unavailable, a placeholder Redis entry is included in the
+      response with the `name` field set to a value of the form
+      `projects/{project_id}/locations/{location_id}/instances/`- and the
+      `status` field set to ERROR and `status_message` field set to "location
       not available for ListInstances".
     nextPageToken: Token to retrieve the next page of results, or empty if
       there are no more results in the list.
@@ -890,6 +586,41 @@ class LocationMetadata(_messages.Message):
   availableZones = _messages.MessageField('AvailableZonesValue', 1)
 
 
+class MetricHealth(_messages.Message):
+  r"""Metric health, such as used_memory_ratio, redis_server_cpu_usage
+
+  Enums:
+    StateValueValuesEnum: Health state, such as unhealthy/warning/healthy
+
+  Fields:
+    metric: Name of this metric
+    reason: Reason if the status is not healthy
+    state: Health state, such as unhealthy/warning/healthy
+    suggestion: Actional suggestion if the status is not healthy
+  """
+
+  class StateValueValuesEnum(_messages.Enum):
+    r"""Health state, such as unhealthy/warning/healthy
+
+    Values:
+      HEALTH_STATE_UNSPECIFIED: Invalid
+      UNKNOWN: Unknown. May indicate exceptions.
+      HEALTHY: Healthy
+      WARNING: Warning
+      UNHEALTHY: Unhealthy
+    """
+    HEALTH_STATE_UNSPECIFIED = 0
+    UNKNOWN = 1
+    HEALTHY = 2
+    WARNING = 3
+    UNHEALTHY = 4
+
+  metric = _messages.StringField(1)
+  reason = _messages.StringField(2)
+  state = _messages.EnumField('StateValueValuesEnum', 3)
+  suggestion = _messages.StringField(4)
+
+
 class Operation(_messages.Message):
   r"""This resource represents a long-running operation that is the result of
   a network API call.
@@ -1021,6 +752,75 @@ class OutputConfig(_messages.Message):
   gcsDestination = _messages.MessageField('GcsDestination', 1)
 
 
+class PersistenceConfig(_messages.Message):
+  r"""Configuration of the persistence functionality.
+
+  Enums:
+    PersistenceModeValueValuesEnum: Optional. Controls whether Persistence
+      features are enabled. If not provided, the existing value will be used.
+    RdbSnapshotPeriodValueValuesEnum: Optional. Time period for snapshot
+      scheduling. Snapshots will be created every period starting from the
+      provided snapshot start time. Example, start time of 00:00 and SIX_HOURS
+      snapshort period configuration will trigger snapshots every day at
+      00:00, 06:00, 12:00 and 18:00. If not provided TWENTY_FOUR_HOURS will be
+      used as default.
+
+  Fields:
+    persistenceMode: Optional. Controls whether Persistence features are
+      enabled. If not provided, the existing value will be used.
+    rdbSnapshotPeriod: Optional. Time period for snapshot scheduling.
+      Snapshots will be created every period starting from the provided
+      snapshot start time. Example, start time of 00:00 and SIX_HOURS
+      snapshort period configuration will trigger snapshots every day at
+      00:00, 06:00, 12:00 and 18:00. If not provided TWENTY_FOUR_HOURS will be
+      used as default.
+    rdbSnapshotStartTime: Optional. Time of the day when the snapshots are
+      going to be triggered. If backup is already ongoing the trigger will be
+      skipped. If not provided the current time will be used.
+  """
+
+  class PersistenceModeValueValuesEnum(_messages.Enum):
+    r"""Optional. Controls whether Persistence features are enabled. If not
+    provided, the existing value will be used.
+
+    Values:
+      PERSISTENCE_MODE_UNSPECIFIED: Not set.
+      DISABLED: Persistence is disabled for the instance.
+      RDB: RDB based Persistence is enabled.
+    """
+    PERSISTENCE_MODE_UNSPECIFIED = 0
+    DISABLED = 1
+    RDB = 2
+
+  class RdbSnapshotPeriodValueValuesEnum(_messages.Enum):
+    r"""Optional. Time period for snapshot scheduling. Snapshots will be
+    created every period starting from the provided snapshot start time.
+    Example, start time of 00:00 and SIX_HOURS snapshort period configuration
+    will trigger snapshots every day at 00:00, 06:00, 12:00 and 18:00. If not
+    provided TWENTY_FOUR_HOURS will be used as default.
+
+    Values:
+      SNAPSHOT_PERIOD_UNSPECIFIED: Not set.
+      FIFTEEN_MINUTES: Snapshot every 15 minutes.
+      THIRTY_MINUTES: Snapshot every 30 minutes.
+      ONE_HOUR: Snapshot every 1 hour.
+      SIX_HOURS: Snapshot every 6 hours.
+      TWELVE_HOURS: Snapshot every 12 hours.
+      TWENTY_FOUR_HOURS: Snapshot every 24 horus.
+    """
+    SNAPSHOT_PERIOD_UNSPECIFIED = 0
+    FIFTEEN_MINUTES = 1
+    THIRTY_MINUTES = 2
+    ONE_HOUR = 3
+    SIX_HOURS = 4
+    TWELVE_HOURS = 5
+    TWENTY_FOUR_HOURS = 6
+
+  persistenceMode = _messages.EnumField('PersistenceModeValueValuesEnum', 1)
+  rdbSnapshotPeriod = _messages.EnumField('RdbSnapshotPeriodValueValuesEnum', 2)
+  rdbSnapshotStartTime = _messages.MessageField('TimeOfDay', 3)
+
+
 class RedisProjectsLocationsGetRequest(_messages.Message):
   r"""A RedisProjectsLocationsGetRequest object.
 
@@ -1076,6 +876,18 @@ class RedisProjectsLocationsInstancesExportRequest(_messages.Message):
 
   exportInstanceRequest = _messages.MessageField('ExportInstanceRequest', 1)
   name = _messages.StringField(2, required=True)
+
+
+class RedisProjectsLocationsInstancesGetAuthStringRequest(_messages.Message):
+  r"""A RedisProjectsLocationsInstancesGetAuthStringRequest object.
+
+  Fields:
+    name: Required. Redis instance resource name using the form:
+      `projects/{project_id}/locations/{location_id}/instances/{instance_id}`
+      where `location_id` refers to a GCP region.
+  """
+
+  name = _messages.StringField(1, required=True)
 
 
 class RedisProjectsLocationsInstancesGetRequest(_messages.Message):
@@ -1148,6 +960,40 @@ class RedisProjectsLocationsInstancesPatchRequest(_messages.Message):
   instance = _messages.MessageField('Instance', 1)
   name = _messages.StringField(2, required=True)
   updateMask = _messages.StringField(3)
+
+
+class RedisProjectsLocationsInstancesReportInstanceHealthRequest(_messages.Message):
+  r"""A RedisProjectsLocationsInstancesReportInstanceHealthRequest object.
+
+  Enums:
+    WindowValueValuesEnum: Optional. Window associated with the health report.
+      Default: ONE_HOUR
+
+  Fields:
+    instance: Required. Name of Redis instance for which health report will be
+      retrieved
+    reportTime: Optional. Timestamp for the health report. Default: latest
+    window: Optional. Window associated with the health report. Default:
+      ONE_HOUR
+  """
+
+  class WindowValueValuesEnum(_messages.Enum):
+    r"""Optional. Window associated with the health report. Default: ONE_HOUR
+
+    Values:
+      HEALTH_WINDOW_UNSPECIFIED: Invalid window
+      ONE_HOUR: 1 hour
+      ONE_DAY: 1 day
+      ONE_WEEK: 1 week
+    """
+    HEALTH_WINDOW_UNSPECIFIED = 0
+    ONE_HOUR = 1
+    ONE_DAY = 2
+    ONE_WEEK = 3
+
+  instance = _messages.StringField(1, required=True)
+  reportTime = _messages.StringField(2)
+  window = _messages.EnumField('WindowValueValuesEnum', 3)
 
 
 class RedisProjectsLocationsInstancesUpgradeRequest(_messages.Message):
@@ -1225,6 +1071,40 @@ class RedisProjectsLocationsOperationsListRequest(_messages.Message):
   name = _messages.StringField(2, required=True)
   pageSize = _messages.IntegerField(3, variant=_messages.Variant.INT32)
   pageToken = _messages.StringField(4)
+
+
+class ReportInstanceHealthResponse(_messages.Message):
+  r"""Response for ReportInstanceHealth.
+
+  Enums:
+    OverallStateValueValuesEnum: Health state of overall health of this
+      instance. Such as unhealthy/warning/healthy
+
+  Fields:
+    categories: Associated categories, such as CPU/Memory
+    overallState: Health state of overall health of this instance. Such as
+      unhealthy/warning/healthy
+  """
+
+  class OverallStateValueValuesEnum(_messages.Enum):
+    r"""Health state of overall health of this instance. Such as
+    unhealthy/warning/healthy
+
+    Values:
+      HEALTH_STATE_UNSPECIFIED: Invalid
+      UNKNOWN: Unknown. May indicate exceptions.
+      HEALTHY: Healthy
+      WARNING: Warning
+      UNHEALTHY: Unhealthy
+    """
+    HEALTH_STATE_UNSPECIFIED = 0
+    UNKNOWN = 1
+    HEALTHY = 2
+    WARNING = 3
+    UNHEALTHY = 4
+
+  categories = _messages.MessageField('CategoryHealth', 1, repeated=True)
+  overallState = _messages.EnumField('OverallStateValueValuesEnum', 2)
 
 
 class StandardQueryParameters(_messages.Message):
@@ -1339,6 +1219,49 @@ class Status(_messages.Message):
   code = _messages.IntegerField(1, variant=_messages.Variant.INT32)
   details = _messages.MessageField('DetailsValueListEntry', 2, repeated=True)
   message = _messages.StringField(3)
+
+
+class TimeOfDay(_messages.Message):
+  r"""Represents a time of day. The date and time zone are either not
+  significant or are specified elsewhere. An API may choose to allow leap
+  seconds. Related types are google.type.Date and `google.protobuf.Timestamp`.
+
+  Fields:
+    hours: Hours of day in 24 hour format. Should be from 0 to 23. An API may
+      choose to allow the value "24:00:00" for scenarios like business closing
+      time.
+    minutes: Minutes of hour of day. Must be from 0 to 59.
+    nanos: Fractions of seconds in nanoseconds. Must be from 0 to 999,999,999.
+    seconds: Seconds of minutes of the time. Must normally be from 0 to 59. An
+      API may allow the value 60 if it allows leap-seconds.
+  """
+
+  hours = _messages.IntegerField(1, variant=_messages.Variant.INT32)
+  minutes = _messages.IntegerField(2, variant=_messages.Variant.INT32)
+  nanos = _messages.IntegerField(3, variant=_messages.Variant.INT32)
+  seconds = _messages.IntegerField(4, variant=_messages.Variant.INT32)
+
+
+class TlsCertificate(_messages.Message):
+  r"""TlsCertificate Resource
+
+  Fields:
+    cert: PEM representation.
+    createTime: Output only. The time when the certificate was created in [RFC
+      3339](https://tools.ietf.org/html/rfc3339) format, for example
+      `2020-05-18T00:00:00.094Z`.
+    expireTime: Output only. The time when the certificate expires in [RFC
+      3339](https://tools.ietf.org/html/rfc3339) format, for example
+      `2020-05-18T00:00:00.094Z`.
+    serialNumber: Serial number, as extracted from the certificate.
+    sha1Fingerprint: Sha1 Fingerprint of the certificate.
+  """
+
+  cert = _messages.StringField(1)
+  createTime = _messages.StringField(2)
+  expireTime = _messages.StringField(3)
+  serialNumber = _messages.StringField(4)
+  sha1Fingerprint = _messages.StringField(5)
 
 
 class UpgradeInstanceRequest(_messages.Message):

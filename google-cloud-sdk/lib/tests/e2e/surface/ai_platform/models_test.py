@@ -96,6 +96,7 @@ class MlPlatformModelsIntegrationTestGA(MlPlatformModelsIntegrationTest,
       create_version_args = (
           '--origin {model_dir} '
           '--staging-bucket {staging_bucket} '
+          '--runtime-version 2.1 '
           '--description "My Description"').format(
               model_dir=savedmodel_dir, staging_bucket=self._STAGING_BUCKET_URL)
       with self._CreateVersion(
@@ -139,7 +140,6 @@ class MlPlatformModelsIntegrationTestBeta(MlPlatformModelsIntegrationTest,
       # Create a version within the model
       savedmodel_dir = self.Resource('tests', 'e2e', 'surface', 'ai_platform',
                                      'testdata', 'savedmodel')
-      # TODO(b/151400378) rely on default for --machine-type.
       create_version_args = (
           '--origin {model_dir} --staging-bucket {staging_bucket} '
           '--description "My Description" --machine-type n1-standard-2 '

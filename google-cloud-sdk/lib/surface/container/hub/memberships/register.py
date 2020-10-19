@@ -24,10 +24,10 @@ import textwrap
 from apitools.base.py import exceptions as apitools_exceptions
 from googlecloudsdk.api_lib.util import exceptions as core_api_exceptions
 from googlecloudsdk.calliope import base
-from googlecloudsdk.command_lib.container.hub import agent_util as agent_util
-from googlecloudsdk.command_lib.container.hub import api_util as api_util
-from googlecloudsdk.command_lib.container.hub import exclusivity_util as exclusivity_util
-from googlecloudsdk.command_lib.container.hub import kube_util as kube_util
+from googlecloudsdk.command_lib.container.hub import agent_util
+from googlecloudsdk.command_lib.container.hub import api_util
+from googlecloudsdk.command_lib.container.hub import exclusivity_util
+from googlecloudsdk.command_lib.container.hub import kube_util
 from googlecloudsdk.command_lib.container.hub import util as hub_util
 from googlecloudsdk.command_lib.util.apis import arg_utils
 from googlecloudsdk.core import exceptions
@@ -221,7 +221,7 @@ class Register(base.CreateCommand):
          """),
     )
 
-    if cls.ReleaseTrack() is base.ReleaseTrack.ALPHA:
+    if cls.ReleaseTrack() is not base.ReleaseTrack.GA:
       # Optional groups with required arguments are "modal,"
       # meaning that if any of the required arguments is specified,
       # all are required.
@@ -232,7 +232,7 @@ class Register(base.CreateCommand):
           action='store_true',
           help=textwrap.dedent("""\
             Enable Workload Identity when registering the cluster with Hub.
-            Requires gcloud alpha.
+            Requires gcloud alpha or beta.
             --service_account_key_file flag should not be set if this is set.
             """),
       )
@@ -245,26 +245,27 @@ class Register(base.CreateCommand):
             Use this option when the OpenID Provider Configuration and associated
             JSON Web Key Set for validating the cluster's service account JWTs
             are served at a public endpoint different from the cluster API server.
-            Requires gcloud alpha and --enable-workload-identity.
+            Requires gcloud alpha or beta and --enable-workload-identity.
             """),
       )
-      # Keep this hidden as it is not used for user-facing workflows and will
-      # be eliminated in beta.
-      workload_identity_mutex.add_argument(
-          '--manage-workload-identity-bucket',
-          hidden=True,
-          action='store_true',
-          help=textwrap.dedent("""\
-            Create the GCS bucket for serving OIDC discovery information when
-            registering the cluster with Hub. The cluster must already be
-            configured with an issuer URL of the format:
-            https://storage.googleapis.com/gke-issuer-{UUID}. The cluster must
-            also serve the built-in OIDC discovery endpoints by enabling and
-            correctly configuring the ServiceAccountIssuerDiscovery feature.
-            Requires gcloud alpha and --enable-workload-identity.
-            Mutually exclusive with --public-issuer-url.
-            """),
-      )
+      # Keep this hidden as it is not used for user-facing workflows and is
+      # eliminated in beta.
+      if cls.ReleaseTrack() is base.ReleaseTrack.ALPHA:
+        workload_identity_mutex.add_argument(
+            '--manage-workload-identity-bucket',
+            hidden=True,
+            action='store_true',
+            help=textwrap.dedent("""\
+              Create the GCS bucket for serving OIDC discovery information when
+              registering the cluster with Hub. The cluster must already be
+              configured with an issuer URL of the format:
+              https://storage.googleapis.com/gke-issuer-{UUID}. The cluster must
+              also serve the built-in OIDC discovery endpoints by enabling and
+              correctly configuring the ServiceAccountIssuerDiscovery feature.
+              Requires gcloud alpha and --enable-workload-identity.
+              Mutually exclusive with --public-issuer-url.
+              """),
+        )
 
   def Run(self, args):
     project = arg_utils.GetFromNamespace(args, '--project', use_defaults=True)
@@ -303,8 +304,8 @@ class Register(base.CreateCommand):
       issuer_url = None
       # enable_workload_identity, public_issuer_url, and
       # manage_workload_identity_bucket are only properties if we are on the
-      # alpha track
-      if (self.ReleaseTrack() is base.ReleaseTrack.ALPHA
+      # alpha or beta track
+      if (self.ReleaseTrack() is not base.ReleaseTrack.GA
           and args.enable_workload_identity):
         if args.public_issuer_url:
           issuer_url = args.public_issuer_url
@@ -342,7 +343,8 @@ class Register(base.CreateCommand):
                                      args.public_issuer_url, issuer_url))
 
         # Set up the GCS bucket that serves OpenID Provider Config and JWKS.
-        if args.manage_workload_identity_bucket:
+        if self.ReleaseTrack(
+        ) is base.ReleaseTrack.ALPHA and args.manage_workload_identity_bucket:
           openid_keyset_json = kube_client.GetOpenIDKeyset()
           api_util.CreateWorkloadIdentityBucket(project, issuer_url,
                                                 openid_config_json,
@@ -380,23 +382,23 @@ class Register(base.CreateCommand):
             raise
           obj = api_util.GetMembership(resource_name, self.ReleaseTrack())
           if not obj.externalId:
-            raise exceptions.Error('invalid membership {} does not have '
-                                   'external_id field set. We cannot determine '
-                                   'if registration is requested against a '
-                                   'valid existing Membership. Consult the '
-                                   'documentation on container hub memberships '
-                                   'update for more information or run gcloud '
-                                   'container hub memberships delete {} if you '
-                                   'are sure that this is an invalid or '
-                                   'otherwise stale Membership'.format(
-                                       membership_id, membership_id))
+            raise exceptions.Error(
+                'invalid membership {0} does not have '
+                'external_id field set. We cannot determine '
+                'if registration is requested against a '
+                'valid existing Membership. Consult the '
+                'documentation on container hub memberships '
+                'update for more information or run gcloud '
+                'container hub memberships delete {0} if you '
+                'are sure that this is an invalid or '
+                'otherwise stale Membership'.format(membership_id))
           if obj.externalId != uuid:
-            raise exceptions.Error('membership {} already exists in the project'
-                                   ' with another cluster. If this operation is'
-                                   ' intended, please run `gcloud container '
-                                   'hub memberships delete {}` and register '
-                                   'again.'.format(membership_id,
-                                                   membership_id))
+            raise exceptions.Error(
+                'membership {0} already exists in the project'
+                ' with another cluster. If this operation is'
+                ' intended, please run `gcloud container '
+                'hub memberships delete {0}` and register '
+                'again.'.format(membership_id))
 
           # The membership exists with same cluster_name.
           already_exists = True
@@ -404,12 +406,34 @@ class Register(base.CreateCommand):
       # In case of an existing membership, check with the user to upgrade the
       # Connect-Agent.
       if already_exists:
-        console_io.PromptContinue(
-            message='A membership [{}] for the cluster [{}] already exists. '
-            'Continuing will reinstall the Connect agent deployment to use a '
-            'new image (if one is available).'.format(resource_name,
-                                                      args.CLUSTER_NAME),
-            cancel_on_no=True)
+        # Update Membership if issuer is updated by the user from an empty value
+        # to a non-empty value or vice versa. UpdateMembership API will error
+        # out if the user tries to modify the issuer URL.
+        if self.ReleaseTrack() is not base.ReleaseTrack.GA and (
+            (obj.authority and not issuer_url) or
+            (issuer_url and not obj.authority) or
+            (obj.authority and (obj.authority.issuer != issuer_url))):
+          console_io.PromptContinue(
+              message=hub_util.GenerateWIUpdateMsgString(
+                  obj, issuer_url, resource_name, args.CLUSTER_NAME),
+              cancel_on_no=True)
+          try:
+            api_util.UpdateMembership(resource_name, obj, 'authority',
+                                      self.ReleaseTrack(), issuer_url)
+            log.status.Print(
+                'Updated the membership [{}] for the cluster [{}]'.format(
+                    resource_name, args.CLUSTER_NAME))
+          except Exception as e:
+            raise exceptions.Error(
+                'Error in updating the membership [{}]:{}'.format(
+                    resource_name, e))
+        else:
+          console_io.PromptContinue(
+              message='A membership [{}] for the cluster [{}] already exists. '
+              'Continuing will reinstall the Connect agent deployment to use a '
+              'new image (if one is available).'.format(resource_name,
+                                                        args.CLUSTER_NAME),
+              cancel_on_no=True)
       else:
         log.status.Print(
             'Created a new membership [{}] for the cluster [{}]'.format(

@@ -31,6 +31,7 @@ from googlecloudsdk.command_lib.container.hub import util as hub_util
 from googlecloudsdk.command_lib.util.apis import arg_utils
 from googlecloudsdk.core import exceptions
 from googlecloudsdk.core import log
+from googlecloudsdk.core.console import console_io
 
 
 class Unregister(base.DeleteCommand):
@@ -99,8 +100,8 @@ class Unregister(base.DeleteCommand):
     )
     hub_util.AddUnRegisterCommonArgs(parser)
 
-    # Keep this hidden as it is not used for user-facing workflows and will
-    # be eliminated in beta.
+    # Keep this hidden as it is not used for user-facing workflows and is
+    # eliminated in beta.
     if cls.ReleaseTrack() is base.ReleaseTrack.ALPHA:
       workload_identity = parser.add_group(
           help='Workload Identity', hidden=True)
@@ -127,6 +128,26 @@ class Unregister(base.DeleteCommand):
     try:
       name = 'projects/{}/locations/global/memberships/{}'.format(
           project, membership_id)
+      obj = api_util.GetMembership(name, self.ReleaseTrack())
+      if not obj.externalId:
+        console_io.PromptContinue(
+            'invalid membership {0} does not have '
+            'external_id field set. We cannot determine '
+            'if registration is requested against a '
+            'valid existing Membership. Consult the '
+            'documentation on container hub memberships '
+            'update for more information or run gcloud '
+            'container hub memberships delete {0} if you '
+            'are sure that this is an invalid or '
+            'otherwise stale Membership'.format(membership_id),
+            cancel_on_no=True)
+      uuid = kube_util.GetClusterUUID(kube_client)
+      if obj.externalId != uuid:
+        raise exceptions.Error(
+            'Membership [{}] is not associated with the cluster you are trying'
+            ' to unregister. Please double check the cluster identifier that you'
+            ' have supplied.'.format(membership_id))
+
       api_util.DeleteMembership(name, self.ReleaseTrack())
     except apitools_exceptions.HttpUnauthorizedError as e:
       raise exceptions.Error(
@@ -139,7 +160,7 @@ class Unregister(base.DeleteCommand):
           .format(name, args.CLUSTER_NAME))
 
     # enable_workload_identity and manage_workload_identity_bucket are only
-    # properties if we are on the alpha track
+    # properties if we are on the alpha track.
     if (self.ReleaseTrack() is base.ReleaseTrack.ALPHA and
         args.manage_workload_identity_bucket):
       # The issuer URL from the cluster indicates which bucket to delete.
@@ -184,6 +205,21 @@ class Unregister(base.DeleteCommand):
 
     # Delete in-cluster membership resources.
     try:
+      parent = api_util.ParentRef(project, 'global')
+      cr_manifest = kube_client.GetMembershipCR()
+
+      res = api_util.ValidateExclusivity(cr_manifest, parent, membership_id,
+                                         self.ReleaseTrack())
+      if res.status.code:
+        console_io.PromptContinue(
+            'Error validating cluster\'s exclusivity state with the Hub under '
+            'parent collection [{}]: {}. The cluster you are trying to unregister'
+            ' is not associated with the membership [{}]. Continuing will delete'
+            ' membership related resources from your cluster, and the cluster'
+            ' will lose its association to the Hub in project [{}] and can be'
+            ' registered into a different project. '
+            .format(parent, res.status.message, membership_id, project),
+            cancel_on_no=True)
       exclusivity_util.DeleteMembershipResources(kube_client)
     except exceptions.Error as e:
       log.status.Print(

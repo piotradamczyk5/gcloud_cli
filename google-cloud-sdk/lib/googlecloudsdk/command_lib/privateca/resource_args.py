@@ -25,8 +25,28 @@ from googlecloudsdk.api_lib.privateca import locations
 from googlecloudsdk.calliope import exceptions
 from googlecloudsdk.calliope.concepts import concepts
 from googlecloudsdk.calliope.concepts import deps
+from googlecloudsdk.command_lib.kms import resource_args as kms_args
 from googlecloudsdk.command_lib.privateca import exceptions as privateca_exceptions
 from googlecloudsdk.command_lib.util.concepts import concept_parsers
+from googlecloudsdk.core import properties
+
+
+# Flag fallthroughs that rely on properties.
+LOCATION_PROPERTY_FALLTHROUGH = deps.PropertyFallthrough(
+    properties.VALUES.privateca.location)
+PROJECT_PROPERTY_FALLTHROUGH = deps.PropertyFallthrough(
+    properties.VALUES.core.project)
+
+
+def _GetFallthroughsSummary(fallthroughs):
+  if not fallthroughs:
+    return ''
+
+  if len(fallthroughs) == 1:
+    return ' Alternatively, you can {}.'.format(fallthroughs[0].hint)
+
+  return ' Alternatively, you can {}, or {}.'.format(
+      ', '.join([f.hint for f in fallthroughs[:-1]]), fallthroughs[-1].hint)
 
 
 def ReusableConfigAttributeConfig():
@@ -47,38 +67,66 @@ def CertificateAuthorityAttributeConfig(arg_name='certificate_authority'):
 
 
 def LocationAttributeConfig(arg_name='location', fallthroughs=None):
+  fallthroughs = fallthroughs or [LOCATION_PROPERTY_FALLTHROUGH]
   return concepts.ResourceParameterAttributeConfig(
       name=arg_name,
-      help_text='The location of the {resource}.',
-      fallthroughs=fallthroughs or [])
+      help_text='The location of the {resource}.' +
+      _GetFallthroughsSummary(fallthroughs),
+      fallthroughs=fallthroughs)
 
 
-def ProjectAttributeConfig(fallthroughs=None):
+def ProjectAttributeConfig(arg_name='project', fallthroughs=None):
   """DO NOT USE THIS for most flags.
 
   This config is only useful when you want to provide an explicit project
   fallthrough. For most cases, prefer concepts.DEFAULT_PROJECT_ATTRIBUTE_CONFIG.
 
   Args:
+    arg_name: Name of the flag used to specify this attribute. Defaults to
+              'project'.
     fallthroughs: List of deps.Fallthrough objects to provide project values.
 
   Returns:
     A concepts.ResourceParameterAttributeConfig for a project.
   """
   return concepts.ResourceParameterAttributeConfig(
-      name='project',
-      help_text='The project containing the {resource}.',
+      name=arg_name,
+      help_text='The project containing the {resource}.' +
+      _GetFallthroughsSummary(fallthroughs),
       fallthroughs=fallthroughs or [])
 
 
-def CreateReusableConfigResourceSpec(location_fallthrough):
+def CreateKmsKeyVersionResourceSpec():
+  """Creates a resource spec for a KMS CryptoKeyVersion.
+
+  Defaults to the location and project of the CA, specified through flags or
+  properties.
+
+  Returns:
+    A concepts.ResourceSpec for a CryptoKeyVersion.
+  """
+  return concepts.ResourceSpec(
+      'cloudkms.projects.locations.keyRings.cryptoKeys.cryptoKeyVersions',
+      resource_name='key version',
+      cryptoKeyVersionsId=kms_args.KeyVersionAttributeConfig(kms_prefix=True),
+      cryptoKeysId=kms_args.KeyAttributeConfig(kms_prefix=True),
+      keyRingsId=kms_args.KeyringAttributeConfig(kms_prefix=True),
+      locationsId=LocationAttributeConfig(
+          'kms-location',
+          [deps.ArgFallthrough('location'), LOCATION_PROPERTY_FALLTHROUGH]),
+      projectsId=ProjectAttributeConfig(
+          'kms-project',
+          [deps.ArgFallthrough('project'), PROJECT_PROPERTY_FALLTHROUGH]))
+
+
+def CreateReusableConfigResourceSpec(location_fallthroughs=None):
   """Create a resource spec for a ReusableConfig.
 
   Defaults to the predefined project for reusable configs.
 
   Args:
-    location_fallthrough: Fallthrough to use for the location of the reusable
-      config, if not explicitly provided.
+    location_fallthroughs: List of fallthroughs to use for the location of the
+      reusable config, if not explicitly provided.
 
   Returns:
     A concepts.ResourceSpec for a reusable config.
@@ -94,7 +142,7 @@ def CreateReusableConfigResourceSpec(location_fallthrough):
       'privateca.projects.locations.reusableConfigs',
       resource_name='reusable config',
       reusableConfigsId=ReusableConfigAttributeConfig(),
-      locationsId=LocationAttributeConfig(fallthroughs=[location_fallthrough]),
+      locationsId=LocationAttributeConfig(fallthroughs=location_fallthroughs),
       projectsId=ProjectAttributeConfig(fallthroughs=[project_fallthrough]))
 
 
@@ -160,12 +208,12 @@ def AddCertificatePositionalResourceArg(parser, verb):
 # Resource validation.
 
 
-def ValidateKmsKeyVersionLocation(version_ref):
-  """Raises an exception if the key version is in an unsupported location."""
+def ValidateResourceLocation(resource_ref, arg_name):
+  """Raises an exception if the given resource is in an unsupported location."""
   supported_locations = locations.GetSupportedLocations()
-  if version_ref.locationsId not in supported_locations:
+  if resource_ref.locationsId not in supported_locations:
     raise exceptions.InvalidArgumentException(
-        '--kms-key-version',
+        arg_name,
         'Resource is in an unsupported location. Supported locations are: {}.'
         .format(', '.join(sorted(supported_locations))))
 

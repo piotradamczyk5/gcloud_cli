@@ -62,22 +62,25 @@ class ConnectionContextTest(test_case.TestCase, parameterized.TestCase):
       (flags.Product.RUN, base.ReleaseTrack.GA, None, 'run', 'v1'),
       (flags.Product.RUN, base.ReleaseTrack.ALPHA, 'v1alpha1', 'run',
        'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, None, 'run', 'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.BETA, None, 'run', 'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.GA, None, 'run', 'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, 'v1', 'run', 'v1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, None, 'anthosevents',
+       'v1beta1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.BETA, None, 'anthosevents',
+       'v1beta1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.GA, None, 'anthosevents',
+       'v1beta1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, 'v1', 'anthosevents',
+       'v1'),
   )
   def testGetConnectionContextGke(self, product, release_track,
                                   version_override, expected_api_name,
                                   expected_api_version):
-    properties.VALUES.run.platform.Set('gke')
     cluster_ref = mock.Mock()
     self.args.CONCEPTS.cluster.Parse.return_value = cluster_ref
     gke_context = self.StartObjectPatch(connection_context,
                                         '_GKEConnectionContext')
 
     connection_context.GetConnectionContext(self.args, product, release_track,
-                                            version_override)
+                                            version_override, 'gke')
 
     gke_context.assert_called_once_with(cluster_ref, expected_api_name,
                                         expected_api_version)
@@ -88,15 +91,18 @@ class ConnectionContextTest(test_case.TestCase, parameterized.TestCase):
       (flags.Product.RUN, base.ReleaseTrack.GA, None, 'run', 'v1'),
       (flags.Product.RUN, base.ReleaseTrack.ALPHA, 'v1alpha1', 'run',
        'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, None, 'run', 'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.BETA, None, 'run', 'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.GA, None, 'run', 'v1alpha1'),
-      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, 'v1', 'run', 'v1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, None, 'anthosevents',
+       'v1beta1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.BETA, None, 'anthosevents',
+       'v1beta1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.GA, None, 'anthosevents',
+       'v1beta1'),
+      (flags.Product.EVENTS, base.ReleaseTrack.ALPHA, 'v1', 'anthosevents',
+       'v1'),
   )
   def testGetConnectionContextKubernetes(self, product, release_track,
                                          version_override, expected_api_name,
                                          expected_api_version):
-    properties.VALUES.run.platform.Set('kubernetes')
     kubeconfig_obj = kubeconfig.Kubeconfig.Default()
     self.StartObjectPatch(flags, 'GetKubeconfig', return_value=kubeconfig_obj)
     self.args.context = 'context'
@@ -104,7 +110,7 @@ class ConnectionContextTest(test_case.TestCase, parameterized.TestCase):
                                                '_KubeconfigConnectionContext')
 
     connection_context.GetConnectionContext(self.args, product, release_track,
-                                            version_override)
+                                            version_override, 'kubernetes')
 
     kubernetes_context.assert_called_once_with(kubeconfig_obj,
                                                expected_api_name,
@@ -124,16 +130,28 @@ class ConnectionContextTest(test_case.TestCase, parameterized.TestCase):
   def testGetConnectionContextManaged(self, product, release_track,
                                       version_override, expected_api_name,
                                       expected_api_version):
-    properties.VALUES.run.platform.Set('managed')
     self.StartObjectPatch(flags, 'GetRegion', return_value='us-central1')
     regional_context = self.StartObjectPatch(connection_context,
                                              '_RegionalConnectionContext')
 
     connection_context.GetConnectionContext(self.args, product, release_track,
-                                            version_override)
+                                            version_override, 'managed')
 
     regional_context.assert_called_once_with('us-central1', expected_api_name,
                                              expected_api_version)
+
+  def testGetConnectionContextDefaultToPlatformFlag(self):
+    platform = 'managed'
+    properties.VALUES.run.platform.Set(platform)
+    self.StartObjectPatch(flags, 'GetRegion', return_value='us-central1')
+    regional_context = self.StartObjectPatch(connection_context,
+                                             '_RegionalConnectionContext')
+
+    connection_context.GetConnectionContext(self.args, flags.Product.RUN,
+                                            base.ReleaseTrack.GA,
+                                            None)
+
+    regional_context.assert_called_once_with('us-central1', 'run', 'v1')
 
   @parameterized.parameters('v1', 'v1alpha1')
   def testConnectToGKECluster(self, version):

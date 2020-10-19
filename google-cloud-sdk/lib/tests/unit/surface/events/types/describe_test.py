@@ -21,13 +21,14 @@ from __future__ import unicode_literals
 from googlecloudsdk.api_lib.events import custom_resource_definition
 from googlecloudsdk.calliope import base as calliope_base
 from googlecloudsdk.command_lib.events import exceptions
+from googlecloudsdk.command_lib.run import exceptions as serverless_exceptions
 from tests.lib.surface.events import base
 
 
-class TypesDescribeTestAlpha(base.EventsBase):
+class TypesDescribeAnthosTestBeta(base.EventsBase):
 
   def PreSetUp(self):
-    self.track = calliope_base.ReleaseTrack.ALPHA
+    self.track = calliope_base.ReleaseTrack.BETA
 
   def _MakeSourceCrds(self, num_sources, num_event_types_per_source,
                       num_properties_per_source):
@@ -61,40 +62,34 @@ class TypesDescribeTestAlpha(base.EventsBase):
       required_properties = [
           'p{}-{}'.format(i, j) for j in range(1, num_properties_per_source, 3)
       ]
-      crd.spec.validation = self.crd_messages.CustomResourceValidation(
-          openAPIV3Schema=self._SourceSchemaProperties(
-              spec_properties,
-              required_properties,
-          ))
+
+      schema = self._SourceSchemaProperties(
+          spec_properties,
+          required_properties,
+      )
+
+      # Attempt setting validation under spec for api 'run' v1beta1
+      try:
+        crd.spec.version = 'v1beta1'
+        crd.spec.validation = self.crd_messages.CustomResourceValidation(
+            openAPIV3Schema=schema)
+      except AttributeError:
+        custom_resource_definition_versions = [
+            self.crd_messages.CustomResourceDefinitionVersion(
+                name='v1',
+                schema=self.crd_messages.CustomResourceValidation(
+                    openAPIV3Schema=schema))
+        ]
+        crd.spec.versions = custom_resource_definition_versions
+
     self.operations.ListSourceCustomResourceDefinitions.return_value = (
         self.source_crds)
 
   def testDescribeManaged(self):
-    """Tests successful describe with default output format."""
-    self._MakeSourceCrds(
-        num_sources=2,
-        num_event_types_per_source=3,
-        num_properties_per_source=3)
-    self.Run('events types describe google.source.0.et.0 '
-             '--platform=managed --region=us-central1')
-
-    self.AssertOutputEquals(
-        """description: desc00
-        schema: https://somewhere.over.the.rainbow.json
-        source: SourceKind0
-        type: google.source.0.et.0
-
-        Parameter(s) to create a trigger for this event type:
-        REQUIRED PARAMETER DESCRIPTION
-        Yes p0-1 pdesc01
-            p0-0 pdesc00
-            p0-2 pdesc02
-
-        Secret parameter(s) to create a trigger for this event type:
-        REQUIRED PARAMETER DESCRIPTION
-         pSecret pSecretdesc
-        """,
-        normalize_space=True)
+    """This command is for Anthos only."""
+    with self.assertRaises(serverless_exceptions.ConfigurationError):
+      self.Run('events types describe google.source.0.et.0 '
+               '--platform=managed')
 
   def testDescribeGke(self):
     """Tests successful describe with default output format."""
@@ -134,3 +129,47 @@ class TypesDescribeTestAlpha(base.EventsBase):
       self.Run('events types describe bad.event.type --platform=gke '
                '--cluster=cluster-1 --cluster-location=us-central1-a')
     self.AssertErrContains('Unknown event type: bad.event.type.')
+
+
+class TypesDescribeAnthosTestAlpha(TypesDescribeAnthosTestBeta):
+
+  def PreSetUp(self):
+    self.track = calliope_base.ReleaseTrack.ALPHA
+
+  def testDescribeManaged(self):
+    pass
+
+
+class TypesDescribeManagedTestAlpha(TypesDescribeAnthosTestBeta):
+
+  def PreSetUp(self):
+    self.track = calliope_base.ReleaseTrack.ALPHA
+    self.api_name = 'run'
+    self.api_version = 'v1alpha1'
+
+  def testDescribeManaged(self):
+    """Tests successful describe with default output format."""
+    self._MakeSourceCrds(
+        num_sources=2,
+        num_event_types_per_source=3,
+        num_properties_per_source=3)
+    self.Run('events types describe google.source.0.et.0 '
+             '--platform=managed --region=us-central1')
+
+    self.AssertOutputEquals(
+        """description: desc00
+        schema: https://somewhere.over.the.rainbow.json
+        source: SourceKind0
+        type: google.source.0.et.0
+
+        Parameter(s) to create a trigger for this event type:
+        REQUIRED PARAMETER DESCRIPTION
+        Yes p0-1 pdesc01
+            p0-0 pdesc00
+            p0-2 pdesc02
+
+        Secret parameter(s) to create a trigger for this event type:
+        REQUIRED PARAMETER DESCRIPTION
+         pSecret pSecretdesc
+        """,
+        normalize_space=True)

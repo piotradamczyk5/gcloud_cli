@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for the http module."""
 
 from __future__ import absolute_import
@@ -24,8 +23,6 @@ import uuid
 
 from apitools.base.py import batch
 from apitools.base.py import http_wrapper
-
-import google_auth_httplib2
 
 from googlecloudsdk.core import config
 from googlecloudsdk.core import properties
@@ -39,11 +36,18 @@ from tests.lib import sdk_test_base
 from tests.lib import test_case
 
 import httplib2
+import mock
 from oauth2client import client
 import six
 from google.auth import credentials
 from google.auth import exceptions as google_auth_exceptions
 from google.oauth2 import credentials as google_auth_creds
+
+
+def EncodeHeaders(headers):
+  return {
+      k.encode('ascii'): v.encode('ascii') for k, v in six.iteritems(headers)
+  }
 
 
 class CredentialsTestGoogleAuth(sdk_test_base.WithFakeAuth):
@@ -163,8 +167,8 @@ class FakeService(object):
     return {}
 
   # pylint: disable=unused-argument
-  def PrepareHttpRequest(
-      self, method_config, request, global_params, upload_config):
+  def PrepareHttpRequest(self, method_config, request, global_params,
+                         upload_config):
     return global_params['desired_request']
 
   def ProcessHttpResponse(self, _, http_response):
@@ -196,8 +200,7 @@ class BatchTokenRefreshTest(sdk_test_base.WithFakeAuth, parameterized.TestCase):
       refresh_mock = self.StartObjectPatch(google_auth_creds.Credentials,
                                            'refresh')
     else:
-      refresh_mock = self.StartObjectPatch(client.OAuth2Credentials,
-                                           'refresh')
+      refresh_mock = self.StartObjectPatch(client.OAuth2Credentials, 'refresh')
     mock_service = FakeService()
 
     desired_url = 'https://www.example.com'
@@ -209,8 +212,8 @@ class BatchTokenRefreshTest(sdk_test_base.WithFakeAuth, parameterized.TestCase):
         'content-length': 80,
     }, 'x' * 80)
 
-    mock_request = self.StartObjectPatch(http_wrapper, 'MakeRequest',
-                                         autospec=True)
+    mock_request = self.StartObjectPatch(
+        http_wrapper, 'MakeRequest', autospec=True)
     self.__ConfigureMock(
         mock_request,
         http_wrapper.Request(
@@ -260,7 +263,11 @@ class HttpTestBase(sdk_test_base.SdkBase):
   def FakeAuthUserAgent(self):
     return ''
 
-  def UserAgent(self, cmd_path, invocation_id, python_version, interactive,
+  def UserAgent(self,
+                cmd_path,
+                invocation_id,
+                python_version,
+                interactive,
                 fromscript=False):
     template = ('{0} gcloud/{1} command/{2} invocation-id/{3} environment/{4} '
                 'environment-version/{5} interactive/{6} from-script/{9} '
@@ -282,22 +289,34 @@ class HttpTestBase(sdk_test_base.SdkBase):
         httplib2.Http,
         'request',
         return_value=(httplib2.Response({'status': 200}), b''))
-    self.google_auth_request_mock = self.StartObjectPatch(
-        google_auth_httplib2.AuthorizedHttp,
-        'request',
-        return_value=(httplib2.Response({'status': 200}), b''))
     uuid_mock = self.StartObjectPatch(uuid, 'uuid4')
     uuid_mock.return_value = uuid.UUID('12345678123456781234567812345678')
     is_interactive_mock = self.StartObjectPatch(console_io, 'IsInteractive')
     is_interactive_mock.return_value = False
     python_version = '2.7.6'
     self.StartPatch('platform.python_version').return_value = python_version
-    self.StartObjectPatch(console_io, 'IsRunFromShellScript',
-                          return_value=False)
-    self.StartObjectPatch(console_attr.ConsoleAttr, 'GetTermIdentifier',
-                          return_value='xterm')
-    self.expected_user_agent = self.UserAgent(
-        'None', uuid_mock.return_value.hex, python_version, False)
+    self.StartObjectPatch(
+        console_io, 'IsRunFromShellScript', return_value=False)
+    self.StartObjectPatch(
+        console_attr.ConsoleAttr, 'GetTermIdentifier', return_value='xterm')
+    self.expected_user_agent = self.UserAgent('None',
+                                              uuid_mock.return_value.hex,
+                                              python_version, False)
+    self.url = 'http://foo.com'
+
+  def AssertHeaderContains(self, header, call_args):
+    args, kwargs = call_args
+    if len(args) >= 3:
+      self.assertDictContainsSubset(header, args[3])
+    else:
+      self.assertDictContainsSubset(header, kwargs['headers'])
+
+  def AssertHeaderNotContains(self, header_key, call_args):
+    args, kwargs = call_args
+    if len(args) >= 3:
+      self.assertNotIn(header_key, args[3])
+    else:
+      self.assertNotIn(header_key, kwargs['headers'])
 
 
 class HttpTestUserCredsGoogleAuth(HttpTestBase, sdk_test_base.WithFakeAuth):
@@ -305,126 +324,28 @@ class HttpTestUserCredsGoogleAuth(HttpTestBase, sdk_test_base.WithFakeAuth):
   def PreSetUp(self):
     self.use_google_auth = True
 
-  def _EncodeHeaders(self, headers):
-    return {
-        k.encode('ascii'): v.encode('ascii')
-        for k, v in six.iteritems(headers)}
-
   def testIAMAuthoritySelectorHeaderGoogleAuth(self):
-    url = 'http://foo.com'
-    authority_selector = 'superuser@google.com'
-    properties.VALUES.auth.authority_selector.Set(authority_selector)
-
-    expect_headers = {'x-goog-iam-authority-selector': authority_selector}
-    expect_headers = self._EncodeHeaders(expect_headers)
-
-    # google-auth is invoked by default if use_google_auth is set to True.
-    http.Http(use_google_auth=True).request(url, 'GET', None, {}, 0, None)
-    self.google_auth_request_mock.assert_called_once_with(
-        url, 'GET', None, expect_headers, 0, None)
-
-  def testIAMAuthorizationTokenHeaderGoogleAuth(self):
-    url = 'http://foo.com'
-    authorization_token = 'A very interesting authorization token'
-    authorization_token_file = self.Touch(
-        self.temp_path, 'auth_token_file', contents=authorization_token)
-    properties.VALUES.auth.authorization_token_file.Set(
-        authorization_token_file)
-
-    expect_headers = {'x-goog-iam-authorization-token': authorization_token}
-    expect_headers = self._EncodeHeaders(expect_headers)
-    http.Http(use_google_auth=True).request(url, 'GET', None, {}, 0, None)
-    self.google_auth_request_mock.assert_called_once_with(
-        url, 'GET', None, expect_headers, 0, None)
-
-  def testDisabledAuthGoogleAuth(self):
-    properties.VALUES.auth.disable_credentials.Set(True)
-    url = 'http://foo.com'
-    expect_headers = {'user-agent': self.expected_user_agent}
-    expect_headers = self._EncodeHeaders(expect_headers)
-    http_client = http.Http(use_google_auth=True)
-    http_client.request(url, 'GET', None, None, 0, None)
-    self.request_mock.assert_called_once_with(url, 'GET', None, expect_headers,
-                                              0, None)
-
-  def testResourceProjectOverrideGoogleAuth(self):
-    properties.VALUES.billing.quota_project.Set(
-        properties.VALUES.billing.CURRENT_PROJECT)
-    properties.VALUES.core.project.Set('foo')
-    http.Http(
-        enable_resource_quota=True,
-        use_google_auth=True).request('http://foo.com', 'GET', None, {})
-    expect_headers = self._EncodeHeaders({'X-Goog-User-Project': 'foo'})
-    self.assertDictContainsSubset(expect_headers,
-                                  self.google_auth_request_mock.call_args[0][3])
-
-  def testResourceProjectOverrideLegacyProjectGoogleAuth(self):
-    properties.VALUES.billing.quota_project.Set(
-        properties.VALUES.billing.LEGACY)
-    for x in [False, True]:
-      http.Http(
-          enable_resource_quota=x,
-          use_google_auth=True).request('http://foo.com', 'GET', None, {})
-      self.assertNotIn('X-Goog-User-Project',
-                       self.google_auth_request_mock.call_args[0][3])
-      self.assertNotIn(b'X-Goog-User-Project',
-                       self.google_auth_request_mock.call_args[0][3])
-
-  def testResourceProjectOverrideUnsetDefaultGoogleAuth(self):
-    properties.VALUES.billing.quota_project.Set(None)
-    http.Http(
-        enable_resource_quota=False,
-        use_google_auth=True).request('http://foo.com', 'GET', None, {})
-    self.assertNotIn('X-Goog-User-Project',
-                     self.google_auth_request_mock.call_args[0][3])
-    self.assertNotIn(b'X-Goog-User-Project',
-                     self.google_auth_request_mock.call_args[0][3])
-
-  def testResourceProjectOverrideCustomProjectGoogleAuth(self):
-    properties.VALUES.billing.quota_project.Set('bar')
-    http.Http(
-        enable_resource_quota=True,
-        use_google_auth=True).request('http://foo.com', 'GET', None, {})
-    expect_headers = self._EncodeHeaders({'X-Goog-User-Project': 'bar'})
-    self.assertDictContainsSubset(expect_headers,
-                                  self.google_auth_request_mock.call_args[0][3])
-
-  def testResourceProjectOverrideForceResourceQuotGoogleAuth(self):
-    properties.VALUES.billing.quota_project.Set(
-        properties.VALUES.billing.LEGACY)
-    properties.VALUES.core.project.Set('foo')
-    http.Http(
-        enable_resource_quota=True,
-        force_resource_quota=True,
-        use_google_auth=True).request('http://foo.com', 'GET', None, {})
-    expect_headers = self._EncodeHeaders({'X-Goog-User-Project': 'foo'})
-    self.assertDictContainsSubset(expect_headers,
-                                  self.google_auth_request_mock.call_args[0][3])
-
-
-class HttpTestUserCreds(HttpTestBase, sdk_test_base.WithFakeAuth):
-
-  def _EncodeHeaders(self, headers):
-    return {
-        k.encode('ascii'): v.encode('ascii')
-        for k, v in six.iteritems(headers)}
-
-  def testIAMAuthoritySelectorHeader(self):
-    url = 'http://foo.com'
     authority_selector = 'superuser@google.com'
     properties.VALUES.auth.authority_selector.Set(authority_selector)
 
     expect_headers = {
         'user-agent': self.expected_user_agent,
         'x-goog-iam-authority-selector': authority_selector,
-        'Authorization': 'Bearer ' + self.FakeAuthAccessToken()}
-    expect_headers = self._EncodeHeaders(expect_headers)
-    http.Http().request(url, 'GET', None, {}, 0, None)
-    self.request_mock.assert_called_once_with(
-        url, 'GET', None, expect_headers, 0, None)
+        'authorization': 'Bearer ' + self.FakeAuthAccessToken()
+    }
+    expect_headers = EncodeHeaders(expect_headers)
 
-  def testIAMAuthorizationTokenHeader(self):
-    url = 'http://foo.com'
+    http.Http(use_google_auth=True).request(
+        self.url, 'GET', None, {}, redirections=0, connection_type=None)
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=expect_headers,
+        redirections=0,
+        connection_type=None)
+
+  def testIAMAuthorizationTokenHeaderGoogleAuth(self):
     authorization_token = 'A very interesting authorization token'
     authorization_token_file = self.Touch(
         self.temp_path, 'auth_token_file', contents=authorization_token)
@@ -434,57 +355,102 @@ class HttpTestUserCreds(HttpTestBase, sdk_test_base.WithFakeAuth):
     expect_headers = {
         'user-agent': self.expected_user_agent,
         'x-goog-iam-authorization-token': authorization_token,
-        'Authorization': 'Bearer ' + self.FakeAuthAccessToken()}
-    expect_headers = self._EncodeHeaders(expect_headers)
-    http.Http().request(url, 'GET', None, {}, 0, None)
+        'authorization': 'Bearer ' + self.FakeAuthAccessToken()
+    }
+    expect_headers = EncodeHeaders(expect_headers)
+    http.Http(use_google_auth=True).request(
+        self.url, 'GET', None, {}, redirections=0, connection_type=None)
     self.request_mock.assert_called_once_with(
-        url, 'GET', None, expect_headers, 0, None)
+        self.url,
+        'GET',
+        body=None,
+        headers=expect_headers,
+        redirections=0,
+        connection_type=None)
+
+  def testDisabledAuthGoogleAuth(self):
+    properties.VALUES.auth.disable_credentials.Set(True)
+    expect_headers = {'user-agent': self.expected_user_agent}
+    expect_headers = EncodeHeaders(expect_headers)
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, None, 0,
+                                            None)
+    self.request_mock.assert_called_once_with(self.url, 'GET', None,
+                                              expect_headers, 0, None)
+
+
+class HttpTestUserCreds(HttpTestBase, sdk_test_base.WithFakeAuth):
+
+  def testIAMAuthoritySelectorHeader(self):
+    authority_selector = 'superuser@google.com'
+    properties.VALUES.auth.authority_selector.Set(authority_selector)
+
+    expect_headers = {
+        'user-agent': self.expected_user_agent,
+        'x-goog-iam-authority-selector': authority_selector,
+        'Authorization': 'Bearer ' + self.FakeAuthAccessToken()
+    }
+    expect_headers = EncodeHeaders(expect_headers)
+    http.Http().request(self.url, 'GET', None, {}, 0, None)
+    self.request_mock.assert_called_once_with(self.url, 'GET', None,
+                                              expect_headers, 0, None)
+
+  def testIAMAuthorizationTokenHeader(self):
+    authorization_token = 'A very interesting authorization token'
+    authorization_token_file = self.Touch(
+        self.temp_path, 'auth_token_file', contents=authorization_token)
+    properties.VALUES.auth.authorization_token_file.Set(
+        authorization_token_file)
+
+    expect_headers = {
+        'user-agent': self.expected_user_agent,
+        'x-goog-iam-authorization-token': authorization_token,
+        'Authorization': 'Bearer ' + self.FakeAuthAccessToken()
+    }
+    expect_headers = EncodeHeaders(expect_headers)
+    http.Http().request(self.url, 'GET', None, {}, 0, None)
+    self.request_mock.assert_called_once_with(self.url, 'GET', None,
+                                              expect_headers, 0, None)
 
   def testDisabledAuth(self):
     properties.VALUES.auth.disable_credentials.Set(True)
-    url = 'http://foo.com'
     expect_headers = {'user-agent': self.expected_user_agent}
-    expect_headers = self._EncodeHeaders(expect_headers)
+    expect_headers = EncodeHeaders(expect_headers)
     http_client = http.Http()
-    http_client.request(url, 'GET', None, None, 0, None)
-    self.request_mock.assert_called_once_with(
-        url, 'GET', None, expect_headers, 0, None)
+    http_client.request(self.url, 'GET', None, None, 0, None)
+    self.request_mock.assert_called_once_with(self.url, 'GET', None,
+                                              expect_headers, 0, None)
 
   def testResourceProjectOverride(self):
     properties.VALUES.billing.quota_project.Set(
         properties.VALUES.billing.CURRENT_PROJECT)
     properties.VALUES.core.project.Set('foo')
-    http.Http(enable_resource_quota=True).request('http://foo.com', 'GET', None,
-                                                  {})
-    expect_headers = self._EncodeHeaders({'X-Goog-User-Project': 'foo'})
-    self.assertDictContainsSubset(expect_headers,
-                                  self.request_mock.call_args[0][3])
+    http.Http(enable_resource_quota=True).request(self.url, 'GET', None, {})
+    expect_headers = EncodeHeaders({'X-Goog-User-Project': 'foo'})
+    self.AssertHeaderContains(expect_headers, self.request_mock.call_args)
 
   def testResourceProjectOverrideLegacyProject(self):
     properties.VALUES.billing.quota_project.Set(
         properties.VALUES.billing.LEGACY)
     for x in [False, True]:
-      http.Http(enable_resource_quota=x).request(
-          'http://foo.com', 'GET', None, {})
-      self.assertNotIn('X-Goog-User-Project',
-                       self.request_mock.call_args[0][3])
-      self.assertNotIn(b'X-Goog-User-Project',
-                       self.request_mock.call_args[0][3])
+      http.Http(enable_resource_quota=x).request(self.url, 'GET', None, {})
+      self.AssertHeaderNotContains('X-Goog-User-Project',
+                                   self.request_mock.call_args)
+      self.AssertHeaderNotContains(b'X-Goog-User-Project',
+                                   self.request_mock.call_args)
 
   def testResourceProjectOverrideUnsetDefault(self):
     properties.VALUES.billing.quota_project.Set(None)
-    http.Http(enable_resource_quota=False).request(
-        'http://foo.com', 'GET', None, {})
-    self.assertNotIn('X-Goog-User-Project', self.request_mock.call_args[0][3])
-    self.assertNotIn(b'X-Goog-User-Project', self.request_mock.call_args[0][3])
+    http.Http(enable_resource_quota=False).request(self.url, 'GET', None, {})
+    self.AssertHeaderNotContains('X-Goog-User-Project',
+                                 self.request_mock.call_args)
+    self.AssertHeaderNotContains(b'X-Goog-User-Project',
+                                 self.request_mock.call_args)
 
   def testResourceProjectOverrideCustomProject(self):
     properties.VALUES.billing.quota_project.Set('bar')
-    http.Http(enable_resource_quota=True).request('http://foo.com', 'GET', None,
-                                                  {})
-    expect_headers = self._EncodeHeaders({'X-Goog-User-Project': 'bar'})
-    self.assertDictContainsSubset(expect_headers,
-                                  self.request_mock.call_args[0][3])
+    http.Http(enable_resource_quota=True).request(self.url, 'GET', None, {})
+    expect_headers = EncodeHeaders({'X-Goog-User-Project': 'bar'})
+    self.AssertHeaderContains(expect_headers, self.request_mock.call_args)
 
   def testResourceProjectOverrideForceResourceQuota(self):
     properties.VALUES.billing.quota_project.Set(
@@ -492,32 +458,232 @@ class HttpTestUserCreds(HttpTestBase, sdk_test_base.WithFakeAuth):
     properties.VALUES.core.project.Set('foo')
     http.Http(
         enable_resource_quota=True,
-        force_resource_quota=True).request('http://foo.com', 'GET', None, {})
-    expect_headers = self._EncodeHeaders({'X-Goog-User-Project': 'foo'})
-    self.assertDictContainsSubset(expect_headers,
-                                  self.request_mock.call_args[0][3])
+        force_resource_quota=True).request(self.url, 'GET', None, {})
+    expect_headers = EncodeHeaders({'X-Goog-User-Project': 'foo'})
+    self.AssertHeaderContains(expect_headers, self.request_mock.call_args)
 
 
 class HttpTestGCECreds(HttpTestBase, sdk_test_base.WithFakeComputeAuth):
 
   def testComputeServiceAccount(self):
-    # Don't do it for service accounts.
-    properties.VALUES.billing.quota_project.Set('bar')
-    http.Http(enable_resource_quota=True).request(
-        'http://foo.com', 'GET', None, {})
-    self.assertNotIn('X-Goog-User-Project', self.request_mock.call_args[0][3])
-    self.assertNotIn(b'X-Goog-User-Project', self.request_mock.call_args[0][3])
+    # Don't add x-goog-user-project header for service accounts,
+    # unless billing project is set. In that case, use the value for the header.
+    http.Http(enable_resource_quota=True).request(self.url, 'GET', None, {})
+    self.AssertHeaderNotContains('X-Goog-User-Project',
+                                 self.request_mock.call_args)
+    self.AssertHeaderNotContains(b'X-Goog-User-Project',
+                                 self.request_mock.call_args)
+
+
+class HttpTestGCECredsGoogleAuth(HttpTestBase,
+                                 sdk_test_base.WithFakeComputeAuth):
+
+  def PreSetUp(self):
+    self.use_google_auth = True
 
   def testComputeServiceAccountGoogleAuth(self):
-    # Don't do it for service accounts.
-    properties.VALUES.billing.quota_project.Set('bar')
+    # Don't add x-goog-user-project header for service accounts,
+    # unless billing project is set. In that case, use the value for the header.
     http.Http(
         enable_resource_quota=True,
-        use_google_auth=True).request('http://foo.com', 'GET', None, {})
-    self.assertNotIn('X-Goog-User-Project',
-                     self.google_auth_request_mock.call_args[0][3])
-    self.assertNotIn(b'X-Goog-User-Project',
-                     self.google_auth_request_mock.call_args[0][3])
+        use_google_auth=True).request(self.url, 'GET', None, {})
+    self.AssertHeaderNotContains('X-Goog-User-Project',
+                                 self.request_mock.call_args)
+    self.AssertHeaderNotContains(b'X-Goog-User-Project',
+                                 self.request_mock.call_args)
+
+
+class HttpTestUserProjectQuota(HttpTestBase, sdk_test_base.WithFakeAuth):
+
+  def PreSetUp(self):
+    self.use_google_auth = True
+
+  def SetUp(self):
+    common_headers = {
+        'user-agent': self.expected_user_agent,
+        'authorization': 'Bearer ' + self.FakeAuthAccessToken()
+    }
+    self.common_headers = EncodeHeaders(common_headers)
+
+    self.permission_denied_response = (
+        httplib2.Response({'status': 403}),
+        b'{"error": {"message": "Grant the caller the Owner or Editor role, '
+        b'or a custom role with the serviceusage.services.use permission"}}')
+
+  def testForceUserProjectQuota(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.LEGACY)
+    properties.VALUES.core.project.Set('foo')
+    http.Http(
+        enable_resource_quota=True,
+        force_resource_quota=True,
+        use_google_auth=True).request(self.url, 'GET', None, {})
+    self.common_headers[b'X-Goog-User-Project'] = b'foo'
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testLegacyMode(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.LEGACY)
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testCurrentProjectMode_WithPermission(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT)
+    properties.VALUES.core.project.Set('foo')
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.common_headers[b'X-Goog-User-Project'] = b'foo'
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testCurrentProjectMode_WithoutPermission(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT)
+    properties.VALUES.core.project.Set('foo')
+    self.request_mock.return_value = self.permission_denied_response
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.common_headers[b'X-Goog-User-Project'] = b'foo'
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testCurrentProjectMode_EmptyProject(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT)
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testCurrentProjectWithFallbackMode_WithPermission(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT_WITH_FALLBACK)
+    properties.VALUES.core.project.Set('foo')
+
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.common_headers[b'X-Goog-User-Project'] = b'foo'
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testCurrentProjectWithFallbackMode_WithoutPermission(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT_WITH_FALLBACK)
+    properties.VALUES.core.project.Set('foo')
+    self.request_mock.side_effect = (self.permission_denied_response,
+                                     mock.DEFAULT)
+
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    headers_with_quota = self.common_headers.copy()
+    headers_with_quota[b'X-Goog-User-Project'] = b'foo'
+
+    self.assertEqual(self.request_mock.call_count, 2)
+    calls = [
+        mock.call(
+            self.url,
+            'GET',
+            body=None,
+            headers=headers_with_quota,
+            redirections=5,
+            connection_type=None),
+        mock.call(
+            self.url,
+            'GET',
+            body=None,
+            headers=self.common_headers,
+            redirections=5,
+            connection_type=None),
+    ]
+    self.request_mock.assert_has_calls(calls)
+
+  def testCurrentProjectWithFallbackMode_EmptyProject(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT_WITH_FALLBACK)
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testQuotaProjectManuallySet_WithPermission(self):
+    properties.VALUES.billing.quota_project.Set('bar')
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.common_headers[b'X-Goog-User-Project'] = b'bar'
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testQuotaProjectManuallySet_WithoutPermission(self):
+    properties.VALUES.billing.quota_project.Set('bar')
+    self.request_mock.return_value = self.permission_denied_response
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    self.common_headers[b'X-Goog-User-Project'] = b'bar'
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testQuotaProjectDisabled(self):
+    properties.VALUES.billing.quota_project.Set(
+        properties.VALUES.billing.CURRENT_PROJECT)
+    properties.VALUES.core.project.Set('foo')
+    http.Http(
+        enable_resource_quota=False,
+        use_google_auth=True).request(self.url, 'GET', None, {})
+    self.request_mock.assert_called_once_with(
+        self.url,
+        'GET',
+        body=None,
+        headers=self.common_headers,
+        redirections=5,
+        connection_type=None)
+
+  def testNoCredentialsMode(self):
+    properties.VALUES.billing.quota_project.Set('bar')
+    properties.VALUES.auth.disable_credentials.Set(True)
+    http.Http(use_google_auth=True).request(self.url, 'GET', None, {})
+    del self.common_headers[b'authorization']
+    self.request_mock.assert_called_once_with(self.url, 'GET', None,
+                                              self.common_headers)
 
 
 if __name__ == '__main__':

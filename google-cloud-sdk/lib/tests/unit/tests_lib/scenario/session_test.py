@@ -20,6 +20,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import contextlib
+import datetime
+import io
 import json
 import os
 import re
@@ -27,7 +29,8 @@ import textwrap
 
 from apitools.base.py import batch
 from apitools.base.py import http_wrapper
-
+import botocore.awsrequest
+import botocore.response
 from googlecloudsdk.calliope import exceptions as calliope_exceptions
 from googlecloudsdk.core import config
 from googlecloudsdk.core import http
@@ -36,7 +39,6 @@ from googlecloudsdk.core import yaml
 from googlecloudsdk.core.console import console_io
 from googlecloudsdk.core.console import progress_tracker
 from googlecloudsdk.core.util import files
-
 from tests.lib import parameterized
 from tests.lib import sdk_test_base
 from tests.lib import test_case
@@ -47,11 +49,142 @@ from tests.lib.scenario import schema
 from tests.lib.scenario import session
 from tests.lib.scenario import test_base
 from tests.lib.scenario import updates
-
 import httplib2
 import mock
+import requests
 import six
 from six.moves import http_client as httplib
+
+
+def make_requests_response(status_code, headers, body):
+  http_resp = requests.Response()
+  http_resp.status_code = status_code
+  http_resp.raw = io.BytesIO(six.ensure_binary(body))
+  http_resp.headers = headers
+  return http_resp
+
+
+def make_botocore_response(status_code, headers, parsed_response):
+  resp = botocore.awsrequest.AWSResponse('url', status_code, headers, {})
+  return resp, parsed_response
+
+
+def make_botocore_parsed_body(str_value, date_value):
+  bytes_value = bytes(str_value.encode('utf-8'))
+  length = len(str_value)
+  return {
+      'Body': botocore.response.StreamingBody(six.BytesIO(bytes_value), length),
+      'ContentLength': length,
+      'ContentLanguage': 'en',
+      'LastModified': date_value,
+  }
+
+
+def make_botocore_json_body(str_value, date_value):
+  return (
+      '{{"Body": {{"_streamingbody": "{0}"}}, '
+      '"ContentLanguage": "en", "ContentLength": {2}, "LastModified": {{'
+      '"_datetime": "{1}"}}}}').format(str_value,
+                                       date_value.strftime('%Y-%m-%dT%H:%M:%S'),
+                                       len(str_value))
+
+
+class TransportTest(test_case.TestCase, parameterized.TestCase):
+
+  @parameterized.parameters(
+      (session.Httplib2Transport(None).RequestFromArgs(
+          'url', method='POST', body='test', headers={'header': 'val'}),),
+      (session.RequestsTransport(None).RequestFromArgs(
+          'POST', 'url', data='test', headers={'header': 'val'}),),
+      (session.BotocoreTransport(None).RequestFromArgs({}, {
+          'url': 'url',
+          'method': 'POST',
+          'headers': {
+              'header': 'val'
+          },
+          'body': 'test'
+      })))
+  def testRequestFromArgs(self, request):
+    self.assertEqual(request.uri, 'url')
+    self.assertEqual(request.method, 'POST')
+    self.assertEqual(request.headers, {'header': 'val'})
+    self.assertEqual(request.body, 'test')
+
+  @parameterized.parameters(
+      (session.Httplib2Transport(None), (httplib2.Response({
+          'status': httplib.OK,
+          'header': 'val'
+      }), 'test'.encode('utf-8'))),
+      (session.RequestsTransport(None),
+       make_requests_response(httplib.OK, {'header': 'val'},
+                              'test'.encode('utf-8'))),
+      (session.BotocoreTransport(None),
+       make_botocore_response(httplib.OK, {'header': 'val'}, 'test')))
+  def testResponseFromTransportResponse(self, transport, transport_response):
+    response = transport.ResponseFromTransportResponse(transport_response)
+    self.assertEqual(response.status, httplib.OK)
+    self.assertEqual(response.headers, {'header': 'val'})
+    self.assertEqual(response.body, 'test')
+
+  def testBotocoreJsonResponseFromTransportResponse(self):
+    transport = session.BotocoreTransport(None)
+    str_value = 'test'
+    date_value = datetime.datetime(2020, 3, 14, 0, 0, 0)
+    transport_response = make_botocore_response(
+        httplib.OK, {'header': 'val'},
+        make_botocore_parsed_body(str_value, date_value))
+    response = transport.ResponseFromTransportResponse(transport_response)
+    self.assertEqual(response.body,
+                     make_botocore_json_body(str_value, date_value))
+
+  def testToHttplib2TransportResponse(self):
+    response = events.Response(
+        httplib.OK, {'header': 'val'}, 'test')
+    transport = session.Httplib2Transport(None)
+    transport_response = transport.ResponseToTransportResponse(response)
+
+    expected_response = (
+        httplib2.Response({'status': httplib.OK, 'header': 'val'}),
+        'test'.encode('utf-8'))
+    self.assertEqual(transport_response, expected_response)
+
+  def testToRequestsTransportResponse(self):
+    response = events.Response(
+        httplib.OK, {'header': 'val'}, 'test')
+    transport = session.RequestsTransport(None)
+    transport_response = transport.ResponseToTransportResponse(response)
+
+    expected_response = make_requests_response(
+        httplib.OK, {'header': 'val'}, 'test'.encode('utf-8'))
+    self.assertEqual(transport_response.status_code,
+                     expected_response.status_code)
+    self.assertEqual(transport_response.headers,
+                     expected_response.headers)
+    self.assertEqual(transport_response.content,
+                     expected_response.content)
+
+  def testToBotocoreTransportResponse(self):
+    date_value = datetime.datetime(2020, 3, 14, 0, 0, 0)
+    response = events.Response(httplib.OK, {'header': 'val'},
+                               make_botocore_json_body('test', date_value))
+    transport = session.BotocoreTransport(None)
+    transport_response = transport.ResponseToTransportResponse(response)
+
+    expected_response = make_botocore_response(
+        httplib.OK, {'header': 'val'},
+        make_botocore_parsed_body('test', date_value))
+    self.assertEqual(transport_response[0].status_code,
+                     expected_response[0].status_code)
+    self.assertEqual(transport_response[0].headers,
+                     expected_response[0].headers)
+    self.assertEqual(transport_response[1]['Body'].read(),
+                     expected_response[1]['Body'].read())
+    self.assertEqual(transport_response[1]['ContentLanguage'],
+                     expected_response[1]['ContentLanguage'])
+    self.assertEqual(transport_response[1]['ContentLength'],
+                     expected_response[1]['ContentLength'])
+    self.assertEqual(transport_response[1]['LastModified'],
+                     expected_response[1]['LastModified'])
 
 
 class _SessionTestsBase(sdk_test_base.WithOutputCapture,
@@ -247,16 +380,23 @@ class SessionTests(_SessionTestsBase):
       answer = console_io.PromptResponse(message='foo')
       self.assertEqual('bar', answer)
 
-  def testMakeRealRequest(self):
+  @parameterized.parameters(
+      (session.Httplib2Transport(None),
+       (httplib2.Response({'status': httplib.OK}), 'test'.encode('utf-8'))),
+      (session.RequestsTransport(None),
+       make_requests_response(httplib.OK, {}, 'test'.encode('utf-8'))),
+      (session.BotocoreTransport(None),
+       make_botocore_response(httplib.OK, {}, 'test')))
+  def testMakeRealRequest(self, transport, response):
     client_mock = mock.Mock()
     args = ['arg1']
     kwargs = {'kwarg1': 'value'}
     ce = self.CommandExecution({'expect_exit': {'code': 0}})
-    with self.Execute(ce) as s:
-      s._orig_request_method = mock.Mock(return_value=(
-          httplib2.Response({'status': httplib.OK}), 'test'.encode('utf-8')))
-      response = s._MakeRealRequest(client_mock, args, kwargs)
-      s._orig_request_method.assert_called_with(client_mock, args, kwargs)
+    with self.Execute(ce):
+      transport._orig_request_method = mock.Mock(return_value=response)
+      response = transport.MakeRealRequest(client_mock, args, kwargs)
+      transport._orig_request_method.assert_called_with(
+          client_mock, args, kwargs)
       self.assertEqual(response.status, httplib.OK)
       self.assertEqual(response.body, 'test')
 
@@ -342,7 +482,7 @@ class SessionTests(_SessionTestsBase):
     self.assertEqual(1, len(context.exception.failures))
 
   def testIgnoreApiCalls(self):
-    request_mock = self.StartPatch('httplib2.Http.request', auto_spec=True)
+    request_mock = self.StartPatch('httplib2.Http.request', autospec=True)
     response = {'status': 'RUNNING', 'progress': '0'}
     request_mock.return_value = (httplib2.Response({'status': httplib.OK}),
                                  self.ToJson(response).encode('utf-8'))
@@ -359,8 +499,8 @@ class SessionTests(_SessionTestsBase):
       self.assertEqual('0', self.FromJson(body)['progress'])
 
   def testRepeatableAPICall(self):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     running = {
         'api_call': {
             'repeatable': True,
@@ -420,8 +560,8 @@ class SessionTests(_SessionTestsBase):
       self.assertEqual('100', self.FromJson(body)['progress'])
 
   def testOptionalAPICallRemote(self):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     first_event = {'expect_stderr': 'err'}
     optional_call = {
         'api_call': {
@@ -618,8 +758,8 @@ class SessionTests(_SessionTestsBase):
       self.assertEqual(op_body, self.FromJson(body))
 
   def testAPICallOperation(self):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     op_body = {
         'name': 'operation-12345',
         'kind': 'foo#operation',
@@ -690,8 +830,8 @@ class SessionTests(_SessionTestsBase):
       self.assertEqual(op_body, self.FromJson(body))
 
   def testAPICallOperationWithWait(self):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     op_body = {
         'name': 'operation-12345',
         'kind': 'foo#operation',
@@ -810,8 +950,8 @@ class SessionTests(_SessionTestsBase):
       ({'status': 404, 'headers': {}, 'body': 'error'},),
   )
   def testAPICallResponsePayloadUpdates(self, response):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     request_mock.return_value = events.Response(httplib.OK, {}, 'success')
     data = {
         'api_call': {
@@ -921,8 +1061,8 @@ class SessionTests(_SessionTestsBase):
     self.assertEqual(1, len(context.exception.failures))
 
   def testBatchApiCallRemote(self):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     request_mock.return_value = events.Response(
         httplib.OK,
         {'Content-type': 'multipart/mixed; boundary=BATCH_BOUNDARY'},
@@ -1170,8 +1310,8 @@ class SessionUpdateTests(_SessionTestsBase):
 
   def testRepeatableAPICall(self):
     """Check that repeatable calls are automatically marked as such."""
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     running = {
         'api_call': {
             'expect_request': {
@@ -1236,8 +1376,8 @@ class SessionUpdateTests(_SessionTestsBase):
     self.assertIsNone(done['api_call'].get('repeatable'))
 
   def testAPICallGenerateOperationPolling(self):
-    request_mock = self.StartObjectPatch(session.Session, '_MakeRealRequest',
-                                         auto_spec=True)
+    request_mock = self.StartObjectPatch(session.Transport, 'MakeRealRequest',
+                                         autospec=True)
     op_body = {
         'name': 'operation-12345',
         'kind': 'foo#operation',

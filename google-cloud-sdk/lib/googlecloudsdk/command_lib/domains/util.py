@@ -115,7 +115,7 @@ def PunycodeToUnicode(domain):
 def ValidateDomainName(domain):
   if not domain:
     return False
-  # TODO(b/146630685): Find a library function for FQDN validation.
+  # Replace with some library function for FQDN validation.
   pattern = r'^[a-z0-9-]+(\.[a-z0-9-]+)+\.{0,1}$'
   if not re.match(pattern, domain) or '..' in domain:
     return False
@@ -133,9 +133,24 @@ def ValidateRegionCode(rc):
 def ValidateEmail(email):
   if not email:
     return False
-  # TODO(b/146630685): Find a library function for email validation.
+  # Replace with some library function for email validation.
   pattern = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
   return bool(re.match(pattern, email))
+
+
+def Prompt(prompt_string, message=None):
+  """Prompt for user input.
+
+  Args:
+    prompt_string: Message to print in the line with prompt.
+    message: Optional message to print before prompt.
+
+  Returns:
+    User provided value.
+  """
+  if message:
+    log.status.Print(message)
+  return console_io.PromptResponse(prompt_string)
 
 
 def PromptWithValidator(prompt_string,
@@ -155,7 +170,6 @@ def PromptWithValidator(prompt_string,
   Returns:
     Valid user provided value or default if not None and user chose it.
   """
-  # TODO(b/124427180): Use console_io.PromptWithValidator.
   if message:
     log.status.Print(message)
   while True:

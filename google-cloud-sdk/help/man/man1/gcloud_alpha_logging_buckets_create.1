@@ -11,7 +11,7 @@ gcloud alpha logging buckets create \- creates a bucket
 
 .SH "SYNOPSIS"
 .HP
-\f5gcloud alpha logging buckets create\fR \fIBUCKET_ID\fR \fB\-\-location\fR=\fILOCATION\fR [\fB\-\-description\fR=\fIDESCRIPTION\fR] [\fB\-\-retention\-days\fR=\fIRETENTION_DAYS\fR] [\fIGCLOUD_WIDE_FLAG\ ...\fR]
+\f5gcloud alpha logging buckets create\fR \fIBUCKET_ID\fR \fB\-\-location\fR=\fILOCATION\fR [\fB\-\-description\fR=\fIDESCRIPTION\fR] [\fB\-\-enable\-analytics\fR=\fIENABLE_ANALYTICS\fR] [\fB\-\-retention\-days\fR=\fIRETENTION_DAYS\fR] [\fIGCLOUD_WIDE_FLAG\ ...\fR]
 
 
 
@@ -52,6 +52,11 @@ cannot be changed.
 A textual description for the bucket.
 
 .TP 2m
+\fB\-\-enable\-analytics\fR=\fIENABLE_ANALYTICS\fR
+Whether to opt the bucket into advanced log analytics. This field may only be
+set at bucket creation and cannot be changed later.
+
+.TP 2m
 \fB\-\-retention\-days\fR=\fIRETENTION_DAYS\fR
 The period logs will be retained, after which logs will automatically be
 deleted. The default is 30 days.
@@ -76,5 +81,5 @@ Run \fB$ gcloud help\fR for details.
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist.
+allowlist.
 

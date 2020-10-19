@@ -232,6 +232,7 @@ class ClustersCreateUnitTest(unit_base.DataprocUnitTestBase,
     network = 'foo-network'
     network_uri = ('https://compute.googleapis.com/compute/v1/projects/'
                    'foo-project/global/networks/foo-network')
+    private_ipv6_google_access = 'bidirectional'
     action_uris = ['gs://my-bucket/action1.sh', 'gs://my-bucket/action2.sh']
     initialization_actions = [
         self.messages.NodeInitializationAction(
@@ -282,6 +283,7 @@ class ClustersCreateUnitTest(unit_base.DataprocUnitTestBase,
         serviceAccount=service_account,
         serviceAccountScopes=scope_uris,
         internalIpOnly=True,
+        privateIpv6GoogleAccess=private_ipv6_google_access,
         properties=encoding.DictToAdditionalPropertyMessage(
             cluster_properties, self.messages.SoftwareConfig.PropertiesValue),
         tags=['tag1', 'tag2'],
@@ -330,6 +332,7 @@ class ClustersCreateUnitTest(unit_base.DataprocUnitTestBase,
         '--service-account {service_account} '
         '--scopes {scopes} '
         '--no-address '
+        '--private-ipv6-google-access-type {private_ipv6_google_access} '
         '--master-min-cpu-platform="{master_min_cpu_platform}" '
         '--worker-min-cpu-platform="{worker_min_cpu_platform}" '
         '--properties core:com.foo=foo,hdfs:com.bar=bar '
@@ -367,6 +370,7 @@ class ClustersCreateUnitTest(unit_base.DataprocUnitTestBase,
             image_version=image_version,
             actions=','.join(action_uris),
             num_secondary=num_secondary_workers,
+            private_ipv6_google_access=private_ipv6_google_access,
             secondary_worker_type=secondary_worker_type,
             service_account=service_account,
             scopes=scope_list)
@@ -1066,42 +1070,40 @@ class ClustersCreateUnitTest(unit_base.DataprocUnitTestBase,
                             max_age='1h',
                             expiration_time='2017-08-25T00:00:00-07:00'))
 
-  def testCreateKerberosFlagsMissingKmsKey(self):
-    password_uri = 'gs://my-bucket/password.encrypted'
-    error_msg = ('argument (--kerberos-kms-key : '
-                 '--kerberos-kms-key-keyring '
-                 '--kerberos-kms-key-location '
-                 '--kerberos-kms-key-project): '
-                 'Must be specified.')
-    with self.AssertRaisesArgumentErrorMatches(error_msg):
-      self.RunDataproc(
-          ('clusters create {name} '
-           '--zone={zone} '
-           '--kerberos-root-principal-password-uri={password_uri}').format(
-               name=self.CLUSTER_NAME,
-               zone=self.ZONE,
-               password_uri=password_uri))
+  def testCreateKerberosDirectEnable(self):
+    expected_request_cluster = self.MakeCluster()
+    self.AddKerberosConfig(expected_request_cluster, enableKerberos=True)
+    expected_response_cluster = self.MakeRunningCluster()
+    self.AddKerberosConfig(expected_response_cluster, enableKerberos=True)
+    self.ExpectCreateCalls(
+        request_cluster=expected_request_cluster,
+        response_cluster=expected_response_cluster)
+    result = self.RunDataproc(
+        ('clusters create {name} '
+         '--zone={zone} '
+         '--enable-kerberos').format(name=self.CLUSTER_NAME, zone=self.ZONE))
+    self.AssertMessagesEqual(expected_response_cluster, result)
 
-  def testCreateKerberosFlagsMissingRootPrincipalPasswordUri(self):
-    kms_project = 'my-project'
-    kms_location = 'global'
-    kms_keyring = 'my-keyring'
-    kms_key = 'my-key'
-    error_msg = ('argument --kerberos-root-principal-password-uri: '
-                 'Must be specified.')
-    with self.AssertRaisesArgumentErrorMatches(error_msg):
-      self.RunDataproc(('clusters create {name} '
-                        '--zone={zone} '
-                        '--kerberos-kms-key={kms_key} '
-                        '--kerberos-kms-key-project={kms_project} '
-                        '--kerberos-kms-key-location={kms_location} '
-                        '--kerberos-kms-key-keyring={kms_keyring}').format(
-                            name=self.CLUSTER_NAME,
-                            zone=self.ZONE,
-                            kms_key=kms_key,
-                            kms_project=kms_project,
-                            kms_location=kms_location,
-                            kms_keyring=kms_keyring))
+  def testCreateKerberosFlagsDirectEnableIgnoresMissingKmsKey(self):
+    password_uri = 'gs://my-bucket/password.encrypted'
+    expected_request_cluster = self.MakeCluster()
+    self.AddKerberosConfig(
+        expected_request_cluster,
+        enableKerberos=True,
+        kerberosRootPrincipalPasswordUri=password_uri)
+    expected_response_cluster = copy.deepcopy(expected_request_cluster)
+    expected_response_cluster.status = self.messages.ClusterStatus(
+        state=self.messages.ClusterStatus.StateValueValuesEnum.RUNNING)
+    self.ExpectCreateCalls(
+        request_cluster=expected_request_cluster,
+        response_cluster=expected_response_cluster)
+    result = self.RunDataproc(
+        ('clusters create {name} '
+         '--zone={zone} '
+         '--enable-kerberos '
+         '--kerberos-root-principal-password-uri={password_uri} ').format(
+             name=self.CLUSTER_NAME, zone=self.ZONE, password_uri=password_uri))
+    self.AssertMessagesEqual(expected_response_cluster, result)
 
   def testCreateKerberosFlagsKmsKeyOneFlag(self):
     password_uri = 'gs://my-bucket/password.encrypted'
@@ -1310,6 +1312,33 @@ class ClustersCreateUnitTest(unit_base.DataprocUnitTestBase,
                             zone='test-zone',
                             reservation_affinity='specific'))
 
+  def testCreateClusterWithNodeGroup(self):
+    project = 'foo-project'
+    cluster_name = 'foo-cluster'
+    zone = 'foo-zone'
+    node_group = 'foo-node-group'
+    expected_request_cluster = self.MakeCluster(
+        clusterName=cluster_name, projectId=project, zoneUri=zone)
+    self.AddNodeGroupAffinity(expected_request_cluster, node_group)
+
+    expected_response_cluster = copy.deepcopy(expected_request_cluster)
+    expected_response_cluster.status = self.messages.ClusterStatus(
+        state=self.messages.ClusterStatus.StateValueValuesEnum.RUNNING)
+
+    command = ('clusters --project {project} create {cluster} '
+               '--zone {zone} '
+               '--node-group {node_group}').format(
+                   project=project,
+                   cluster=cluster_name,
+                   zone=zone,
+                   node_group=node_group)
+
+    self.ExpectCreateCalls(
+        request_cluster=expected_request_cluster,
+        response_cluster=expected_response_cluster)
+    result = self.RunDataproc(command)
+    self.AssertMessagesEqual(expected_response_cluster, result)
+
   def testCreateCluster_autoscalingPolicyIdOnly(self):
     specified_policy = 'cool-policy'
     expected_policy_uri = 'projects/fake-project/regions/antarctica-north42/autoscalingPolicies/cool-policy'
@@ -1408,6 +1437,7 @@ class ClustersCreateUnitTestBeta(ClustersCreateUnitTest,
     zone = 'foo-zone'
     master_machine_type = 'foo-type'
     worker_machine_type = 'bar-type'
+    dataproc_metastore = 'projects/foo-project/locations/foo-region/services/foo-service'
     expected_request_cluster = self.MakeCluster(
         clusterName=cluster_name,
         projectId=project,
@@ -1428,6 +1458,7 @@ class ClustersCreateUnitTestBeta(ClustersCreateUnitTest,
     self.AddEncryptionConfig(expected_request_cluster,
                              'projects/p/locations/l/keyRings/kr/cryptoKeys/k')
     self.AddComponents(expected_request_cluster, ['ANACONDA', 'ZEPPELIN'])
+    self.AddMetastoreConfig(expected_request_cluster, dataproc_metastore)
     expected_response_cluster = copy.deepcopy(expected_request_cluster)
     expected_response_cluster.status = self.messages.ClusterStatus(
         state=self.messages.ClusterStatus.StateValueValuesEnum.RUNNING)
@@ -1449,13 +1480,15 @@ class ClustersCreateUnitTestBeta(ClustersCreateUnitTest,
                '--optional-components=anaconda,zeppelin '
                '--zone {zone} '
                '--autoscaling-policy {autoscaling_policy_uri} '
-               '--enable-component-gateway ').format(
+               '--enable-component-gateway '
+               '--dataproc-metastore {dataproc_metastore} ').format(
                    project=project,
                    cluster=cluster_name,
                    master_machine_type=master_machine_type,
                    worker_machine_type=worker_machine_type,
                    zone=zone,
-                   autoscaling_policy_uri=autoscaling_policy_uri)
+                   autoscaling_policy_uri=autoscaling_policy_uri,
+                   dataproc_metastore=dataproc_metastore)
 
     self.ExpectCreateCalls(
         request_cluster=expected_request_cluster,

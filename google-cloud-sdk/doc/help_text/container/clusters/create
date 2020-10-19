@@ -6,21 +6,24 @@ SYNOPSIS
         [--accelerator=[type=TYPE,[count=COUNT],...]]
         [--additional-zones=ZONE,[ZONE,...]] [--addons=[ADDON,...]] [--async]
         [--boot-disk-kms-key=BOOT_DISK_KMS_KEY]
+        [--cloud-run-config=[load-balancer-type=EXTERNAL,...]]
         [--cluster-ipv4-cidr=CLUSTER_IPV4_CIDR]
         [--cluster-secondary-range-name=NAME]
         [--cluster-version=CLUSTER_VERSION]
         [--create-subnetwork=[KEY=VALUE,...]]
         [--database-encryption-key=DATABASE_ENCRYPTION_KEY]
         [--default-max-pods-per-node=DEFAULT_MAX_PODS_PER_NODE]
-        [--disk-size=DISK_SIZE] [--disk-type=DISK_TYPE] [--enable-autorepair]
-        [--no-enable-autoupgrade] [--enable-binauthz] [--enable-cloud-logging]
+        [--disable-default-snat] [--disk-size=DISK_SIZE]
+        [--disk-type=DISK_TYPE] [--enable-autorepair] [--no-enable-autoupgrade]
+        [--enable-binauthz] [--enable-cloud-logging]
         [--enable-cloud-monitoring] [--enable-cloud-run-alpha]
         [--enable-intra-node-visibility] [--enable-ip-alias]
         [--enable-kubernetes-alpha] [--enable-legacy-authorization]
-        [--enable-network-policy] [--enable-shielded-nodes]
-        [--enable-stackdriver-kubernetes] [--enable-vertical-pod-autoscaling]
-        [--image-type=IMAGE_TYPE] [--issue-client-certificate]
-        [--labels=[KEY=VALUE,...]] [--local-ssd-count=LOCAL_SSD_COUNT]
+        [--enable-master-global-access] [--enable-network-policy]
+        [--enable-shielded-nodes] [--enable-stackdriver-kubernetes]
+        [--enable-vertical-pod-autoscaling] [--image-type=IMAGE_TYPE]
+        [--issue-client-certificate] [--labels=[KEY=VALUE,...]]
+        [--local-ssd-count=LOCAL_SSD_COUNT]
         [--machine-type=MACHINE_TYPE, -m MACHINE_TYPE]
         [--max-nodes-per-pool=MAX_NODES_PER_POOL]
         [--max-pods-per-node=MAX_PODS_PER_NODE]
@@ -40,7 +43,8 @@ SYNOPSIS
         [[--enable-autoprovisioning
           : --autoprovisioning-config-file=AUTOPROVISIONING_CONFIG_FILE
           | [--max-cpu=MAX_CPU --max-memory=MAX_MEMORY
-          : --autoprovisioning-locations=ZONE,[ZONE,...] --min-cpu=MIN_CPU
+          : --autoprovisioning-locations=ZONE,[ZONE,...]
+          --autoprovisioning-min-cpu-platform=PLATFORM --min-cpu=MIN_CPU
           --min-memory=MIN_MEMORY
           --autoprovisioning-max-surge-upgrade=AUTOPROVISIONING_MAX_SURGE_UPGRADE --autoprovisioning-max-unavailable-upgrade=AUTOPROVISIONING_MAX_UNAVAILABLE_UPGRADE --autoprovisioning-scopes=[SCOPE,
           ...]
@@ -120,7 +124,7 @@ FLAGS
         flag will be enabled. The others will be disabled. Default addons:
         HttpLoadBalancing, HorizontalPodAutoscaling. ADDON must be one of:
         HttpLoadBalancing, HorizontalPodAutoscaling, KubernetesDashboard,
-        NetworkPolicy, CloudRun, NodeLocalDNS.
+        NetworkPolicy, CloudRun, NodeLocalDNS, ConfigConnector.
 
      --async
         Return immediately, without waiting for the operation in progress to
@@ -133,6 +137,16 @@ FLAGS
         For more information about protecting resources with Cloud KMS Keys
         please see:
         https://cloud.google.com/compute/docs/disks/customer-managed-encryption
+
+     --cloud-run-config=[load-balancer-type=EXTERNAL,...]
+        Configurations for Cloud Run addon, requires --addons=CloudRun for
+        create and --update-addons=CloudRun=ENABLED for update.
+
+         load-balancer-type
+            Optional Type of load-balancer-type EXTERNAL or INTERNAL Example:
+
+                $ gcloud container clusters create example-cluster \
+                    --cloud-run-config=load-balancer-type=INTERNAL
 
      --cluster-ipv4-cidr=CLUSTER_IPV4_CIDR
         The IP address range for the pods in this cluster in CIDR notation
@@ -212,6 +226,17 @@ FLAGS
 
         Must be used in conjunction with '--enable-ip-alias'.
 
+     --disable-default-snat
+        Disable default source NAT rules applied in cluster nodes.
+
+        By default, network traffic sending from Pods to outside of VPC will
+        get masqueraded by the node external IP. When this flag is set, no
+        default sNAT will be enforced on the cluster. The flag must be set if
+        the cluster uses privately used public IPs.
+
+        Must be used in conjunction with --enable-ip-alias and
+        --enable-private-nodes.
+
      --disk-size=DISK_SIZE
         Size for node VM boot disks. Defaults to 100GB.
 
@@ -225,8 +250,9 @@ FLAGS
             $ gcloud container clusters create example-cluster \
                 --enable-autorepair
 
-        Node autorepair is enabled by default for clusters using COS or
-        COS_CONTAINERD as a base image, use --no-enable-autorepair to disable.
+        Node autorepair is enabled by default for clusters using COS,
+        COS_CONTAINERD, UBUNTU or UBUNTU_CONTAINERD as a base image, use
+        --no-enable-autorepair to disable.
 
         See
         https://cloud.google.com/kubernetes-engine/docs/how-to/node-auto-repair
@@ -311,6 +337,14 @@ FLAGS
         permissions instead, create or update your cluster with the option
         --no-enable-legacy-authorization.
 
+     --enable-master-global-access
+        Use with private clusters to allow access to the master's private
+        endpoint from any Google Cloud region or on-premises environment
+        regardless of the private cluster's region.
+
+        Must be used in conjunction with '--enable-ip-alias' and
+        '--enable-private-nodes'.
+
      --enable-network-policy
         Enable network policy enforcement for this cluster. If you are enabling
         network policy on an existing cluster the network policy addon must
@@ -367,9 +401,8 @@ FLAGS
         information.
 
      --machine-type=MACHINE_TYPE, -m MACHINE_TYPE
-        The type of machine to use for nodes. Defaults to n1-standard-1. The
-        list of predefined machine types is available using the following
-        command:
+        The type of machine to use for nodes. Defaults to e2-medium. The list
+        of predefined machine types is available using the following command:
 
             $ gcloud compute machine-types list
 
@@ -453,6 +486,10 @@ FLAGS
         * kube-env
         * startup-script
         * user-data
+
+    Google Kubernetes Engine sets the following keys by default:
+
+      o serial-port-logging-enable
 
     See also Compute Engine's documentation
     (https://cloud.google.com/compute/docs/storing-retrieving-metadata) on
@@ -674,7 +711,9 @@ FLAGS
             cluster's node autoprovisioning configuration. Currently it
             contains a list of resource limits, identity defaults for
             autoprovisioning, node upgrade settings, node management settings,
-            minimum cpu platform, and node locations for autoprovisioning.
+            minimum cpu platform, node locations for autoprovisioning, disk
+            type and size configuration, shielded instance settings, and
+            customer-managed encryption keys settings.
 
             Resource limits are specified in the field 'resourceLimits'. Each
             resource limits definition contains three fields: resourceType,
@@ -717,6 +756,22 @@ FLAGS
             specified in the field 'autoprovisioningLocations'. All zones must
             be in the same region as the cluster's master(s).
 
+            Disk type and size are specified under the 'diskType' and
+            'diskSizeGb' fields, respectively. If specified, new
+            autoprovisioned nodes will be created with custom boot disks
+            configured by these settings.
+
+            Shielded instance settings are specified under the
+            'shieldedInstanceConfig' field, which has the following fields:
+            enableSecureBoot: A boolean field that indicates if secure boot is
+            enabled for autoprovisioned nodes. enableIntegrityMonitoring: A
+            boolean field that indicates if integrity monitoring is enabled for
+            autoprovisioned nodes.
+
+            Customer Managed Encryption Keys (CMEK) used by new
+            auto-provisioned node pools can be specified in the
+            'bootDiskKmsKey' field.
+
          Flags to configure autoprovisioned nodes
 
            --max-cpu=MAX_CPU
@@ -738,6 +793,10 @@ FLAGS
               autoprovisioning. All zones must be in the same region as the
               cluster's master(s). Multiple locations can be specified,
               separated by commas.
+
+           --autoprovisioning-min-cpu-platform=PLATFORM
+              If specified, new autoprovisioned nodes will be scheduled on host
+              with specified CPU architecture or a newer one.
 
            --min-cpu=MIN_CPU
               Minimum number of cores in the cluster.

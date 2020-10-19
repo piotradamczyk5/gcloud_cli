@@ -21,7 +21,9 @@ from __future__ import unicode_literals
 from apitools.base.py import exceptions as api_exceptions
 from googlecloudsdk.api_lib.compute import daisy_utils
 from googlecloudsdk.calliope import base as calliope_base
+from googlecloudsdk.calliope import exceptions
 from googlecloudsdk.command_lib.iam import iam_util
+from googlecloudsdk.core import config
 from googlecloudsdk.core import properties
 from googlecloudsdk.core.console import console_io
 from tests.lib import test_case
@@ -36,12 +38,16 @@ class ImagesExportTestGA(daisy_test_base.DaisyBaseTest):
   def SetUp(self):
     self.image_name = 'my-image'
     self.destination_uri = 'gs://31dd/my-image.tar.gz'
-    self.builder = daisy_utils._IMAGE_EXPORT_BUILDER.format(
-        daisy_utils._DEFAULT_BUILDER_VERSION)
+    self.builder = daisy_utils._DEFAULT_BUILDER_DOCKER_PATTERN.format(
+        executable=daisy_utils._IMAGE_EXPORT_BUILDER_EXECUTABLE,
+        docker_image_tag=daisy_utils._DEFAULT_BUILDER_VERSION)
     self.tags = ['gce-daisy', 'gce-daisy-image-export']
 
-  def PrepareDaisyMocksForExport(self, daisy_step, timeout='7200s',
-                                 log_location=None, permissions=None,
+  def PrepareDaisyMocksForExport(self,
+                                 daisy_step,
+                                 timeout='7200s',
+                                 log_location=None,
+                                 permissions=None,
                                  async_flag=False):
     super(ImagesExportTestGA, self).PrepareDaisyMocksWithRegionalBucket(
         daisy_step,
@@ -52,10 +58,15 @@ class ImagesExportTestGA(daisy_test_base.DaisyBaseTest):
         is_import=False)
 
   def GetNetworkStepForExport(
-      self, network=None, subnet=None, include_zone=True,
-      include_empty_network=False, image_project='my-project',
+      self,
+      network=None,
+      subnet=None,
+      include_zone=True,
+      include_empty_network=False,
+      image_project='my-project',
       workflow='../workflows/export/image_export.wf.json',
-      image_format=''):
+      image_format='',
+      daisy_bucket_name=None):
     export_vars = []
 
     if subnet:
@@ -69,7 +80,8 @@ class ImagesExportTestGA(daisy_test_base.DaisyBaseTest):
 
     daisy_utils.AppendArg(
         export_vars, 'scratch_bucket_gcs_path',
-        'gs://{0}/'.format(self.GetScratchBucketNameWithRegion()))
+        'gs://{0}/'.format(daisy_bucket_name or
+                           self.GetScratchBucketNameWithRegion()))
 
     daisy_utils.AppendArg(export_vars, 'timeout',
                           daisy_test_base._DEFAULT_TIMEOUT)
@@ -79,6 +91,8 @@ class ImagesExportTestGA(daisy_test_base.DaisyBaseTest):
             image_project, self.image_name))
     daisy_utils.AppendArg(export_vars, 'destination_uri', self.destination_uri)
     daisy_utils.AppendArg(export_vars, 'format', image_format)
+    daisy_utils.AppendArg(export_vars, 'client_version',
+                          config.CLOUD_SDK_VERSION)
 
     return self.cloudbuild_v1_messages.BuildStep(
         args=export_vars, name=self.builder)
@@ -312,11 +326,17 @@ class ImagesExportTestGA(daisy_test_base.DaisyBaseTest):
                 kind='storage#bucket',
                 name=daisy_bucket_name,
                 location=self.GetScratchBucketRegion(),
-
             ),
             project='my-project',
         ),
         response=self.storage_v1_messages.Bucket(id=daisy_bucket_name))
+    self.mocked_storage_v1.buckets.List.Expect(
+        self.storage_v1_messages.StorageBucketsListRequest(
+            project='my-project',
+            prefix=daisy_bucket_name,
+        ),
+        response=self.storage_v1_messages.Buckets(
+            items=[self.storage_v1_messages.Bucket(id=daisy_bucket_name)]))
 
     self.Run("""
              compute images export --image {0}
@@ -326,6 +346,146 @@ class ImagesExportTestGA(daisy_test_base.DaisyBaseTest):
     self.AssertOutputContains("""\
         [image-export] output
         """, normalize_space=True)
+
+  def testScratchBucketCreatedEvenIfDefaultAlreadyExistsInAnotherProject(self):
+    self.mocked_storage_v1.buckets.Get.Expect(
+        self.storage_v1_messages.StorageBucketsGetRequest(bucket='31dd'),
+        response=self.storage_v1_messages.Bucket(
+            name='31dd',
+            storageClass='REGIONAL',
+            location=self.GetScratchBucketRegion()
+        ),
+    )
+
+    daisy_bucket_name = self.GetScratchBucketNameWithRegion()
+    daisy_bucket = self.storage_v1_messages.Bucket(
+        kind='storage#bucket',
+        name=daisy_bucket_name,
+        location=self.GetScratchBucketRegion(),
+    )
+
+    # Bucket exists when searched by name and is accessible
+    self.mocked_storage_v1.buckets.Get.Expect(
+        self.storage_v1_messages.StorageBucketsGetRequest(
+            bucket=daisy_bucket_name),
+        response=daisy_bucket)
+
+    # But, it's not in the current project
+    self.mocked_storage_v1.buckets.List.Expect(
+        self.storage_v1_messages.StorageBucketsListRequest(
+            project='my-project',
+            prefix=daisy_bucket_name,
+        ),
+        response=self.storage_v1_messages.Buckets(items=[]))
+
+    # Try another, slightly different bucket name
+    daisy_utils.bucket_random_suffix_override = '12345678'
+    daisy_bucket_name = '{0}-{1}'.format(
+        daisy_bucket_name, daisy_utils.bucket_random_suffix_override)
+
+    daisy_bucket = self.storage_v1_messages.Bucket(
+        kind='storage#bucket',
+        name=daisy_bucket_name,
+        location=self.GetScratchBucketRegion(),
+    )
+
+    # Doesn't exist
+    self.mocked_storage_v1.buckets.Get.Expect(
+        self.storage_v1_messages.StorageBucketsGetRequest(
+            bucket=daisy_bucket_name),
+        exception=api_exceptions.HttpNotFoundError(None, None, None))
+    # Create it
+    self.mocked_storage_v1.buckets.Insert.Expect(
+        self.storage_v1_messages.StorageBucketsInsertRequest(
+            bucket=daisy_bucket,
+            project='my-project',
+        ),
+        response=self.storage_v1_messages.Bucket(id=daisy_bucket_name))
+    # Make sure it's in the current project
+    self.mocked_storage_v1.buckets.List.Expect(
+        self.storage_v1_messages.StorageBucketsListRequest(
+            project='my-project',
+            prefix=daisy_bucket_name,
+        ),
+        response=self.storage_v1_messages.Buckets(
+            items=[self.storage_v1_messages.Bucket(id=daisy_bucket_name)]))
+
+    build_step = self.GetNetworkStepForExport(
+        include_zone=False, daisy_bucket_name=daisy_bucket_name)
+    self.PrepareDaisyMocks(build_step, is_import=False)
+
+    self.Run("""
+             compute images export --image {0}
+             --destination-uri {1}
+             """.format(self.image_name, self.destination_uri))
+
+    self.AssertOutputContains("""\
+        [image-export] output
+        """, normalize_space=True)
+
+  def testFailOnAllScratchBucketsExistInAnotherProject(self):
+    self.mocked_storage_v1.buckets.Get.Expect(
+        self.storage_v1_messages.StorageBucketsGetRequest(bucket='31dd'),
+        response=self.storage_v1_messages.Bucket(
+            name='31dd',
+            storageClass='REGIONAL',
+            location=self.GetScratchBucketRegion()),
+    )
+
+    daisy_bucket_name = self.GetScratchBucketNameWithRegion()
+    daisy_bucket = self.storage_v1_messages.Bucket(
+        kind='storage#bucket',
+        name=daisy_bucket_name,
+        location=self.GetScratchBucketRegion(),
+    )
+
+    # Bucket exists when searched by name and is accessible
+    self.mocked_storage_v1.buckets.Get.Expect(
+        self.storage_v1_messages.StorageBucketsGetRequest(
+            bucket=daisy_bucket_name),
+        response=daisy_bucket)
+
+    # But, it's not in the current project
+    self.mocked_storage_v1.buckets.List.Expect(
+        self.storage_v1_messages.StorageBucketsListRequest(
+            project='my-project',
+            prefix=daisy_bucket_name,
+        ),
+        response=self.storage_v1_messages.Buckets(items=[]))
+
+    # Try another, slightly different bucket name
+    daisy_utils.bucket_random_suffix_override = '12345678'
+    daisy_bucket_name = '{0}-{1}'.format(
+        daisy_bucket_name, daisy_utils.bucket_random_suffix_override)
+
+    daisy_bucket = self.storage_v1_messages.Bucket(
+        kind='storage#bucket',
+        name=daisy_bucket_name,
+        location=self.GetScratchBucketRegion(),
+    )
+
+    for _ in range(10):
+      # This one also exists
+      self.mocked_storage_v1.buckets.Get.Expect(
+          self.storage_v1_messages.StorageBucketsGetRequest(
+              bucket=daisy_bucket_name),
+          response=daisy_bucket)
+      # Also in another project
+      self.mocked_storage_v1.buckets.List.Expect(
+          self.storage_v1_messages.StorageBucketsListRequest(
+              project='my-project',
+              prefix=daisy_bucket_name,
+          ),
+          response=self.storage_v1_messages.Buckets(items=[]))
+
+    with self.AssertRaisesExceptionMatches(
+        daisy_utils.DaisyBucketCreationException,
+        r'Unable to create a temporary bucket `my-project-daisy-bkt-my-region` needed for the operation to proceed as it exists in another project.'
+    ):
+      self.Run("""
+               compute images export --image {0}
+               --destination-uri {1}
+               """.format(self.image_name, self.destination_uri))
 
   def testAllowFailedServiceAccountPermissionModification(self):
     actual_permissions = self.crm_v1_messages.Policy(bindings=[
@@ -488,11 +648,14 @@ class ImagesExportTestBeta(ImagesExportTestGA):
     self.track = calliope_base.ReleaseTrack.BETA
 
   def testDockerImageTag(self):
-    self.builder = daisy_utils._IMAGE_EXPORT_BUILDER.format(
-        daisy_utils._DEFAULT_BUILDER_VERSION)
+    self.builder = daisy_utils._DEFAULT_BUILDER_DOCKER_PATTERN.format(
+        executable=daisy_utils._IMAGE_EXPORT_BUILDER_EXECUTABLE,
+        docker_image_tag=daisy_utils._DEFAULT_BUILDER_VERSION)
     self.testCommonCase()
 
-    self.builder = daisy_utils._IMAGE_EXPORT_BUILDER.format('latest')
+    self.builder = daisy_utils._DEFAULT_BUILDER_DOCKER_PATTERN.format(
+        executable=daisy_utils._IMAGE_EXPORT_BUILDER_EXECUTABLE,
+        docker_image_tag='latest')
     build_step = self.GetNetworkStepForExport(include_zone=False)
     self.PrepareDaisyMocksForExport(build_step)
     self.Run("""
@@ -503,6 +666,26 @@ class ImagesExportTestBeta(ImagesExportTestGA):
     self.AssertOutputContains("""\
         [image-export] output
         """, normalize_space=True)
+
+  def testDestinationUriBucketOnlyGCSPath(self):
+    with self.AssertRaisesExceptionMatches(
+        exceptions.InvalidArgumentException,
+        r'Invalid value for [destination-uri]: must be a path to an object in Google Cloud Storage'
+    ):
+      self.Run("""
+             compute images export --image {0}
+             --destination-uri {1}
+             """.format(self.image_name, 'gs://bucket'))
+
+  def testDestinationUriInvalidGCSPath(self):
+    with self.AssertRaisesExceptionMatches(
+        exceptions.InvalidArgumentException,
+        r'Invalid value for [destination-uri]: must be a path to an object in Google Cloud Storage'
+    ):
+      self.Run("""
+             compute images export --image {0}
+             --destination-uri {1}
+             """.format(self.image_name, 'NOT_A_GCS_PATH'))
 
 
 class ImagesExportTestAlpha(ImagesExportTestBeta):

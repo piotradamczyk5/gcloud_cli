@@ -381,6 +381,7 @@ class TestBase(cli_test_base.CliTestBase):
             sandboxConfig=kwargs.get('sandboxConfig'),
             workloadMetadataConfig=kwargs.get('workloadMetadataConfig'),
             bootDiskKmsKey=kwargs.get('bootDiskKmsKey'),
+            nodeGroup=kwargs.get('nodeGroup'),
         ),
         locations=kwargs.get('nodePoolLocations', []),
         instanceGroupUrls=kwargs.get('instanceGroupUrls', []),
@@ -1107,6 +1108,7 @@ class BetaTestBase(GATestBase):
       node_pool.upgradeSettings = self._MakeDefaultUpgradeSettings()
     node_pool.config.linuxNodeConfig = kwargs.get('linuxNodeConfig')
     node_pool.config.kubeletConfig = kwargs.get('kubeletConfig')
+    node_pool.config.gcfsConfig = kwargs.get('gcfsConfig')
     return node_pool
 
   def _MakeIPAllocationPolicy(self, **kwargs):
@@ -1212,6 +1214,7 @@ class AlphaTestBase(BetaTestBase):
     node_pool.config.nodeGroup = kwargs.get('nodeGroup')
     node_pool.config.linuxNodeConfig = kwargs.get('linuxNodeConfig')
     node_pool.config.kubeletConfig = kwargs.get('kubeletConfig')
+    node_pool.config.gcfsConfig = kwargs.get('gcfsConfig')
 
     return node_pool
 

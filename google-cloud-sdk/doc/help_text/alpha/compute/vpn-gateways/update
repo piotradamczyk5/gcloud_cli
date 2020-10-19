@@ -1,6 +1,6 @@
 NAME
-    gcloud alpha compute vpn-gateways update - update a Google Compute Engine
-        Highly Available VPN gateway
+    gcloud alpha compute vpn-gateways update - update a Compute Engine Highly
+        Available VPN gateway
 
 SYNOPSIS
     gcloud alpha compute vpn-gateways update NAME [--region=REGION]
@@ -9,7 +9,7 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute vpn-gateways update updates labels for a
-    Google Compute Engine Highly Available VPN gateway.
+    Compute Engine Highly Available VPN gateway.
 
     For example:
 
@@ -101,7 +101,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute vpn-gateways update
         $ gcloud beta compute vpn-gateways update

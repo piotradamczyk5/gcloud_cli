@@ -46,15 +46,15 @@ def _AddCreateArgs(parser):
   base.Argument(
       '--origin',
       help="""\
-          Location of ```model/``` "directory" (as output by
-          https://www.tensorflow.org/versions/r0.12/api_docs/python/state_ops.html#Saver).
+          Location of ```model/``` "directory" (see
+          https://cloud.google.com/ai-platform/prediction/docs/deploying-models#upload-model).
 
           This overrides `deploymentUri` in the `--config` file. If this flag is
           not passed, `deploymentUri` *must* be specified in the file from
           `--config`.
 
-          Can be a Google Cloud Storage (`gs://`) path or local file path (no
-          prefix). In the latter case the files will be uploaded to Google Cloud
+          Can be a Cloud Storage (`gs://`) path or local file path (no
+          prefix). In the latter case the files will be uploaded to Cloud
           Storage and a `--staging-bucket` argument is required.
       """).AddToParser(parser)
   flags.RUNTIME_VERSION.AddToParser(parser)
@@ -65,7 +65,7 @@ def _AddCreateArgs(parser):
       help="""\
           Path to a YAML configuration file containing configuration parameters
           for the
-          [version](https://cloud.google.com/ml/reference/rest/v1/projects.models.versions)
+          [Version](https://cloud.google.com/ai-platform/prediction/docs/reference/rest/v1/projects.models.versions)
           to create.
 
           The file is in YAML format. Note that not all attributes of a version
@@ -73,7 +73,8 @@ def _AddCreateArgs(parser):
 
               description: A free-form description of the version.
               deploymentUri: gs://path/to/source
-              runtimeVersion: '1.0'
+              runtimeVersion: '2.1'
+              #  Set only one of either manualScaling or autoScaling.
               manualScaling:
                 nodes: 10  # The number of nodes to allocate for this model.
               autoScaling:
@@ -106,7 +107,7 @@ class CreateGA(base.CreateCommand):
   Creates a new version of an AI Platform model.
 
   For more details on managing AI Platform models and versions see
-  https://cloud.google.com/ml-engine/docs/how-tos/managing-models-jobs
+  https://cloud.google.com/ai-platform/prediction/docs/managing-models-jobs
   """
 
   detailed_help = DETAILED_HELP
@@ -146,7 +147,7 @@ class CreateBeta(CreateGA):
   Creates a new version of an AI Platform model.
 
   For more details on managing AI Platform models and versions see
-  https://cloud.google.com/ml-engine/docs/how-tos/managing-models-jobs
+  https://cloud.google.com/ai-platform/prediction/docs/managing-models-jobs
   """
 
   @staticmethod
@@ -155,6 +156,7 @@ class CreateBeta(CreateGA):
     flags.SERVICE_ACCOUNT.AddToParser(parser)
     flags.AddUserCodeArgs(parser)
     flags.AddExplainabilityFlags(parser)
+    flags.AddContainerFlags(parser)
 
   def Run(self, args):
     with endpoint_util.MlEndpointOverrides(region=args.region):
@@ -183,7 +185,15 @@ class CreateBeta(CreateGA):
           accelerator_config=accelerator,
           explanation_method=args.explanation_method,
           num_integral_steps=args.num_integral_steps,
-          num_paths=args.num_paths)
+          num_paths=args.num_paths,
+          image=args.image,
+          command=args.command,
+          container_args=args.args,
+          env_vars=args.env_vars,
+          ports=args.ports,
+          predict_route=args.predict_route,
+          health_route=args.health_route,
+          containers_hidden=False)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
@@ -193,13 +203,12 @@ class CreateAlpha(CreateBeta):
   Creates a new version of an AI Platform model.
 
   For more details on managing AI Platform models and versions see
-  https://cloud.google.com/ml-engine/docs/how-tos/managing-models-jobs
+  https://cloud.google.com/ai-platform/prediction/docs/managing-models-jobs
   """
 
   @staticmethod
   def Args(parser):
     CreateBeta.Args(parser)
-    flags.AddContainerFlags(parser)
 
   def Run(self, args):
     with endpoint_util.MlEndpointOverrides(region=args.region):

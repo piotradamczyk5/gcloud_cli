@@ -824,7 +824,7 @@ class ServerlessOperations(object):
       base_revision_nonce = template.labels.get(revision.NONCE_LABEL, None)
       if base_revision_nonce:
         try:
-          # TODO(b/150322097): Remove this when the api has been split.
+          # TODO(b/148817410): Remove this when the api has been split.
           # This try/except block is needed because the v1alpha1 and v1 run apis
           # have different collection names for the namespaces.
           try:
@@ -844,8 +844,7 @@ class ServerlessOperations(object):
     # Nonce polling didn't work, because some client didn't post one or didn't
     # change one. Fall back to the (slightly racy) `latestCreatedRevisionName`.
     if not base_revision:
-      # TODO(b/117663680) Getattr -> normal access.
-      if getattr(status, 'latestCreatedRevisionName', None):
+      if status.latestCreatedRevisionName:
         # Get by latestCreatedRevisionName
         revision_ref = self._registry.Parse(
             status.latestCreatedRevisionName,
@@ -999,7 +998,7 @@ class ServerlessOperations(object):
     Ensures a new revision is always created, even if the spec of the revision
     has not changed.
 
-    Arguments:
+    Args:
       service_ref: Resource, the service to release.
       config_changes: list, objects that implement Adjust().
       tracker: StagedProgressTracker, to report on the progress of releasing.
@@ -1015,6 +1014,9 @@ class ServerlessOperations(object):
         service.
       build_op_ref: The reference to the build.
       build_log_url: The log url of the build result.
+    Returns:
+      service.Service, the service as returned by the server on the POST/PUT
+       request to create/update the service.
     """
     if tracker is None:
       tracker = progress_tracker.NoOpStagedProgressTracker(
@@ -1055,7 +1057,7 @@ class ServerlessOperations(object):
         self._EnsureImageDigest(serv, config_changes)
     config_changes = [_SetClientNameAndVersion()] + config_changes
 
-    self._UpdateOrCreateService(
+    created_or_updated_service = self._UpdateOrCreateService(
         service_ref, config_changes, with_image, serv)
 
     if allow_unauthenticated is not None:
@@ -1087,6 +1089,7 @@ class ServerlessOperations(object):
       self.WaitForCondition(poller)
       for msg in run_condition.GetNonTerminalMessages(poller.GetConditions()):
         tracker.AddWarning(msg)
+    return created_or_updated_service
 
   def ListRevisions(self, namespace_ref, service_name,
                     limit=None, page_size=100):
@@ -1149,12 +1152,14 @@ class ServerlessOperations(object):
   def CreateDomainMapping(self,
                           domain_mapping_ref,
                           service_name,
+                          config_changes,
                           force_override=False):
     """Create a domain mapping.
 
     Args:
       domain_mapping_ref: Resource, domainmapping resource.
       service_name: str, the service to which to map domain.
+      config_changes: list of ConfigChanger to modify the domainmapping with
       force_override: bool, override an existing mapping of this domain.
 
     Returns:
@@ -1167,6 +1172,9 @@ class ServerlessOperations(object):
     new_mapping.name = domain_mapping_ref.domainmappingsId
     new_mapping.route_name = service_name
     new_mapping.force_override = force_override
+
+    for config_change in config_changes:
+      new_mapping = config_change.Adjust(new_mapping)
 
     request = messages.RunNamespacesDomainmappingsCreateRequest(
         domainMapping=new_mapping.Message(),

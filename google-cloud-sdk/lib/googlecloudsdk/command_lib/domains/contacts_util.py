@@ -94,7 +94,7 @@ def PromptForContacts(current_contacts=None):
       'all the contacts to the same value', 'registrant contact',
       'admin contact', 'technical contact'
   ]
-  # TODO(b/146630685): Make it a loop.
+  # TODO(b/166210862): Make it a loop.
   index = console_io.PromptChoice(
       options=choices,
       cancel_option=True,
@@ -126,9 +126,9 @@ def _PromptForSingleContact(unused_current_contact=None):
   contact = messages.Contact()
   contact.postalAddress = messages.PostalAddress()
 
-  # TODO(b/146630685): Use defaults from current_contact.
+  # TODO(b/166210862): Use defaults from current_contact.
   #                      But then: How to clear a value?
-  # TODO(b/146630685): Better validation: Call validate_only after each prompt.
+  # TODO(b/166210862): Better validation: Call validate_only after each prompt.
   contact.postalAddress.recipients.append(
       util.PromptWithValidator(
           validator=util.ValidateNonEmpty,
@@ -146,6 +146,9 @@ def _PromptForSingleContact(unused_current_contact=None):
       error_message=' Phone number must not be empty.',
       prompt_string='Phone number:  ',
       message='Enter phone number with country code, e.g. "+1.8005550123".')
+  contact.faxNumber = util.Prompt(
+      prompt_string='Fax number (if applicable):  ',
+      message='Enter fax number with country code, e.g. "+1.8005550123".')
   contact.postalAddress.regionCode = util.PromptWithValidator(
       validator=util.ValidateRegionCode,
       error_message=(

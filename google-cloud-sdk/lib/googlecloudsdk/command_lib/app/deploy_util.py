@@ -116,13 +116,6 @@ class InvalidRuntimeNameError(Error):
         'Must match regular expression [{}].'.format(runtime, allowed_regex))
 
 
-# TODO(b/27101941): Remove when commands all rely solely on the property.
-class ServiceManagementOption(enum.Enum):
-  """Enum declaring when to use Service Management for Flexible deployments."""
-  ALWAYS = 1
-  IF_PROPERTY_SET = 2
-
-
 class FlexImageBuildOptions(enum.Enum):
   """Enum declaring different options for building image for flex deploys."""
   ON_CLIENT = 1
@@ -493,6 +486,12 @@ def ArgsDeploy(parser):
       action=actions.StoreBooleanProperty(
           properties.VALUES.app.promote_by_default),
       help='Promote the deployed version to receive all traffic.')
+  parser.add_argument(
+      '--no-cache',
+      action='store_true',
+      default=False,
+      help='Skip caching mechanisms involved in the deployment process, in '
+      'particular do not use cached dependencies during the build step.')
   staging_group = parser.add_mutually_exclusive_group()
   staging_group.add_argument(
       '--skip-staging',
@@ -542,7 +541,6 @@ def RunDeploy(
     runtime_builder_strategy=runtime_builders.RuntimeBuilderStrategy.NEVER,
     parallel_build=True,
     flex_image_build_option=FlexImageBuildOptions.ON_CLIENT,
-    disable_build_cache=False,
     dispatch_admin_api=False):
   """Perform a deployment based on the given args.
 
@@ -561,7 +559,6 @@ def RunDeploy(
     flex_image_build_option: FlexImageBuildOptions, whether a flex deployment
       should upload files so that the server can build the image or build the
       image on client.
-    disable_build_cache: bool, disable the build cache.
     dispatch_admin_api: bool, speak to the (new) Admin API rather than the (old)
       Admin Console for config push of dispatch.yaml.
 
@@ -646,7 +643,7 @@ def RunDeploy(
           args.image_url,
           all_services,
           app.gcrDomain,
-          disable_build_cache=disable_build_cache,
+          disable_build_cache=args.no_cache,
           flex_image_build_option=flex_image_build_option,
           ignore_file=args.ignore_file)
       new_versions.append(new_version)

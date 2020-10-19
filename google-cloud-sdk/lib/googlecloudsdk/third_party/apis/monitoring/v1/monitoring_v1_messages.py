@@ -445,6 +445,8 @@ class Dashboard(_messages.Message):
       configuration. The field should not be passed during dashboard creation.
     gridLayout: Content is arranged with a basic layout that re-flows a simple
       list of informational elements like widgets or tiles.
+    mosaicLayout: The content is arranged as a grid of tiles, with each
+      content widget occupying one or more grid blocks.
     name: Immutable. The resource name of the dashboard.
     rowLayout: The content is divided into equally spaced rows and the widgets
       are arranged horizontally.
@@ -454,8 +456,9 @@ class Dashboard(_messages.Message):
   displayName = _messages.StringField(2)
   etag = _messages.StringField(3)
   gridLayout = _messages.MessageField('GridLayout', 4)
-  name = _messages.StringField(5)
-  rowLayout = _messages.MessageField('RowLayout', 6)
+  mosaicLayout = _messages.MessageField('MosaicLayout', 5)
+  name = _messages.StringField(6)
+  rowLayout = _messages.MessageField('RowLayout', 7)
 
 
 class DataSet(_messages.Message):
@@ -514,18 +517,18 @@ class DataSet(_messages.Message):
 
 
 class DroppedLabels(_messages.Message):
-  r"""A set of (label, value) pairs which were dropped during aggregation,
-  attached to google.api.Distribution.Exemplars in google.api.Distribution
-  values during aggregation.These values are used in combination with the
-  label values that remain on the aggregated Distribution timeseries to
-  construct the full label set for the exemplar values. The resulting full
-  label set may be used to identify the specific task/job/instance (for
-  example) which may be contributing to a long-tail, while allowing the
-  storage savings of only storing aggregated distribution values for a large
-  group.Note that there are no guarantees on ordering of the labels from
-  exemplar-to-exemplar and from distribution-to-distribution in the same
-  stream, and there may be duplicates. It is up to clients to resolve any
-  ambiguities.
+  r"""A set of (label, value) pairs that were removed from a Distribution time
+  series during aggregation and then added as an attachment to a
+  Distribution.Exemplar.The full label set for the exemplars is constructed by
+  using the dropped pairs in combination with the label values that remain on
+  the aggregated Distribution time series. The constructed full label set can
+  be used to identify the specific entity, such as the instance or job, which
+  might be contributing to a long-tail. However, with dropped labels, the
+  storage requirements are reduced because only the aggregated distribution
+  values for a large group of time series are stored.Note that there are no
+  guarantees on ordering of the labels from exemplar-to-exemplar and from
+  distribution-to-distribution in the same stream, and there may be
+  duplicates. It is up to clients to resolve any ambiguities.
 
   Messages:
     LabelValue: Map from label to its value, for all labels dropped in any
@@ -567,7 +570,7 @@ class DroppedLabels(_messages.Message):
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance: service Foo {   rpc
+  or the response type of an API method. For instance: service Foo { rpc
   Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
   representation for Empty is empty JSON object {}.
   """
@@ -745,7 +748,7 @@ class MonitoringProjectsDashboardsGetRequest(_messages.Message):
   Fields:
     name: Required. The resource name of the Dashboard. The format is one of:
       dashboards/[DASHBOARD_ID] (for system dashboards)
-      projects/[PROJECT_ID_OR_NUMBER]/dashboards/[DASHBOARD_ID]  (for custom
+      projects/[PROJECT_ID_OR_NUMBER]/dashboards/[DASHBOARD_ID] (for custom
       dashboards).
   """
 
@@ -781,6 +784,21 @@ class MonitoringProjectsDashboardsPatchRequest(_messages.Message):
 
   dashboard = _messages.MessageField('Dashboard', 1)
   name = _messages.StringField(2, required=True)
+
+
+class MosaicLayout(_messages.Message):
+  r"""A mosaic layout divides the available space into a grid of blocks, and
+  overlays the grid with tiles. Unlike GridLayout, tiles may span multiple
+  grid blocks and can be placed at arbitrary locations in the grid.
+
+  Fields:
+    columns: The number of columns in the mosaic grid. The number of columns
+      must be between 1 and 12, inclusive.
+    tiles: The tiles to display.
+  """
+
+  columns = _messages.IntegerField(1, variant=_messages.Variant.INT32)
+  tiles = _messages.MessageField('Tile', 2, repeated=True)
 
 
 class Option(_messages.Message):
@@ -960,10 +978,10 @@ class Scorecard(_messages.Message):
       threshold that triggers above/below, then the scorecard is in a warning
       state - unless x also puts it in a danger state. (Danger trumps
       warning.)As an example, consider a scorecard with the following four
-      thresholds: {  value: 90,  category: 'DANGER',  trigger: 'ABOVE', }, {
-      value: 70,  category: 'WARNING',  trigger: 'ABOVE', }, {  value: 10,
-      category: 'DANGER',  trigger: 'BELOW', }, {  value: 20,  category:
-      'WARNING',  trigger: 'BELOW', }Then: values less than or equal to 10
+      thresholds: { value: 90, category: 'DANGER', trigger: 'ABOVE', }, {
+      value: 70, category: 'WARNING', trigger: 'ABOVE', }, { value: 10,
+      category: 'DANGER', trigger: 'BELOW', }, { value: 20, category:
+      'WARNING', trigger: 'BELOW', }Then: values less than or equal to 10
       would put the scorecard in a DANGER state, values greater than 10 but
       less than or equal to 20 a WARNING state, values strictly between 20 and
       70 an OK state, values greater than or equal to 70 but less than 90 a
@@ -1223,6 +1241,31 @@ class Threshold(_messages.Message):
   direction = _messages.EnumField('DirectionValueValuesEnum', 2)
   label = _messages.StringField(3)
   value = _messages.FloatField(4)
+
+
+class Tile(_messages.Message):
+  r"""A single tile in the mosaic. The placement and size of the tile are
+  configurable.
+
+  Fields:
+    height: The height of the tile, measured in grid blocks. Tiles must have a
+      minimum height of 1.
+    widget: The informational widget contained in the tile. For example an
+      XyChart.
+    width: The width of the tile, measured in grid blocks. Tiles must have a
+      minimum width of 1.
+    xPos: The zero-indexed position of the tile in grid blocks relative to the
+      left edge of the grid. Tiles must be contained within the specified
+      number of columns. x_pos cannot be negative.
+    yPos: The zero-indexed position of the tile in grid blocks relative to the
+      top edge of the grid. y_pos cannot be negative.
+  """
+
+  height = _messages.IntegerField(1, variant=_messages.Variant.INT32)
+  widget = _messages.MessageField('Widget', 2)
+  width = _messages.IntegerField(3, variant=_messages.Variant.INT32)
+  xPos = _messages.IntegerField(4, variant=_messages.Variant.INT32)
+  yPos = _messages.IntegerField(5, variant=_messages.Variant.INT32)
 
 
 class TimeSeriesFilter(_messages.Message):

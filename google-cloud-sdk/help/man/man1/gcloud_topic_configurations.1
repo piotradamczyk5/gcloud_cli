@@ -43,7 +43,7 @@ unset\fR.
 
 .SH "Creating configurations"
 
-Named configurations maybe be defined by users or built into gcloud.
+Named configurations may be defined by users or built into gcloud.
 
 User defined configurations have lowercase names, such as 'johndoe', 'default',
 \'jeff\-staging', or 'foo2'. These are defined by the following regular
@@ -228,7 +228,8 @@ standard output and standard error will be suppressed.
 \fBverbosity\fR
 Default logging verbosity for \f5gcloud\fR commands. This is the equivalent of
 using the global \f5\-\-verbosity\fR flag. Supported verbosity levels:
-\f5debug\fR, \f5info\fR, \f5warning\fR, \f5error\fR, and \f5none\fR.
+\f5debug\fR, \f5info\fR, \f5warning\fR, \f5error\fR, \f5critical\fR, and
+\f5none\fR.
 
 
 .RE
@@ -240,6 +241,19 @@ using the global \f5\-\-verbosity\fR flag. Supported verbosity levels:
 .TP 2m
 \fBscreen_reader\fR
 Make gcloud more screen reader friendly.
+
+
+.RE
+.sp
+.TP 2m
+\fIai\fR
+
+.RS 2m
+.TP 2m
+\fBregion\fR
+Default region to use when working withAI Platform resources. When a
+\f5\-\-region\fR flag is required but not provided, the command will fall back
+to this value, if set.
 
 
 .RE
@@ -746,6 +760,19 @@ this value, if set.
 .RE
 .sp
 .TP 2m
+\fIprivateca\fR
+
+.RS 2m
+.TP 2m
+\fBlocation\fR
+Default location to use when working with Private CA resources. When a
+\f5\-\-location\fR flag is required but not provided, the command will fall back
+to this value, if set.
+
+
+.RE
+.sp
+.TP 2m
 \fIproxy\fR
 
 .RS 2m
@@ -863,6 +890,29 @@ provided.
 Default instance to use when working with Cloud Spanner resources. When an
 instance is required but not provided by a flag, the command will fall back to
 this value, if set.
+
+
+.RE
+.sp
+.TP 2m
+\fIssh\fR
+
+.RS 2m
+.TP 2m
+\fBputty_force_connect\fR
+Whether or not \f5gcloud\fR should automatically accept new or changed host keys
+when executing plink/pscp commands on Windows. Defaults to True, but can be set
+to False to present these interactive prompts to the user for host key checking.
+
+
+.TP 2m
+\fBverify_internal_ip\fR
+Whether or not \f5gcloud\fR should perform an initial SSH connection to verify
+an instance ID is correct when connecting via its internal IP. Without this
+check, \f5gcloud\fR will simply connect to the internal IP of the desired
+instance, which may be wrong if the desired instance is in a different subnet
+but happens to share the same internal IP as an instance in the current subnet.
+Defaults to True.
 
 
 .RE

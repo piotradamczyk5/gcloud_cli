@@ -72,7 +72,7 @@ Adds punctuation to recognition result hypotheses.
 The type of encoding of the file. Required if the file format is not WAV or
 FLAC. \fIENCODING\fR must be one of: \fBamr\fR, \fBamr\-wb\fR,
 \fBencoding\-unspecified\fR, \fBflac\fR, \fBlinear16\fR, \fBmp3\fR, \fBmulaw\fR,
-\fBogg\-opus\fR, \fBspeex\-with\-header\-byte\fR.
+\fBogg\-opus\fR, \fBspeex\-with\-header\-byte\fR, \fBwebm\-opus\fR.
 
 .TP 2m
 \fB\-\-filter\-profanity\fR
@@ -313,7 +313,7 @@ $ gcloud alpha ml speech recognize 'gs://bucket/myaudio' \e
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist. These variants are also available:
+allowlist. These variants are also available:
 
 .RS 2m
 $ gcloud ml speech recognize

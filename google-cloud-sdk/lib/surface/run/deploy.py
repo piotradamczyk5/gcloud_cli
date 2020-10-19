@@ -24,9 +24,10 @@ import uuid
 from googlecloudsdk.api_lib.cloudbuild import cloudbuild_util
 from googlecloudsdk.api_lib.run import traffic
 from googlecloudsdk.calliope import base
+from googlecloudsdk.calliope import exceptions as c_exceptions
 from googlecloudsdk.command_lib.builds import flags as build_flags
 from googlecloudsdk.command_lib.builds import submit_util
-from googlecloudsdk.command_lib.run import config_changes as config_changes_mod
+from googlecloudsdk.command_lib.run import config_changes
 from googlecloudsdk.command_lib.run import connection_context
 from googlecloudsdk.command_lib.run import flags
 from googlecloudsdk.command_lib.run import messages_util
@@ -106,7 +107,6 @@ class Deploy(base.Command):
 
     # Flags specific to connecting to a cluster
     cluster_group = flags.GetClusterArgGroup(parser)
-    flags.AddEndpointVisibilityEnum(cluster_group)
     flags.AddSecretsFlags(cluster_group)
     flags.AddConfigMapsFlags(cluster_group)
     flags.AddHttp2Flag(cluster_group)
@@ -133,6 +133,8 @@ class Deploy(base.Command):
     flags.AddNoTrafficFlag(parser)
     flags.AddServiceAccountFlag(parser)
     concept_parsers.ConceptParser([service_presentation]).AddToParser(parser)
+    # No output by default, can be overridden by --format
+    parser.display_info.AddFormat('none')
 
   @staticmethod
   def Args(parser):
@@ -142,6 +144,7 @@ class Deploy(base.Command):
     # Flags only supported on GKE and Knative
     cluster_group = flags.GetClusterArgGroup(parser)
     flags.AddMinInstancesFlag(cluster_group)
+    flags.AddEndpointVisibilityEnum(cluster_group)
 
   def Run(self, args):
     """Deploy a container to Cloud Run."""
@@ -149,42 +152,41 @@ class Deploy(base.Command):
     build_op_ref = None
     messages = None
     build_log_url = None
-    image = args.image
     include_build = flags.FlagIsExplicitlySet(args, 'source')
     # Build an image from source if source specified.
     if include_build:
       # Create a tag for the image creation
-      if (image is None and not args.IsSpecified('config') and
+      if (not args.IsSpecified('image') and not args.IsSpecified('config') and
           not args.IsSpecified('pack')):
-        image = 'gcr.io/{projectID}/cloud-run-source-deploy/{service}:{tag}'.format(
+        args.image = 'gcr.io/{projectID}/cloud-run-source-deploy/{service}:{tag}'.format(
             projectID=properties.VALUES.core.project.Get(required=True),
             service=service_ref.servicesId,
             tag=uuid.uuid4().hex)
 
       messages = cloudbuild_util.GetMessagesModule()
       build_config = submit_util.CreateBuildConfigAlpha(
-          image, args.no_cache, messages, args.substitutions, args.config,
+          args.image, args.no_cache, messages, args.substitutions, args.config,
           args.IsSpecified('source'), False, args.source,
           args.gcs_source_staging_dir, args.ignore_file, args.gcs_log_dir,
-          args.machine_type, args.disk_size, args.pack)
-
-      if args.IsSpecified('pack'):
-        image = args.pack[0].get('image')
+          args.machine_type, args.disk_size, args.worker_pool, args.pack)
 
       build, build_op = submit_util.Build(messages, True, build_config, True)
       build_op_ref = resources.REGISTRY.ParseRelativeName(
           build_op.name, 'cloudbuild.operations')
       build_log_url = build.logUrl
+      args.image = build.images[0]
+    elif not args.IsSpecified('image'):
+      raise c_exceptions.RequiredArgumentException(
+          '--image', 'Requires a container image to deploy (e.g. '
+          '`gcr.io/cloudrun/hello:latest`) if no build source is provided.')
     # Deploy a container with an image
     conn_context = connection_context.GetConnectionContext(
         args, flags.Product.RUN, self.ReleaseTrack())
-    config_changes = flags.GetConfigurationChanges(args)
+    changes = flags.GetConfigurationChanges(args)
+    changes.append(
+        config_changes.SetLaunchStageAnnotationChange(self.ReleaseTrack()))
 
     with serverless_operations.Connect(conn_context) as operations:
-      image_change = config_changes_mod.ImageChange(image)
-      changes = [image_change]
-      if config_changes:
-        changes.extend(config_changes)
       service = operations.GetService(service_ref)
       allow_unauth = GetAllowUnauth(args, operations, service_ref, service)
 
@@ -208,7 +210,7 @@ class Deploy(base.Command):
           deployment_stages,
           failure_message='Deployment failed',
           suppress_output=args.async_) as tracker:
-        operations.ReleaseService(
+        service = operations.ReleaseService(
             service_ref,
             changes,
             tracker,
@@ -217,14 +219,15 @@ class Deploy(base.Command):
             prefetch=service,
             build_op_ref=build_op_ref,
             build_log_url=build_log_url)
+
       if args.async_:
-        pretty_print.Success(
-            'Service [{{bold}}{serv}{{reset}}] is deploying '
-            'asynchronously.'.format(serv=service_ref.servicesId))
+        pretty_print.Success('Service [{{bold}}{serv}{{reset}}] is deploying '
+                             'asynchronously.'.format(serv=service.name))
       else:
+        service = operations.GetService(service_ref)
         pretty_print.Success(
-            messages_util.GetSuccessMessageForSynchronousDeploy(
-                operations, service_ref))
+            messages_util.GetSuccessMessageForSynchronousDeploy(service))
+      return service
 
 
 @base.ReleaseTracks(base.ReleaseTrack.BETA)
@@ -249,19 +252,26 @@ class AlphaDeploy(Deploy):
     managed_group = flags.GetManagedArgGroup(parser)
     flags.AddEgressSettingsFlag(managed_group)
 
+    # Flags specific to connecting to a cluster
+    cluster_group = flags.GetClusterArgGroup(parser)
+    flags.AddEndpointVisibilityEnum(cluster_group, deprecated=True)
+
     # Flags not specific to any platform
     flags.AddMinInstancesFlag(parser)
     flags.AddDeployTagFlag(parser)
+    flags.AddIngressFlag(parser)
 
     # Flags inherited from gcloud builds submit
     flags.AddConfigFlags(parser)
     flags.AddSourceFlag(parser)
     flags.AddBuildTimeoutFlag(parser)
+    # TODO(b/165145546): Remove advanced build flags for 'gcloud run deploy'
     build_flags.AddGcsSourceStagingDirFlag(parser, True)
     build_flags.AddGcsLogDirFlag(parser, True)
     build_flags.AddMachineTypeFlag(parser, True)
     build_flags.AddDiskSizeFlag(parser, True)
     build_flags.AddSubstitutionsFlag(parser, True)
+    build_flags.AddWorkerPoolFlag(parser, True)
     build_flags.AddNoCacheFlag(parser, True)
     build_flags.AddIgnoreFileFlag(parser, True)
 

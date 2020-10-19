@@ -22,9 +22,9 @@ from __future__ import unicode_literals
 from googlecloudsdk.api_lib.privateca import base as privateca_base
 from googlecloudsdk.calliope import exceptions
 from googlecloudsdk.command_lib.privateca import flags
-from googlecloudsdk.command_lib.privateca import resource_args as privateca_resource_args
+from googlecloudsdk.command_lib.privateca import resource_args
 from googlecloudsdk.command_lib.util.args import labels_util
-from googlecloudsdk.core import resources
+from googlecloudsdk.core import log
 
 
 def _ParseCAResourceArgs(args):
@@ -34,40 +34,22 @@ def _ParseCAResourceArgs(args):
     args: The parsed arguments from the command-line.
 
   Returns:
-    Tuple containing the Resource objects for (KMS key version, CA, source CA,
-    issuer).
+    Tuple containing the Resource objects for (CA, source CA, issuer).
   """
+  ca_ref = args.CONCEPTS.certificate_authority.Parse()
+  resource_args.ValidateResourceLocation(ca_ref, 'CERTIFICATE_AUTHORITY')
+
   kms_key_version_ref = args.CONCEPTS.kms_key_version.Parse()
-  # TODO(b/149316889): Use concepts library once attribute fallthroughs work.
-  ca_ref = resources.REGISTRY.Parse(
-      args.CERTIFICATE_AUTHORITY,
-      collection='privateca.projects.locations.certificateAuthorities',
-      params={
-          'projectsId': kms_key_version_ref.projectsId,
-          'locationsId': kms_key_version_ref.locationsId,
-      })
+  if kms_key_version_ref and ca_ref.locationsId != kms_key_version_ref.locationsId:
+    raise exceptions.InvalidArgumentException(
+        '--kms-key-version',
+        'KMS key must be in the same location as the Certificate Authority '
+        '({}).'.format(ca_ref.locationsId))
 
-  issuer_ref = None
-  if hasattr(args, 'issuer') and args.IsSpecified('issuer'):
-    issuer_ref = args.CONCEPTS.issuer.Parse()
-
+  issuer_ref = args.CONCEPTS.issuer.Parse() if hasattr(args, 'issuer') else None
   source_ca_ref = args.CONCEPTS.from_ca.Parse()
 
-  if ca_ref.projectsId != kms_key_version_ref.projectsId:
-    raise exceptions.InvalidArgumentException(
-        'CERTIFICATE_AUTHORITY',
-        'Certificate Authority must be in the same project as the KMS key '
-        'version.')
-
-  if ca_ref.locationsId != kms_key_version_ref.locationsId:
-    raise exceptions.InvalidArgumentException(
-        'CERTIFICATE_AUTHORITY',
-        'Certificate Authority must be in the same location as the KMS key '
-        'version.')
-
-  privateca_resource_args.ValidateKmsKeyVersionLocation(kms_key_version_ref)
-
-  return (kms_key_version_ref, ca_ref, source_ca_ref, issuer_ref)
+  return (ca_ref, source_ca_ref, issuer_ref)
 
 
 def CreateCAFromArgs(args, is_subordinate):
@@ -84,7 +66,7 @@ def CreateCAFromArgs(args, is_subordinate):
   client = privateca_base.GetClientInstance()
   messages = privateca_base.GetMessagesModule()
 
-  kms_key_version_ref, ca_ref, source_ca_ref, issuer_ref = _ParseCAResourceArgs(
+  ca_ref, source_ca_ref, issuer_ref = _ParseCAResourceArgs(
       args)
   source_ca = None
 
@@ -95,6 +77,13 @@ def CreateCAFromArgs(args, is_subordinate):
     if not source_ca:
       raise exceptions.InvalidArgumentException(
           '--from-ca', 'The provided source CA could not be retrieved.')
+
+  tier = flags.ParseTierFlag(args)
+  keyspec = flags.ParseKeySpec(args)
+  if tier == messages.CertificateAuthority.TierValueValuesEnum.DEVOPS and keyspec.cloudKmsKeyVersion:
+    raise exceptions.InvalidArgumentException(
+        '--kms-key-version',
+        'The DevOps tier does not support user-specified KMS keys.')
 
   subject_config = messages.SubjectConfig(
       subject=messages.Subject(), subjectAltName=messages.SubjectAltNames())
@@ -133,16 +122,29 @@ def CreateCAFromArgs(args, is_subordinate):
       args, messages.CertificateAuthority.LabelsValue)
 
   new_ca = messages.CertificateAuthority(
+      tier=tier,
       type=messages.CertificateAuthority.TypeValueValuesEnum.SUBORDINATE
       if is_subordinate else
       messages.CertificateAuthority.TypeValueValuesEnum.SELF_SIGNED,
       lifetime=lifetime,
       config=messages.CertificateConfig(
           reusableConfig=reusable_config_wrapper, subjectConfig=subject_config),
-      cloudKmsKeyVersion=kms_key_version_ref.RelativeName(),
+      keySpec=keyspec,
       certificatePolicy=issuance_policy,
       issuingOptions=issuing_options,
       gcsBucket=None,
       labels=labels)
 
   return (new_ca, ca_ref, issuer_ref)
+
+
+_BETA_RESOURCE_DELETION_DISCLAIMER = """CA Service is currently in preview.
+
+Please remember that all resources created during preview will be deleted
+when CA service transitions to General Availability (GA). Relying on these
+{resource_type} for production traffic is discouraged."""
+
+
+def PrintBetaResourceDeletionDisclaimer(resource_type_plural):
+  log.warning(_BETA_RESOURCE_DELETION_DISCLAIMER.format(
+      resource_type=resource_type_plural))

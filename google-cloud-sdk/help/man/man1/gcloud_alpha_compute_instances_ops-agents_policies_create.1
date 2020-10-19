@@ -5,26 +5,26 @@
 
 .SH "NAME"
 .HP
-gcloud alpha compute instances ops\-agents policies create \- create a Google Cloud Operations Suite Agents (Ops\ Agents) policy
+gcloud alpha compute instances ops\-agents policies create \- create a Google Cloud's operations suite agents (Ops\ Agents) policy
 
 
 
 .SH "SYNOPSIS"
 .HP
-\f5gcloud alpha compute instances ops\-agents policies create\fR \fIPOLICY_ID\fR \fB\-\-agent\-rules\fR=[\fItype\fR=\fITYPE\fR,\fIversion\fR=\fIVERSION\fR,\fIpackage\-state\fR=\fIPACKAGE\-STATE\fR,\fIenable\-autoupgrade\fR=\fIENABLE\-AUTOUPGRADE\fR;...] \fB\-\-os\-types\fR=[\fIshort\-name\fR=\fISHORT\-NAME\fR,\fIversion\fR=\fIVERSION\fR;...] [\fB\-\-description\fR=\fIDESCRIPTION\fR] [\fB\-\-group\-labels\fR=[\fILABEL_NAME\fR=\fILABEL_VALUE\fR,\fILABEL_NAME\fR=\fILABEL_VALUE\fR,...;...]] [\fB\-\-instances\fR=[\fIzones\fR/\fIZONE_NAME\fR/\fIinstances\fR/\fIINSTANCE_NAME\fR,...]] [\fB\-\-zones\fR=[\fIZONE_NAME\fR,...]] [\fIGCLOUD_WIDE_FLAG\ ...\fR]
+\f5gcloud alpha compute instances ops\-agents policies create\fR \fIPOLICY_ID\fR \fB\-\-agent\-rules\fR=\fItype\fR=\fITYPE\fR,\fIversion\fR=\fIVERSION\fR,\fIpackage\-state\fR=\fIPACKAGE\-STATE\fR,\fIenable\-autoupgrade\fR=\fIENABLE\-AUTOUPGRADE\fR;[...] \fB\-\-os\-types\fR=\fIshort\-name\fR=\fISHORT\-NAME\fR,\fIversion\fR=\fIVERSION\fR;[...] [\fB\-\-description\fR=\fIDESCRIPTION\fR] [\fB\-\-group\-labels\fR=[\fILABEL_NAME\fR=\fILABEL_VALUE\fR,\fILABEL_NAME\fR=\fILABEL_VALUE\fR,...;...]] [\fB\-\-instances\fR=[\fIzones\fR/\fIZONE_NAME\fR/\fIinstances\fR/\fIINSTANCE_NAME\fR,...]] [\fB\-\-zones\fR=[\fIZONE_NAME\fR,...]] [\fIGCLOUD_WIDE_FLAG\ ...\fR]
 
 
 
 .SH "DESCRIPTION"
 
 \fB(ALPHA)\fR \fBgcloud alpha compute instances ops\-agents policies create\fR
-creates a policy that facilitates agent management across Google Cloud Compute
+creates a policy that facilitates agent management across Compute Engine
 instances based on user specified instance filters. This policy installs,
 specifies versioning, enables autoupgrade, and removes Ops Agents.
 
 The command returns the content of the created policy or an error indicating why
 the creation fails. The created policy takes effect asynchronously. It can take
-10 ~ 15 minutes for the VMs to enforce the newly created policy.
+10\-15 minutes for the VMs to enforce the newly created policy.
 
 
 
@@ -49,8 +49,8 @@ policies from other generic policies and lower the chance of naming conflicts.
 
 .RS 2m
 .TP 2m
-\fB\-\-agent\-rules\fR=[\fItype\fR=\fITYPE\fR,\fIversion\fR=\fIVERSION\fR,\fIpackage\-state\fR=\fIPACKAGE\-STATE\fR,\fIenable\-autoupgrade\fR=\fIENABLE\-AUTOUPGRADE\fR;...]
-A list of agent rules to be enforced by the policy.
+\fB\-\-agent\-rules\fR=\fItype\fR=\fITYPE\fR,\fIversion\fR=\fIVERSION\fR,\fIpackage\-state\fR=\fIPACKAGE\-STATE\fR,\fIenable\-autoupgrade\fR=\fIENABLE\-AUTOUPGRADE\fR;[...]
+A non\-empty list of agent rules to be enforced by the policy.
 
 This flag must be quoted. Items in the list are separated by ";". Each item in
 the list is a <key, value> map that represents a logging or metrics agent. The
@@ -193,8 +193,8 @@ agent version is set to a specific patch version in the format of
 .RE
 .sp
 .TP 2m
-\fB\-\-os\-types\fR=[\fIshort\-name\fR=\fISHORT\-NAME\fR,\fIversion\fR=\fIVERSION\fR;...]
-A list of OS types to filter instances that the policy applies to.
+\fB\-\-os\-types\fR=\fIshort\-name\fR=\fISHORT\-NAME\fR,\fIversion\fR=\fIVERSION\fR;[...]
+A non\-empty list of OS types to filter instances that the policy applies to.
 
 For Alpha, exactly one OS type needs to be specified. The support for multiple
 OS types will be added later for more flexibility. Each OS type contains the
@@ -339,8 +339,8 @@ Run \fB$ gcloud help\fR for details.
 To create a policy named \f5\fIops\-agents\-test\-policy\fR\fR that targets a
 single CentOS 7 VM instance named
 \f5\fIzones/us\-central1\-a/instances/test\-instance\fR\fR for testing or
-development, and installs both Logging and Monitoring Agents on that VM
-instance, run:
+development and installs both Logging and Monitoring Agents on that VM instance,
+run:
 
 .RS 2m
 $ gcloud alpha compute instances ops\-agents policies create \e
@@ -354,8 +354,8 @@ $ gcloud alpha compute instances ops\-agents policies create \e
 To create a policy named \f5\fIops\-agents\-prod\-policy\fR\fR that targets all
 CentOS 7 VMs in zone \f5\fIus\-central1\-a\fR\fR with either
 \f5\fIenv=prod,product=myapp\fR\fR or \f5\fIenv=staging,product=myapp\fR\fR
-labels, and makes sure the logging agent and metrics agent versions are pinned
-to specific major versions for staging and production, run:
+labels and makes sure the logging agent and metrics agent versions are pinned to
+specific major versions for staging and production, run:
 
 .RS 2m
 $ gcloud alpha compute instances ops\-agents policies create \e
@@ -374,5 +374,5 @@ $ gcloud alpha compute instances ops\-agents policies create \e
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist.
+allowlist.
 

@@ -11,7 +11,7 @@ gcloud alpha sql export sql \- exports data from a Cloud SQL instance to a SQL f
 
 .SH "SYNOPSIS"
 .HP
-\f5gcloud alpha sql export sql\fR \fIINSTANCE\fR \fIURI\fR [\fB\-\-async\fR] [\fB\-\-database\fR=\fIDATABASE\fR,[\fIDATABASE\fR,...],\ \fB\-d\fR\ \fIDATABASE\fR,[\fIDATABASE\fR,...]] [\fB\-\-table\fR=\fITABLE\fR,[\fITABLE\fR,...],\ \fB\-t\fR\ \fITABLE\fR,[\fITABLE\fR,...]] [\fIGCLOUD_WIDE_FLAG\ ...\fR]
+\f5gcloud alpha sql export sql\fR \fIINSTANCE\fR \fIURI\fR [\fB\-\-async\fR] [\fB\-\-database\fR=\fIDATABASE\fR,[\fIDATABASE\fR,...],\ \fB\-d\fR\ \fIDATABASE\fR,[\fIDATABASE\fR,...]] [\fB\-\-offload\fR] [\fB\-\-table\fR=\fITABLE\fR,[\fITABLE\fR,...],\ \fB\-t\fR\ \fITABLE\fR,[\fITABLE\fR,...]] [\fIGCLOUD_WIDE_FLAG\ ...\fR]
 
 
 
@@ -53,6 +53,12 @@ found here:
 https://cloud.google.com/sql/docs/mysql/admin\-api/v1beta4/instances/export#exportContext.databases
 
 .TP 2m
+\fB\-\-offload\fR
+Offload an export to a temporary instance. Doing so reduces strain on source
+instances and allows other operations to be performed while the export is in
+progress.
+
+.TP 2m
 \fB\-\-table\fR=\fITABLE\fR,[\fITABLE\fR,...], \fB\-t\fR \fITABLE\fR,[\fITABLE\fR,...]
 Tables to export from the specified database. If you specify tables, specify one
 and only one database.
@@ -77,7 +83,7 @@ Run \fB$ gcloud help\fR for details.
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist. These variants are also available:
+allowlist. These variants are also available:
 
 .RS 2m
 $ gcloud sql export sql

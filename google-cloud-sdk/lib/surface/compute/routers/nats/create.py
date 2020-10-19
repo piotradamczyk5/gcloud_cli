@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Command for adding a NAT to a Google Compute Engine router."""
+"""Command for adding a NAT to a Compute Engine router."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -30,8 +30,11 @@ from googlecloudsdk.core import log
 from googlecloudsdk.core import resources
 
 
+@base.ReleaseTracks(base.ReleaseTrack.GA, base.ReleaseTrack.BETA)
 class Create(base.CreateCommand):
-  """Add a NAT to a Google Compute Engine router."""
+  """Add a NAT to a Compute Engine router."""
+
+  with_endpoint_independent_mapping = False
 
   @classmethod
   def Args(cls, parser):
@@ -43,7 +46,10 @@ class Create(base.CreateCommand):
     compute_flags.AddRegionFlag(parser, 'NAT', operation_type='create')
 
     nats_flags.AddNatNameArg(parser, operation_type='create')
-    nats_flags.AddCommonNatArgs(parser, for_create=True)
+    nats_flags.AddCommonNatArgs(
+        parser,
+        for_create=True,
+        with_endpoint_independent_mapping=cls.with_endpoint_independent_mapping)
 
   def Run(self, args):
     """See base.CreateCommand."""
@@ -57,7 +63,11 @@ class Create(base.CreateCommand):
     request_type = messages.ComputeRoutersGetRequest
     replacement = service.Get(request_type(**router_ref.AsDict()))
 
-    nat = nats_utils.CreateNatMessage(args, holder)
+    nat = nats_utils.CreateNatMessage(
+        args,
+        holder,
+        with_endpoint_independent_mapping=self.with_endpoint_independent_mapping
+    )
 
     replacement.nats.append(nat)
 
@@ -100,10 +110,16 @@ class Create(base.CreateCommand):
             nat.name, router_ref.Name()))
 
 
+@base.ReleaseTracks(base.ReleaseTrack.ALPHA)
+class CreateAlpha(Create):
+  """Add a NAT to a Compute Engine router."""
+
+  with_endpoint_independent_mapping = True
+
 Create.detailed_help = {
     'DESCRIPTION':
         """
-        *{command}* is used to create a NAT on a Google Compute Engine router.
+        *{command}* is used to create a NAT on a Compute Engine router.
         """,
     'EXAMPLES':
         """\

@@ -130,6 +130,7 @@ def AddMutationArgs(parser, required=True):
       required=required,
       type=arg_parsers.ArgList(
           custom_delim_char=';',
+          min_length=1,
           element_type=arg_parsers.ArgDict(
               spec={
                   'type':
@@ -149,7 +150,7 @@ def AddMutationArgs(parser, required=True):
               required_keys=['type']),
       ),
       help="""\
-      A list of agent rules to be enforced by the policy.
+      A non-empty list of agent rules to be enforced by the policy.
 
       This flag must be quoted. Items in the list are separated by ";". Each
       item in the list is a <key, value> map that represents a logging or
@@ -278,6 +279,7 @@ def AddMutationArgs(parser, required=True):
       required=required,
       type=arg_parsers.ArgList(
           custom_delim_char=';',
+          min_length=1,
           element_type=arg_parsers.ArgDict(
               spec={
                   'short-name':
@@ -291,7 +293,8 @@ def AddMutationArgs(parser, required=True):
               required_keys=['short-name', 'version']),
       ),
       help="""\
-      A list of OS types to filter instances that the policy applies to.
+      A non-empty list of OS types to filter instances that the policy applies
+      to.
 
       For Alpha, exactly one OS type needs to be specified. The support for
       multiple OS types will be added later for more flexibility. Each OS type
@@ -433,6 +436,23 @@ def AddUpdateArgs(parser):
   Args:
     parser: A given parser.
   """
+  parser.add_argument(
+      '--etag',
+      metavar='ETAG',
+      type=str,
+      help="""\
+      Etag of the policy.
+
+      ``etag'' is used for optimistic concurrency control as a way to help
+      prevent simultaneous updates of a policy from overwriting each other.
+      It is strongly suggested that systems make use of the ``etag'' in the
+      read-modify-write cycle to perform policy updates in order to avoid
+      race conditions: an ``etag'' is returned in the response of a ``describe''
+      command, and systems are expected to put that ``etag'' in the request to
+      an ``update'' command to ensure that their change will
+      be applied to the same version of the policy.
+      """,
+  )
   group_labels_args = parser.add_mutually_exclusive_group()
   _AddGroupLabelsArgument(group_labels_args)
   group_labels_args.add_argument(

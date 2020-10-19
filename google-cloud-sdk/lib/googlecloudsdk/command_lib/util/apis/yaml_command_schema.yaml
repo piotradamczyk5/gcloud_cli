@@ -327,6 +327,7 @@ properties:
     - LIST
     - DELETE
     - CREATE
+    - UPDATE
     - WAIT
     - GET_IAM_POLICY
     - SET_IAM_POLICY
@@ -679,6 +680,7 @@ properties:
       # operation. The string may have named format substitutions in it which
       # will be replaced with attributes of the resource being operated on.
       confirmation_prompt: {type: string}
+      default_continue: {type: boolean}
 
   # Information about how to show output to the user.
   output:

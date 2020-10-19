@@ -25,6 +25,9 @@ GROUPS
 COMMANDS
     COMMAND is one of the following:
 
+     add-iam-policy-binding
+        (ALPHA) Add an IAM policy binding to a Cloud Billing account.
+
      describe
         (ALPHA) Show metadata for a billing account.
 
@@ -34,6 +37,9 @@ COMMANDS
      list
         (ALPHA) List all active billing accounts.
 
+     remove-iam-policy-binding
+        (ALPHA) Remove an IAM policy binding from a Cloud Billing account.
+
      set-iam-policy
         (ALPHA) Set the IAM policy for a Cloud Billing account.
 
@@ -41,7 +47,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. This variant is also available:
+    access allowlist. This variant is also available:
 
         $ gcloud beta billing accounts
 

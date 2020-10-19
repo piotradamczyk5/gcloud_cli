@@ -31,15 +31,15 @@ from googlecloudsdk.core import properties
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
 class Update(base.Command):
-  """Update a Google Cloud Operations Suite Agents (Ops Agents) policy.
+  """Update a Google Cloud's operations suite agents (Ops Agents) policy.
 
-  *{command}* updates a policy that facilitates agent management across Google
-  Cloud Compute instances based on user specified instance filters. This policy
+  *{command}* updates a policy that facilitates agent management across
+  Compute Engine instances based on user specified instance filters. This policy
   installs, specifies versioning, enables autoupgrade, and removes Ops Agents.
 
   The command returns the content of the updated policy or an error indicating
   why the update fails. The updated policy takes effect asynchronously. It
-  can take 10 ~ 15 minutes for the VMs to enforce the updated policy.
+  can take 10-15 minutes for the VMs to enforce the updated policy.
 
   The available flags for the ``update'' command are similar to the flags for
   the ``create'' command. All the flags for ``update'' are optional. If a flag
@@ -47,22 +47,18 @@ class Update(base.Command):
   needs to be re-stated during ``update''. Take the ``--agents'' flag for
   example:
 
-  If the original policy specified two agents (e.g.
-  ``--agents="type=logging;type=metrics"''), yet only one agent (e.g.
-  ``--agents="type=logging"'') is specified in a *{command}* command, the other
-  agent will no longer be managed and enforced by the policy. In order to remove
+  If the original policy specified two agents
+  (``--agents="type=logging;type=metrics"''), and only one agent
+  (``--agents="type=logging"'') is specified in a *{command}* command, then the
+  policy stops managing and enforcing the unspecified agent. In order to remove
   the metrics agent in this case, set the package state explicitly to
-  ``removed'' (e.g.
-  ``--agents="type=logging;type=metrics,package-state=removed"'').
+  ``removed'' (``--agents="type=logging;type=metrics,package-state=removed"'').
 
   In order to explicitly clear the ``--group-labels'', ``--instances'', and
   ``--zones'' instance filters, use the following flags as documented below:
   ``--clear-group-labels'', ``--clear-instances'', and ``--clear-zones'' flags.
   """
 
-# TODO(b/160345689): We need to update command description sample with each
-# field that we are updating in the commands. Also Sync gcloud command
-# implementation help text with user guide.
   detailed_help = {
       'DESCRIPTION':
           '{description}',
@@ -90,6 +86,12 @@ class Update(base.Command):
           ``env=staging,product=myapp'' labels, run:
 
           $ {command} ops-agents-labels-policy --clear-instances --group-labels="env=prod,product=myapp;env=staging,product=myapp"
+
+          To perform the same update as above, conditionally on the fact that
+          the policy's etag (retrieved by an earlier command) is
+          ``f59741c8-bb5e-4ee6-bf6f-c4ebeb6b06e0'', run:
+
+          $ {command} ops-agents-labels-policy --clear-instances --group-labels="env=prod,product=myapp;env=staging,product=myapp" --etag f59741c8-bb5e-4ee6-bf6f-c4ebeb6b06e0
           """,
   }
 
@@ -117,8 +119,9 @@ class Update(base.Command):
     current_ops_agents_policy = guest_policy_to_ops_agents_policy_converter.ConvertGuestPolicyToOpsAgentPolicy(
         current_guest_policy)
     updated_ops_agents_policy = ops_agents_policy.UpdateOpsAgentsPolicy(
-        current_ops_agents_policy, args.description, args.agent_rules,
-        args.os_types, [] if args.clear_group_labels else args.group_labels,
+        current_ops_agents_policy, args.description,
+        args.etag, args.agent_rules, args.os_types,
+        [] if args.clear_group_labels else args.group_labels,
         [] if args.clear_zones else args.zones,
         [] if args.clear_instances else args.instances)
     ops_agents_policy_validator.ValidateOpsAgentsPolicy(

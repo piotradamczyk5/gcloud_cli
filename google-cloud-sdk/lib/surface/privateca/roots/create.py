@@ -23,13 +23,12 @@ from googlecloudsdk.api_lib.privateca import base as privateca_base
 from googlecloudsdk.api_lib.privateca import request_utils
 from googlecloudsdk.calliope import base
 from googlecloudsdk.calliope.concepts import deps
-from googlecloudsdk.command_lib.kms import resource_args as kms_resource_args
 from googlecloudsdk.command_lib.privateca import create_utils
 from googlecloudsdk.command_lib.privateca import flags
 from googlecloudsdk.command_lib.privateca import iam
 from googlecloudsdk.command_lib.privateca import operations
 from googlecloudsdk.command_lib.privateca import p4sa
-from googlecloudsdk.command_lib.privateca import resource_args as privateca_resource_args
+from googlecloudsdk.command_lib.privateca import resource_args
 from googlecloudsdk.command_lib.privateca import storage
 from googlecloudsdk.command_lib.util.args import labels_util
 from googlecloudsdk.command_lib.util.concepts import concept_parsers
@@ -87,6 +86,10 @@ class Create(base.CreateCommand):
 
   @staticmethod
   def Args(parser):
+    key_spec_group = parser.add_group(
+        mutex=True,
+        help='The key configuration used for the CA certificate. Defaults to a '
+             'managed key if not specified.')
     reusable_config_group = parser.add_group(
         mutex=True,
         required=False,
@@ -95,29 +98,24 @@ class Create(base.CreateCommand):
     concept_parsers.ConceptParser([
         presentation_specs.ResourcePresentationSpec(
             'CERTIFICATE_AUTHORITY',
-            privateca_resource_args.CreateCertificateAuthorityResourceSpec(
+            resource_args.CreateCertificateAuthorityResourceSpec(
                 'Certificate Authority'),
             'The name of the root CA to create.',
-            required=True,
-            # We'll get these from the KMS key resource.
-            flag_name_overrides={
-                'location': '',
-                'project': '',
-            }),
-        presentation_specs.ResourcePresentationSpec(
-            '--kms-key-version',
-            kms_resource_args.GetKmsKeyVersionResourceSpec(),
-            'The KMS key version backing this CA.',
             required=True),
         presentation_specs.ResourcePresentationSpec(
+            '--kms-key-version',
+            resource_args.CreateKmsKeyVersionResourceSpec(),
+            'An existing KMS key version to back this CA.',
+            group=key_spec_group),
+        presentation_specs.ResourcePresentationSpec(
             '--reusable-config',
-            privateca_resource_args.CreateReusableConfigResourceSpec(
-                location_fallthrough=deps.Fallthrough(
+            resource_args.CreateReusableConfigResourceSpec(
+                location_fallthroughs=[deps.Fallthrough(
                     function=lambda: '',
                     hint=('location will default to the same location as '
                           'the CA'),
                     active=False,
-                    plural=False)),
+                    plural=False)]),
             'The Reusable Config containing X.509 values for this CA.',
             flag_name_overrides={
                 'location': '',
@@ -126,7 +124,7 @@ class Create(base.CreateCommand):
             group=reusable_config_group),
         presentation_specs.ResourcePresentationSpec(
             '--from-ca',
-            privateca_resource_args.CreateCertificateAuthorityResourceSpec(
+            resource_args.CreateCertificateAuthorityResourceSpec(
                 'source CA'),
             'An existing CA from which to copy configuration values for the new CA. '
             'You can still override any of those values by explicitly providing '
@@ -134,9 +132,11 @@ class Create(base.CreateCommand):
             flag_name_overrides={'project': '--from-ca-project'},
             prefixes=True)
     ]).AddToParser(parser)
+    flags.AddTierFlag(parser)
     flags.AddSubjectFlags(parser, subject_required=False)
     flags.AddPublishCaCertFlag(parser, use_update_help_text=False)
     flags.AddPublishCrlFlag(parser, use_update_help_text=False)
+    flags.AddKeyAlgorithmFlag(key_spec_group)
     flags.AddInlineReusableConfigFlags(reusable_config_group, is_ca=True)
     flags.AddValidityFlag(
         parser,
@@ -151,18 +151,20 @@ class Create(base.CreateCommand):
     new_ca, ca_ref, _ = create_utils.CreateCAFromArgs(
         args, is_subordinate=False)
     project_ref = ca_ref.Parent().Parent()
-    kms_key_ref = args.CONCEPTS.kms_key_version.Parse().Parent()
+    key_version_ref = args.CONCEPTS.kms_key_version.Parse()
+    kms_key_ref = key_version_ref.Parent() if key_version_ref else None
 
     iam.CheckCreateCertificateAuthorityPermissions(project_ref, kms_key_ref)
 
-    p4sa_email = p4sa.GetOrCreate(project_ref)
+    bucket_ref = None
     if args.IsSpecified('bucket'):
       bucket_ref = storage.ValidateBucketForCertificateAuthority(args.bucket)
-    else:
-      bucket_ref = storage.CreateBucketForCertificateAuthority(ca_ref)
-    p4sa.AddResourceRoleBindings(p4sa_email, kms_key_ref, bucket_ref)
-    new_ca.gcsBucket = bucket_ref.bucket
+      new_ca.gcsBucket = bucket_ref.bucket
 
+    p4sa_email = p4sa.GetOrCreate(project_ref)
+    p4sa.AddResourceRoleBindings(p4sa_email, kms_key_ref, bucket_ref)
+
+    create_utils.PrintBetaResourceDeletionDisclaimer('certificate authorities')
     operation = self.client.projects_locations_certificateAuthorities.Create(
         self.messages
         .PrivatecaProjectsLocationsCertificateAuthoritiesCreateRequest(
@@ -174,13 +176,5 @@ class Create(base.CreateCommand):
     ca_response = operations.Await(operation, 'Creating Certificate Authority.')
     ca = operations.GetMessageFromResponse(ca_response,
                                            self.messages.CertificateAuthority)
-
-    log.status.Print('Creating the initial Certificate Revocation List.')
-    self.client.projects_locations_certificateAuthorities.PublishCrl(
-        self.messages
-        .PrivatecaProjectsLocationsCertificateAuthoritiesPublishCrlRequest(
-            name=ca.name,
-            publishCertificateRevocationListRequest=self.messages
-            .PublishCertificateRevocationListRequest()))
 
     log.status.Print('Created Certificate Authority [{}].'.format(ca.name))

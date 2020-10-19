@@ -19,9 +19,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import subprocess
+import sys
 
 from googlecloudsdk.command_lib.code import run_subprocess
 from googlecloudsdk.core import exceptions
+from googlecloudsdk.core.console import console_io
+from googlecloudsdk.core.util import platforms
 import six
 
 DEFAULT_CLUSTER_NAME = 'gcloud-local-dev'
@@ -192,6 +195,15 @@ class MinikubeStartError(exceptions.Error):
   """Error if minikube fails to start."""
 
 
+_MINIKUBE_STEP = 'io.k8s.sigs.minikube.step'
+
+_MINIKUBE_DOWNLOAD_PROGRESS = 'io.k8s.sigs.minikube.download.progress'
+
+_MINIKUBE_ERROR = 'io.k8s.sigs.minikube.error'
+
+_MINIKUBE_NOT_ENOUGH_CPU_FRAGMENT = 'The minimum allowed is 2 CPUs.'
+
+
 def _StartMinikubeCluster(cluster_name, vm_driver, debug=False):
   """Starts a minikube cluster."""
   # pylint: disable=broad-except
@@ -206,6 +218,7 @@ def _StartMinikubeCluster(cluster_name, vm_driver, debug=False):
           '--interactive=false',
           '--delete-on-failure',
           '--install-addons=false',
+          '--output=json',
       ]
       if vm_driver:
         cmd.append('--vm-driver=' + vm_driver)
@@ -214,11 +227,49 @@ def _StartMinikubeCluster(cluster_name, vm_driver, debug=False):
       if debug:
         cmd.extend(['--alsologtostderr', '-v8'])
 
-      print("Starting development environment '%s' ..." % cluster_name)
-      run_subprocess.Run(cmd, timeout_sec=150, show_output=debug)
-      print('Development environment created.')
+      start_msg = "Starting development environment '%s' ..." % cluster_name
+
+      with console_io.ProgressBar(start_msg) as progress_bar:
+        for json_obj in run_subprocess.StreamOutputJson(
+            cmd, event_timeout_sec=90, show_stderr=debug):
+          if debug:
+            print('minikube', json_obj)
+          if json_obj['type'] == _MINIKUBE_STEP:
+            data = json_obj['data']
+
+            current_step = int(data['currentstep'])
+            total_steps = int(data['totalsteps'])
+            completion_fraction = current_step / float(total_steps)
+            progress_bar.SetProgress(completion_fraction)
+          elif json_obj['type'] == _MINIKUBE_DOWNLOAD_PROGRESS:
+            data = json_obj['data']
+            current_step = int(data['currentstep'])
+            total_steps = int(data['totalsteps'])
+            download_progress = float(data['progress'])
+
+            completion_fraction = (current_step +
+                                   download_progress) / total_steps
+            progress_bar.SetProgress(completion_fraction)
+          elif (json_obj['type'] == _MINIKUBE_ERROR and
+                'exitcode' in json_obj['data']):
+            data = json_obj['data']
+            # Using matching of the message to detect the error is brittle.
+            # When the error code gets more specific. Just use the error code.
+            # https://github.com/kubernetes/minikube/issues/9080
+            if (_MINIKUBE_NOT_ENOUGH_CPU_FRAGMENT in data['message'] and
+                data['exitcode'] == '64'):
+              msg = 'Not enough CPUs. Cloud Run Emulator requires 2 CPUs.'
+              if (platforms.OperatingSystem.Current() !=
+                  platforms.OperatingSystem.LINUX):
+                msg += ' Increase Docker VM CPUs to 2.'
+            elif data['exitcode'] == '69':
+              msg = 'Cannot reach docker daemon.'
+            else:
+              msg = 'Unable to start Cloud Run Emulator.'
+            raise MinikubeStartError(msg)
+
   except Exception as e:
-    six.reraise(MinikubeStartError, e)
+    six.reraise(MinikubeStartError, e, sys.exc_info()[2])
 
 
 def _GetMinikubeDockerEnvs(cluster_name):

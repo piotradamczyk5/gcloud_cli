@@ -115,6 +115,8 @@ class Binding(_messages.Message):
   r"""Associates `members` with a `role`.
 
   Fields:
+    bindingId: A client-specified ID for this binding. Expected to be globally
+      unique to support the internal bindings-by-ID API.
     condition: The condition that is associated with this binding. If the
       condition evaluates to `true`, then this binding applies to the current
       request. If the condition evaluates to `false`, then this binding does
@@ -158,9 +160,10 @@ class Binding(_messages.Message):
       `roles/editor`, or `roles/owner`.
   """
 
-  condition = _messages.MessageField('Expr', 1)
-  members = _messages.StringField(2, repeated=True)
-  role = _messages.StringField(3)
+  bindingId = _messages.StringField(1)
+  condition = _messages.MessageField('Expr', 2)
+  members = _messages.StringField(3, repeated=True)
+  role = _messages.StringField(4)
 
 
 class CancelOperationRequest(_messages.Message):
@@ -494,6 +497,10 @@ class Instance(_messages.Message):
     availableVersion: Available versions that the instance can be upgraded to
       using UpdateInstanceRequest.
     createTime: Output only. The time the instance was created.
+    dataprocServiceAccount: User-managed service account to set on Dataproc
+      when Cloud Data Fusion creates Dataproc to run data processing
+      pipelines. This allows users to have fine-grained access control on
+      Dataproc's accesses to cloud resources.
     description: A description of this instance.
     displayName: Display name for an instance.
     enableStackdriverLogging: Option to enable Stackdriver Logging.
@@ -509,17 +516,19 @@ class Instance(_messages.Message):
       private Data Fusion instance is to be created.
     options: Map of additional options used to configure the behavior of Data
       Fusion instance.
+    p4ServiceAccount: Output only. P4 service account for the customer
+      project.
     privateInstance: Specifies whether the Data Fusion instance should be
       private. If set to true, all Data Fusion nodes will have private IP
       addresses and will not be able to access the public internet.
-    serviceAccount: Output only. Service account output for use in peering-see
-      [Set up VPC Network Peering](/data-fusion/docs/how-to/create-private-
-      ip#set_up_network_peering).
+    serviceAccount: Output only. Deprecated. Use tenant_project_id instead to
+      extract the tenant project ID.
     serviceEndpoint: Output only. Endpoint on which the Data Fusion UI is
       accessible.
     state: Output only. The current state of this Data Fusion instance.
     stateMessage: Output only. Additional information about the current state
       of this Data Fusion instance if available.
+    tenantProjectId: Output only. The name of the tenant project.
     type: Required. Instance type.
     updateTime: Output only. The time the instance was last updated.
     version: Current version of Data Fusion.
@@ -629,24 +638,27 @@ class Instance(_messages.Message):
   apiEndpoint = _messages.StringField(2)
   availableVersion = _messages.MessageField('Version', 3, repeated=True)
   createTime = _messages.StringField(4)
-  description = _messages.StringField(5)
-  displayName = _messages.StringField(6)
-  enableStackdriverLogging = _messages.BooleanField(7)
-  enableStackdriverMonitoring = _messages.BooleanField(8)
-  gcsBucket = _messages.StringField(9)
-  labels = _messages.MessageField('LabelsValue', 10)
-  name = _messages.StringField(11)
-  networkConfig = _messages.MessageField('NetworkConfig', 12)
-  options = _messages.MessageField('OptionsValue', 13)
-  privateInstance = _messages.BooleanField(14)
-  serviceAccount = _messages.StringField(15)
-  serviceEndpoint = _messages.StringField(16)
-  state = _messages.EnumField('StateValueValuesEnum', 17)
-  stateMessage = _messages.StringField(18)
-  type = _messages.EnumField('TypeValueValuesEnum', 19)
-  updateTime = _messages.StringField(20)
-  version = _messages.StringField(21)
-  zone = _messages.StringField(22)
+  dataprocServiceAccount = _messages.StringField(5)
+  description = _messages.StringField(6)
+  displayName = _messages.StringField(7)
+  enableStackdriverLogging = _messages.BooleanField(8)
+  enableStackdriverMonitoring = _messages.BooleanField(9)
+  gcsBucket = _messages.StringField(10)
+  labels = _messages.MessageField('LabelsValue', 11)
+  name = _messages.StringField(12)
+  networkConfig = _messages.MessageField('NetworkConfig', 13)
+  options = _messages.MessageField('OptionsValue', 14)
+  p4ServiceAccount = _messages.StringField(15)
+  privateInstance = _messages.BooleanField(16)
+  serviceAccount = _messages.StringField(17)
+  serviceEndpoint = _messages.StringField(18)
+  state = _messages.EnumField('StateValueValuesEnum', 19)
+  stateMessage = _messages.StringField(20)
+  tenantProjectId = _messages.StringField(21)
+  type = _messages.EnumField('TypeValueValuesEnum', 22)
+  updateTime = _messages.StringField(23)
+  version = _messages.StringField(24)
+  zone = _messages.StringField(25)
 
 
 class ListAvailableVersionsResponse(_messages.Message):
@@ -1181,14 +1193,17 @@ class Version(_messages.Message):
   r"""The Data Fusion version.
 
   Fields:
+    availableFeatures: Represents a list of available feature names for a
+      given version.
     defaultVersion: Whether this is currently the default version for Cloud
       Data Fusion
     versionNumber: The version number of the Data Fusion instance, such as
       '6.0.1.0'.
   """
 
-  defaultVersion = _messages.BooleanField(1)
-  versionNumber = _messages.StringField(2)
+  availableFeatures = _messages.StringField(1, repeated=True)
+  defaultVersion = _messages.BooleanField(2)
+  versionNumber = _messages.StringField(3)
 
 
 encoding.AddCustomJsonFieldMapping(

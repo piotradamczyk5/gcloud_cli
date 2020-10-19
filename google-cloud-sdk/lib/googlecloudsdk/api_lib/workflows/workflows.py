@@ -18,18 +18,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import json
-
-from apitools.base.py import encoding
 from apitools.base.py import exceptions as api_exceptions
 from googlecloudsdk.api_lib.util import apis
+from googlecloudsdk.api_lib.util import exceptions
 from googlecloudsdk.api_lib.util import waiter
+from googlecloudsdk.api_lib.workflows import poller_utils
 from googlecloudsdk.calliope import base
 from googlecloudsdk.command_lib.util.args import labels_util
 from googlecloudsdk.command_lib.workflows import flags
 from googlecloudsdk.core import resources
-
-import six
 
 
 class UnsupportedReleaseTrackError(Exception):
@@ -121,83 +118,64 @@ class WorkflowsClient(object):
     """Waits until the given long-running operation is complete."""
     operation_ref = resources.REGISTRY.Parse(
         operation.name, collection='workflows.projects.locations.operations')
-    operations = OperationsClient(self.client, self.messages)
-    poller = _OperationPoller(
+    operations = poller_utils.OperationsClient(self.client, self.messages)
+    poller = poller_utils.WorkflowsOperationPoller(
         workflows=self, operations=operations, workflow_ref=workflow_ref)
     progress_string = 'Waiting for operation [{}] to complete'.format(
         operation_ref.Name())
     return waiter.WaitFor(poller, operation_ref, progress_string)
 
 
-class OperationsClient(object):
-  """Client for Operations service in the Cloud Workflows API."""
+class WorkflowExecutionClient(object):
+  """Client for Workflows Execution service in the Cloud Workflows Execution API."""
 
-  def __init__(self, client, messages):
-    self.client = client
-    self.messages = messages
-    self._service = self.client.projects_locations_operations
+  def __init__(self, api_version):
+    self.client = apis.GetClientInstance('workflowexecutions', api_version)
+    self.messages = self.client.MESSAGES_MODULE
+    self._service = self.client.projects_locations_workflows_executions
 
-  def Get(self, operation_ref):
-    """Gets an Operation.
+  def Get(self, execution_ref):
+    """Gets a workflow execution.
 
     Args:
-      operation_ref: Resource reference to the Operation to get.
+      execution_ref: Resource reference to the Workflow execution to get.
 
     Returns:
-      Operation: The operation if it exists, None otherwise.
+      Workflow: The workflow execution if it exists, an error exception
+      otherwise.
     """
-    get_req = self.messages.WorkflowsProjectsLocationsOperationsGetRequest(
-        name=operation_ref.RelativeName())
+    get_req = self.messages.WorkflowexecutionsProjectsLocationsWorkflowsExecutionsGetRequest(
+        name=execution_ref.RelativeName())
     try:
       return self._service.Get(get_req)
-    except api_exceptions.HttpNotFoundError:
-      return None
+    except api_exceptions.HttpError as e:
+      raise exceptions.HttpException(e, error_format='{message}')
+
+  def WaitForExecution(self, execution_ref):
+    """Waits until the given execution is complete or the maximum wait time is reached."""
+    poller = poller_utils.ExecutionsPoller(workflow_execution=self)
+    progress_string = 'Waiting for execution [{}] to complete'.format(
+        execution_ref.Name())
+    try:
+      return waiter.WaitFor(
+          poller,
+          execution_ref,
+          progress_string,
+          pre_start_sleep_ms=100,
+          max_wait_ms=86400000,  # max wait time is 24 hours.
+          exponential_sleep_multiplier=1.25,
+          wait_ceiling_ms=60000)  # truncate sleep exponential at 1 minute.
+    except waiter.TimeoutError:
+      raise waiter.TimeoutError(
+          'Execution {0} has not finished in 24 hours. {1}'.format(
+              execution_ref, _TIMEOUT_MESSAGE))
+    except waiter.AbortWaitError:
+      raise waiter.AbortWaitError(
+          'Aborting wait for execution {0}.'.format(execution_ref))
 
 
-class _OperationPoller(waiter.OperationPoller):
-  """Implementation of OperationPoller for Workflows Operations."""
-
-  def __init__(self, workflows, operations, workflow_ref):
-    """Creates the poller.
-
-    Args:
-      workflows: the Workflows API client used to get the resource after
-        operation is complete.
-      operations: the Operations API client used to poll for the operation.
-      workflow_ref: a reference to a workflow that is the subject of this
-        operation.
-    """
-    self.workflows = workflows
-    self.operations = operations
-    self.workflow_ref = workflow_ref
-
-  def IsDone(self, operation):
-    """Overrides."""
-    if operation.done:
-      if operation.error:
-        raise waiter.OperationError(_SerializeError(operation.error))
-      return True
-    return False
-
-  def Poll(self, operation_ref):
-    """Overrides."""
-    return self.operations.Get(operation_ref)
-
-  def GetResult(self, operation):
-    """Overrides."""
-    return self.workflows.Get(self.workflow_ref)
-
-
-def _SerializeError(error):
-  """Serializes the error message for better format."""
-  if isinstance(error, six.string_types):
-    return error
-  try:
-    return json.dumps(
-        encoding.MessageToDict(error),
-        indent=2,
-        sort_keys=True,
-        separators=(',', ': '))
-  except Exception:  # pylint: disable=broad-except
-    # try the best, fall back to return error
-    return error
+# Same message as the LRO time out error, modified with the word execution.
+_TIMEOUT_MESSAGE = (
+    'The execution may still be underway remotely and may still succeed; '
+    'use gcloud list and describe commands or '
+    'https://console.developers.google.com/ to check resource state.')

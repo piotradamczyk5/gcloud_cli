@@ -4,7 +4,7 @@
  "id": "bigquery:v2",
  "name": "bigquery",
  "version": "v2",
- "revision": "20200609",
+ "revision": "20200923",
  "title": "BigQuery API",
  "description": "A data platform for customers to create, manage, share and query data.",
  "ownerDomain": "google.com",
@@ -1330,9 +1330,17 @@
      "$ref": "EncryptionConfiguration",
      "description": "Custom encryption configuration (e.g., Cloud KMS keys)."
     },
+    "destinationExpirationTime": {
+     "type": "any",
+     "description": "[Optional] The time when the destination table expires. Expired tables will be deleted and their storage reclaimed."
+    },
     "destinationTable": {
      "$ref": "TableReference",
      "description": "[Required] The destination table"
+    },
+    "operationType": {
+     "type": "string",
+     "description": "[Optional] Supported operation types in table copy job."
     },
     "sourceTable": {
      "$ref": "TableReference",
@@ -1535,6 +1543,10 @@
      "type": "string",
      "description": "[Output-only] Slot-milliseconds for the job.",
      "format": "int64"
+    },
+    "transactionInfoTemplate": {
+     "$ref": "TransactionInfo",
+     "description": "[Output-only] [Alpha] Information of the multi-statement transaction if this job is part of one."
     }
    }
   },
@@ -2294,6 +2306,21 @@
     }
    }
   },
+  "SnapshotDefinition": {
+   "id": "SnapshotDefinition",
+   "type": "object",
+   "properties": {
+    "baseTableReference": {
+     "$ref": "TableReference",
+     "description": "[Required] Reference describing the ID of the table that is snapshotted."
+    },
+    "snapshotTime": {
+     "type": "string",
+     "description": "[Required] The time at which the base table was snapshot.",
+     "format": "date-time"
+    }
+   }
+  },
   "Streamingbuffer": {
    "id": "Streamingbuffer",
    "type": "object",
@@ -2423,6 +2450,10 @@
      "type": "string",
      "description": "[Output-only] A URL that can be used to access this resource again."
     },
+    "snapshotDefinition": {
+     "$ref": "SnapshotDefinition",
+     "description": "[Output-only] Snapshot definition."
+    },
     "streamingBuffer": {
      "$ref": "Streamingbuffer",
      "description": "[Output-only] Contains information regarding this table's streaming buffer, if one is present. This field will be absent if the table is not being streamed to or if there is no data in the streaming buffer."
@@ -2437,7 +2468,7 @@
     },
     "type": {
      "type": "string",
-     "description": "[Output-only] Describes the table type. The following values are supported: TABLE: A normal BigQuery table. VIEW: A virtual table defined by a SQL query. [TrustedTester] MATERIALIZED_VIEW: SQL query whose result is persisted. EXTERNAL: A table that references data stored in an external storage system, such as Google Cloud Storage. The default value is TABLE."
+     "description": "[Output-only] Describes the table type. The following values are supported: TABLE: A normal BigQuery table. VIEW: A virtual table defined by a SQL query. [TrustedTester] SNAPSHOT: An immutable, read-only table that is a copy of another table. [TrustedTester] MATERIALIZED_VIEW: SQL query whose result is persisted. EXTERNAL: A table that references data stored in an external storage system, such as Google Cloud Storage. The default value is TABLE."
     },
     "view": {
      "$ref": "ViewDefinition",
@@ -2781,7 +2812,17 @@
     },
     "type": {
      "type": "string",
-     "description": "[Required] The only type supported is DAY, which will generate one partition per day."
+     "description": "[Required] The supported types are DAY, HOUR, MONTH, and YEAR, which will generate one partition per day, hour, month, and year, respectively. When the type is not specified, the default behavior is DAY."
+    }
+   }
+  },
+  "TransactionInfo": {
+   "id": "TransactionInfo",
+   "type": "object",
+   "properties": {
+    "transactionId": {
+     "type": "string",
+     "description": "[Output-only] // [Alpha] Id of the transaction."
     }
    }
   },

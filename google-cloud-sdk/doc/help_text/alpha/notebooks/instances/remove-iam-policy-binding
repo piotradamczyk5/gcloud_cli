@@ -64,9 +64,8 @@ EXAMPLES
     'test-user@gmail.com' on the instance 'instance-id', run:
 
         $ gcloud alpha notebooks instances remove-iam-policy-binding \
-            /projects/example-project/locations/us-central1-b/instances/\
-        example-instance --member='user:test-user@gmail.com' \
-            --role='roles/editor'
+            example-instance --member='user:test-user@gmail.com' \
+            --role='roles/editor' --location=us-central1-a
 
     See https://cloud.google.com/iam/docs/managing-policies for details of
     policy role and member types.
@@ -75,7 +74,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. This variant is also available:
+    access allowlist. This variant is also available:
 
         $ gcloud beta notebooks instances remove-iam-policy-binding
 

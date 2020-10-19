@@ -31,7 +31,8 @@ class UnitTestBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
   """Base class for `gcloud redis` unit tests."""
 
   def SetUp(self):
-    self.api_version = redis.API_VERSION_FOR_TRACK[self.track]
+    if not hasattr(self, 'api_version'):
+      self.api_version = redis.API_VERSION_FOR_TRACK[self.track]
     self.mock_client = mock.Client(
         client_class=apis.GetClientClass('redis', self.api_version))
     self.mock_client.Mock()
@@ -99,7 +100,8 @@ class InstancesUnitTestBase(UnitTestBase):
   def MakeAllOptionsInstance(self,
                              name=None,
                              redis_version='REDIS_3_2',
-                             connect_mode='DIRECT_PEERING'):
+                             connect_mode='DIRECT_PEERING',
+                             transit_encryption_mode=None):
     network_ref = resources.REGISTRY.Create(
         'compute.networks', project=self.Project(), network='my-network')
     redis_configs = {
@@ -143,6 +145,10 @@ class InstancesUnitTestBase(UnitTestBase):
     else:
       redis_instance.connectMode = self.messages.Instance.ConnectModeValueValuesEnum(
           'PRIVATE_SERVICE_ACCESS')
+
+    if transit_encryption_mode == 'SERVER_AUTHENTICATION':
+      redis_instance.transitEncryptionMode = self.messages.Instance.TransitEncryptionModeValueValuesEnum(
+          'SERVER_AUTHENTICATION')
     return redis_instance
 
 

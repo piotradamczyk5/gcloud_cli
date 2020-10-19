@@ -45,10 +45,28 @@ Run \fB$ gcloud help\fR for details.
 .RE
 .sp
 
+.SH "EXAMPLES"
+
+To list all environments for the active Cloud Platform project, run:
+
+.RS 2m
+$ gcloud alpha apigee environments list
+.RE
+
+To get a JSON array of all environments in an Apigee organization called
+\f5\fImy\-org\fR\fR, run:
+
+.RS 2m
+$ gcloud alpha apigee environments list \-\-organization=my\-org \e
+  \-\-format=json
+.RE
+
+
+
 .SH "NOTES"
 
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist.
+allowlist.
 

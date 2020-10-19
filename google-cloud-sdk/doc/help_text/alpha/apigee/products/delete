@@ -1,17 +1,21 @@
 NAME
-    gcloud alpha apigee products delete - deletes an Apigee API product
+    gcloud alpha apigee products delete - delete an Apigee API product
 
 SYNOPSIS
     gcloud alpha apigee products delete (PRODUCT : --organization=ORGANIZATION)
         [GCLOUD_WIDE_FLAG ...]
 
 DESCRIPTION
-    (ALPHA) Deletes an Apigee API product.
+    (ALPHA) Delete an Apigee API product.
 
 POSITIONAL ARGUMENTS
-     API product resource - The API product to be deleted. The arguments in
-     this group can be used to specify the attributes of this resource. This
-     must be specified.
+     API product resource - API product to be deleted. To get a list of
+     available API products, run:
+
+     $ gcloud alpha apigee products list
+
+     The arguments in this group can be used to specify the attributes of this
+     resource. This must be specified.
 
        PRODUCT
           ID of the API product or fully qualified identifier for the API
@@ -19,7 +23,8 @@ POSITIONAL ARGUMENTS
           arguments in this group are specified.
 
        --organization=ORGANIZATION
-          The organization for the API product.
+          Apigee organization containing the API product. If unspecified, the
+          Cloud Platform project's associated organization will be used.
 
 GCLOUD WIDE FLAGS
     These flags are available to all commands: --account, --billing-project,
@@ -30,7 +35,7 @@ GCLOUD WIDE FLAGS
     Run $ gcloud help for details.
 
 EXAMPLES
-    To delete an API product called product-name in the active Cloud Platform
+    To delete an API product called product-name from the active Cloud Platform
     project, run:
 
         $ gcloud alpha apigee products delete product-name
@@ -45,5 +50,5 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist.
+    access allowlist.
 

@@ -22,7 +22,9 @@ import subprocess
 from googlecloudsdk.command_lib.code import kubernetes
 from googlecloudsdk.command_lib.code import run_subprocess
 from googlecloudsdk.core import config
+from googlecloudsdk.core.console import console_io
 from googlecloudsdk.core.updater import update_manager
+from googlecloudsdk.core.util import platforms
 from tests.lib import test_case
 import mock
 
@@ -34,6 +36,16 @@ class Matcher(object):
 
   def __eq__(self, other):
     return self._matcher(other)
+
+
+class FloatMatcher(object):
+
+  def __init__(self, value, delta=0.01):
+    self._value = value
+    self._delta = delta
+
+  def __eq__(self, other):
+    return abs(self._value - other) < self._delta
 
 
 class SdkPathTestCase(test_case.TestCase):
@@ -48,83 +60,240 @@ class SdkPathTestCase(test_case.TestCase):
 
 class StartMinikubeTest(SdkPathTestCase):
 
-  MINIKUBE_TEARDOWN_CALL = mock.call([
-      os.path.join("sdk", "path", "bin", "minikube"), "stop", "-p",
-      "cluster-name"
-  ],
-                                     show_output=False,
-                                     timeout_sec=150)
+  MINIKUBE_PATH = os.path.join("sdk", "path", "bin", "minikube")
+
+  MINIKUBE_TEARDOWN_CALL = mock.call(
+      [MINIKUBE_PATH, "stop", "-p", "cluster-name"],
+      show_output=False,
+      timeout_sec=150)
+
+  def SetUp(self):
+    self.StartObjectPatch(run_subprocess, "Run")
 
   def testAlreadyRunning(self):
-    with mock.patch.object(run_subprocess, "GetOutputJson") as mock_get_json:
-      mock_get_json.return_value = {"Host": "Running"}
-      with mock.patch.object(run_subprocess, "Run") as mock_run:
-
-        with kubernetes.Minikube("cluster-name"):
-          # Assert "minikube start" is not called.
-          mock_run.assert_not_called()
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={"Host": "Running"}), \
+         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         kubernetes.Minikube("cluster-name"):
+      # Assert "minikube start" is not called.
+      mock_run.assert_not_called()
 
     self.assertEqual(self.MINIKUBE_TEARDOWN_CALL, mock_run.call_args)
 
   def testNotYetRunning(self):
-    with mock.patch.object(run_subprocess, "GetOutputJson") as mock_get_json:
-      mock_get_json.return_value = {}
-      with mock.patch.object(run_subprocess, "Run") as mock_run:
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson") as mock_stream, \
+         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         kubernetes.Minikube("cluster-name"):
+      self.assertIn("cluster-name", mock_stream.call_args[0][0])
+      self.assertIn("start", mock_stream.call_args[0][0])
 
-        with kubernetes.Minikube("cluster-name"):
-          self.assertIn("cluster-name", mock_run.call_args[0][0])
-          self.assertIn("start", mock_run.call_args[0][0])
-
-    self.assertEqual(self.MINIKUBE_TEARDOWN_CALL, mock_run.call_args)
+    self.assertEqual(mock_run.call_args, self.MINIKUBE_TEARDOWN_CALL)
 
   def testNotYetRunningError(self):
-    with mock.patch.object(run_subprocess, "GetOutputJson") as mock_get_json:
-      mock_get_json.side_effect = subprocess.CalledProcessError(1, "cmd")
-      with mock.patch.object(run_subprocess, "Run") as mock_run:
+    get_json_side_effect = subprocess.CalledProcessError(1, "cmd")
+    with mock.patch.object(run_subprocess, "GetOutputJson", side_effect=get_json_side_effect), \
+         mock.patch.object(run_subprocess, "StreamOutputJson") as mock_stream, \
+         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         kubernetes.Minikube("cluster-name"):
+      self.assertIn("cluster-name", mock_stream.call_args[0][0])
+      self.assertIn("start", mock_stream.call_args[0][0])
+      self.assertEqual(mock_stream.call_args[1]["event_timeout_sec"], 90)
 
-        with kubernetes.Minikube("cluster-name"):
-          self.assertIn("cluster-name", mock_run.call_args[0][0])
-          self.assertIn("start", mock_run.call_args[0][0])
-
-    self.assertEqual(self.MINIKUBE_TEARDOWN_CALL, mock_run.call_args)
+    self.assertEqual(mock_run.call_args, self.MINIKUBE_TEARDOWN_CALL)
 
   def testDriver(self):
-    with mock.patch.object(run_subprocess, "GetOutputJson") as mock_get_json:
-      mock_get_json.return_value = {}
-      with mock.patch.object(run_subprocess, "Run") as mock_run:
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson") as mock_stream, \
+         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         kubernetes.Minikube("cluster-name", vm_driver="my-driver"):
+      self.assertIn("--vm-driver=my-driver", mock_stream.call_args[0][0])
 
-        with kubernetes.Minikube("cluster-name", vm_driver="my-driver"):
-          self.assertIn("--vm-driver=my-driver", mock_run.call_args[0][0])
-
-    self.assertEqual(self.MINIKUBE_TEARDOWN_CALL, mock_run.call_args)
+    self.assertEqual(mock_run.call_args, self.MINIKUBE_TEARDOWN_CALL)
 
   def testDockerDriver(self):
-    with mock.patch.object(run_subprocess, "GetOutputJson") as mock_get_json:
-      mock_get_json.return_value = {}
-      with mock.patch.object(run_subprocess, "Run") as mock_run:
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson") as mock_stream, \
+         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         kubernetes.Minikube("cluster-name", vm_driver="docker"):
+      self.assertIn("--vm-driver=docker", mock_stream.call_args[0][0])
+      self.assertIn("--container-runtime=docker", mock_stream.call_args[0][0])
 
-        with kubernetes.Minikube("cluster-name", vm_driver="docker"):
-          mock_run.assert_called_once_with(
-              Matcher(lambda cmd: "--vm-driver=docker" in cmd),
-              timeout_sec=150,
-              show_output=False)
-          mock_run.assert_called_once_with(
-              Matcher(lambda cmd: "--container-runtime=docker" in cmd),
-              timeout_sec=150,
-              show_output=False)
-
-    self.assertEqual(self.MINIKUBE_TEARDOWN_CALL, mock_run.call_args)
+    self.assertEqual(mock_run.call_args, self.MINIKUBE_TEARDOWN_CALL)
 
   def testDebug(self):
     with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
-         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         mock.patch.object(run_subprocess, "StreamOutputJson") as mock_stream, \
+         mock.patch.object(run_subprocess, "Run"), \
          kubernetes.Minikube("cluster-name", debug=True):
-      mock_run.assert_called_once_with(
-          Matcher(lambda cmd: "--alsologtostderr" in cmd),
-          timeout_sec=150,
-          show_output=True)
-      mock_run.assert_called_once_with(
-          Matcher(lambda cmd: "-v8" in cmd), timeout_sec=150, show_output=True)
+      self.assertIn("--alsologtostderr", mock_stream.call_args[0][0])
+      self.assertIn("-v8", mock_stream.call_args[0][0])
+      self.assertIs(mock_stream.call_args[1]["show_stderr"], True)
+
+  def testProgressBar(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.step",
+            "data": {
+                "currentstep": "1",
+                "totalsteps": "3"
+            }
+        },
+        {
+            "type": "io.k8s.sigs.minikube.step",
+            "data": {
+                "currentstep": "2",
+                "totalsteps": "3"
+            }
+        },
+        {
+            "type": "io.k8s.sigs.minikube.download.progress",
+            "data": {
+                "progress": "0.33333",
+                "currentstep": "2",
+                "totalsteps": "3"
+            }
+        },
+        {
+            "type": "io.k8s.sigs.minikube.download.progress",
+            "data": {
+                "progress": "0.77777",
+                "currentstep": "2",
+                "totalsteps": "3"
+            }
+        },
+        {
+            "type": "io.k8s.sigs.minikube.step",
+            "data": {
+                "currentstep": "3",
+                "totalsteps": "3"
+            }
+        },
+    ]
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         mock.patch.object(run_subprocess, "Run") as mock_run, \
+         mock.patch.object(console_io, "ProgressBar") as mock_progress_bar, \
+         kubernetes.Minikube("cluster-name"):
+      set_progress = (
+          mock_progress_bar.return_value.__enter__.return_value.SetProgress)
+      expected_calls = [
+          mock.call(FloatMatcher(float(1) / 3)),
+          mock.call(FloatMatcher(float(2) / 3)),
+          mock.call(FloatMatcher(float(2.33333) / 3)),
+          mock.call(FloatMatcher(float(2.77777) / 3)),
+          mock.call(FloatMatcher(float(3) / 3))
+      ]
+      set_progress.assert_has_calls(expected_calls)
+
+    self.assertEqual(mock_run.call_args, self.MINIKUBE_TEARDOWN_CALL)
+
+  def testNotEnoughCpuError(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.error",
+            "data": {
+                "message": "Ensure your  system has enough CPUs. The minimum "
+                           "allowed is 2 CPUs.\n",
+                "exitcode": "64"
+            }
+        },
+    ]
+    expected_error_message = ("Not enough CPUs. Cloud Run Emulator requires "
+                              "2 CPUs.")
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         self.assertRaisesRegex(kubernetes.MinikubeStartError, expected_error_message), \
+         kubernetes.Minikube("cluster-name"):
+      pass
+
+  def testNotEnoughCpuErrorWindows(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.error",
+            "data": {
+                "message": "Ensure your  system has enough CPUs. The minimum "
+                           "allowed is 2 CPUs.\n",
+                "exitcode": "64"
+            }
+        },
+    ]
+    expected_error_message = ("Not enough CPUs. Cloud Run Emulator requires "
+                              "2 CPUs. Increase Docker VM CPUs to 2.")
+    with mock.patch.object(platforms.OperatingSystem, "Current", return_value=platforms.OperatingSystem.WINDOWS), \
+         mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         self.assertRaisesRegex(kubernetes.MinikubeStartError, expected_error_message), \
+         kubernetes.Minikube("cluster-name"):
+      pass
+
+  def testNotEnoughCpuErrorMac(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.error",
+            "data": {
+                "message": "Ensure your  system has enough CPUs. The minimum "
+                           "allowed is 2 CPUs.\n",
+                "exitcode": "64"
+            }
+        },
+    ]
+    expected_error_message = ("Not enough CPUs. Cloud Run Emulator requires "
+                              "2 CPUs. Increase Docker VM CPUs to 2.")
+    with mock.patch.object(platforms.OperatingSystem, "Current", return_value=platforms.OperatingSystem.MACOSX), \
+         mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         self.assertRaisesRegex(kubernetes.MinikubeStartError, expected_error_message), \
+         kubernetes.Minikube("cluster-name"):
+      pass
+
+  def testDockerUnreachable(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.error",
+            "data": {
+                "exitcode": "69",
+                "message": "blah blah blah",
+            }
+        },
+    ]
+    expected_error_message = "Cannot reach docker daemon."
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         self.assertRaisesRegex(kubernetes.MinikubeStartError, expected_error_message), \
+         kubernetes.Minikube("cluster-name"):
+      pass
+
+  def testOtherError(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.error",
+            "data": {
+                "message": "Blah blah blah.\n",
+                "exitcode": "64"
+            }
+        },
+    ]
+    expected_error_message = "Unable to start Cloud Run Emulator."
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         self.assertRaisesRegex(kubernetes.MinikubeStartError, expected_error_message), \
+         kubernetes.Minikube("cluster-name"):
+      pass
+
+  def testNonExitErrors(self):
+    stream_output = [
+        {
+            "type": "io.k8s.sigs.minikube.error",
+            "data": {
+                "message": "Blah blah blah.\n",
+            }
+        },
+    ]
+    with mock.patch.object(run_subprocess, "GetOutputJson", return_value={}), \
+         mock.patch.object(run_subprocess, "StreamOutputJson", return_value=stream_output), \
+         kubernetes.Minikube("cluster-name"):
+      # No exception means success.
+      pass
 
 
 class MinikubeClusterTest(SdkPathTestCase):

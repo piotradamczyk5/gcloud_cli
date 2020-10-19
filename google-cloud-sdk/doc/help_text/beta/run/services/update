@@ -5,10 +5,10 @@ NAME
 SYNOPSIS
     gcloud beta run services update [[SERVICE] --namespace=NAMESPACE]
         [--args=[ARG,...]] [--async] [--command=[COMMAND,...]]
-        [--concurrency=CONCURRENCY] [--cpu=CPU] [--max-instances=MAX_INSTANCES]
-        [--memory=MEMORY] [--platform=PLATFORM] [--port=PORT]
-        [--service-account=SERVICE_ACCOUNT] [--tag=TAG] [--timeout=TIMEOUT]
-        [--no-traffic]
+        [--concurrency=CONCURRENCY] [--cpu=CPU] [--image=IMAGE]
+        [--max-instances=MAX_INSTANCES] [--memory=MEMORY] [--platform=PLATFORM]
+        [--port=PORT] [--service-account=SERVICE_ACCOUNT] [--tag=TAG]
+        [--timeout=TIMEOUT] [--no-traffic]
         [--clear-env-vars | --set-env-vars=[KEY=VALUE,...]
           | --remove-env-vars=[KEY,...] --update-env-vars=[KEY=VALUE,...]]
         [--clear-labels | --remove-labels=[KEY,...] --labels=[KEY=VALUE,...]
@@ -69,6 +69,10 @@ FLAGS
      --cpu=CPU
         Set a CPU limit in Kubernetes cpu units. Ex: .5, 500m, 2.
 
+     --image=IMAGE
+        Name of the container image to deploy (e.g.
+        gcr.io/cloudrun/hello:latest).
+
      --max-instances=MAX_INSTANCES
         The maximum number of container instances of the Service to run. Use
         'default' to unset the limit and use the platform default.
@@ -122,9 +126,12 @@ FLAGS
         True to avoid sending traffic to the revision being deployed. Setting
         this flag assigns any traffic assigned to the LATEST revision to the
         specific revision bound to LATEST before the deployment. The effect is
-        that the revision being deployed will not receive traffic. After a
-        deployment with this flag the LATEST revision will not receive traffic
-        on future deployments.
+        that the revision being deployed will not receive traffic.
+
+        After a deployment with this flag the LATEST revision will not receive
+        traffic on future deployments. To restore sending traffic to the LATEST
+        revision by default, run the gcloud run service update-traffic command
+        with --to-latest.
 
      At most one of these may be specified:
 

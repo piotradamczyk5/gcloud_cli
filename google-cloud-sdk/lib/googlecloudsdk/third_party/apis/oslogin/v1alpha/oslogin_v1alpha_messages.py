@@ -16,21 +16,23 @@ package = 'oslogin'
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance:      service Foo {
-  rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);     }  The
-  JSON representation for `Empty` is empty JSON object `{}`.
+  or the response type of an API method. For instance: service Foo { rpc
+  Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
+  representation for `Empty` is empty JSON object `{}`.
   """
 
 
 
 class ImportSshPublicKeyResponse(_messages.Message):
-  r"""A response message from importing an SSH public key.
+  r"""A response message for importing an SSH public key.
 
   Fields:
+    details: Detailed information about import results.
     loginProfile: The login profile information for the user.
   """
 
-  loginProfile = _messages.MessageField('LoginProfile', 1)
+  details = _messages.StringField(1)
+  loginProfile = _messages.MessageField('LoginProfile', 2)
 
 
 class LoginProfile(_messages.Message):
@@ -42,7 +44,7 @@ class LoginProfile(_messages.Message):
       associated key object.
 
   Fields:
-    name: A unique user ID.
+    name: Required. A unique user ID.
     posixAccounts: The list of POSIX accounts associated with the user.
     sshPublicKeys: A map from SSH public key fingerprint to the associated key
       object.
@@ -86,7 +88,7 @@ class OsloginUsersGetLoginProfileRequest(_messages.Message):
       associated with the account.
 
   Fields:
-    name: The unique ID for the user in format `users/{user}`.
+    name: Required. The unique ID for the user in format `users/{user}`.
     operatingSystemType: The type of operating system associated with the
       account.
     projectId: The project ID of the Google Cloud Platform project.
@@ -97,9 +99,10 @@ class OsloginUsersGetLoginProfileRequest(_messages.Message):
     r"""The type of operating system associated with the account.
 
     Values:
-      OPERATING_SYSTEM_TYPE_UNSPECIFIED: <no description>
-      LINUX: <no description>
-      WINDOWS: <no description>
+      OPERATING_SYSTEM_TYPE_UNSPECIFIED: The operating system type associated
+        with the user account information is unspecified.
+      LINUX: Linux user account information.
+      WINDOWS: Windows user account information.
     """
     OPERATING_SYSTEM_TYPE_UNSPECIFIED = 0
     LINUX = 1
@@ -133,9 +136,9 @@ class OsloginUsersProjectsDeleteRequest(_messages.Message):
       associated with the account.
 
   Fields:
-    name: A reference to the POSIX account to update. POSIX accounts are
-      identified by the project ID they are associated with. A reference to
-      the POSIX account is in format `users/{user}/projects/{project}`.
+    name: Required. A reference to the POSIX account to update. POSIX accounts
+      are identified by the project ID they are associated with. A reference
+      to the POSIX account is in format `users/{user}/projects/{project}`.
     operatingSystemType: The type of operating system associated with the
       account.
   """
@@ -144,9 +147,10 @@ class OsloginUsersProjectsDeleteRequest(_messages.Message):
     r"""The type of operating system associated with the account.
 
     Values:
-      OPERATING_SYSTEM_TYPE_UNSPECIFIED: <no description>
-      LINUX: <no description>
-      WINDOWS: <no description>
+      OPERATING_SYSTEM_TYPE_UNSPECIFIED: The operating system type associated
+        with the user account information is unspecified.
+      LINUX: Linux user account information.
+      WINDOWS: Windows user account information.
     """
     OPERATING_SYSTEM_TYPE_UNSPECIFIED = 0
     LINUX = 1
@@ -160,9 +164,9 @@ class OsloginUsersSshPublicKeysDeleteRequest(_messages.Message):
   r"""A OsloginUsersSshPublicKeysDeleteRequest object.
 
   Fields:
-    name: The fingerprint of the public key to update. Public keys are
-      identified by their SHA-256 fingerprint. The fingerprint of the public
-      key is in format `users/{user}/sshPublicKeys/{fingerprint}`.
+    name: Required. The fingerprint of the public key to update. Public keys
+      are identified by their SHA-256 fingerprint. The fingerprint of the
+      public key is in format `users/{user}/sshPublicKeys/{fingerprint}`.
   """
 
   name = _messages.StringField(1, required=True)
@@ -172,9 +176,9 @@ class OsloginUsersSshPublicKeysGetRequest(_messages.Message):
   r"""A OsloginUsersSshPublicKeysGetRequest object.
 
   Fields:
-    name: The fingerprint of the public key to retrieve. Public keys are
-      identified by their SHA-256 fingerprint. The fingerprint of the public
-      key is in format `users/{user}/sshPublicKeys/{fingerprint}`.
+    name: Required. The fingerprint of the public key to retrieve. Public keys
+      are identified by their SHA-256 fingerprint. The fingerprint of the
+      public key is in format `users/{user}/sshPublicKeys/{fingerprint}`.
   """
 
   name = _messages.StringField(1, required=True)
@@ -184,9 +188,9 @@ class OsloginUsersSshPublicKeysPatchRequest(_messages.Message):
   r"""A OsloginUsersSshPublicKeysPatchRequest object.
 
   Fields:
-    name: The fingerprint of the public key to update. Public keys are
-      identified by their SHA-256 fingerprint. The fingerprint of the public
-      key is in format `users/{user}/sshPublicKeys/{fingerprint}`.
+    name: Required. The fingerprint of the public key to update. Public keys
+      are identified by their SHA-256 fingerprint. The fingerprint of the
+      public key is in format `users/{user}/sshPublicKeys/{fingerprint}`.
     sshPublicKey: A SshPublicKey resource to be passed as the request body.
     updateMask: Mask to control which fields get updated. Updates all if not
       present.
@@ -251,9 +255,7 @@ class SshPublicKey(_messages.Message):
   Fields:
     expirationTimeUsec: An expiration time in microseconds since epoch.
     fingerprint: Output only. The SHA-256 fingerprint of the SSH public key.
-    key: Public key text in SSH format, defined by <a
-      href="https://www.ietf.org/rfc/rfc4253.txt" target="_blank">RFC4253</a>
-      section 6.6.
+    key: Public key text in SSH format, defined by RFC4253 section 6.6.
     name: Output only. The canonical resource name.
   """
 

@@ -30,7 +30,6 @@ from googlecloudsdk.calliope import exceptions
 from googlecloudsdk.command_lib.container import constants
 from googlecloudsdk.command_lib.container import container_command_util as cmd_util
 from googlecloudsdk.command_lib.container import flags
-from googlecloudsdk.command_lib.container import messages
 from googlecloudsdk.core import log
 
 DETAILED_HELP = {
@@ -152,7 +151,9 @@ def ParseCreateNodePoolOptionsBase(args):
       reservation=args.reservation,
       sandbox=args.sandbox,
       max_surge_upgrade=args.max_surge_upgrade,
-      max_unavailable_upgrade=args.max_unavailable_upgrade)
+      max_unavailable_upgrade=args.max_unavailable_upgrade,
+      node_group=args.node_group
+      )
 
 
 @base.ReleaseTracks(base.ReleaseTrack.GA)
@@ -180,6 +181,7 @@ class Create(base.CreateCommand):
     flags.AddSurgeUpgradeFlag(parser, for_node_pool=True)
     flags.AddMaxUnavailableUpgradeFlag(
         parser, for_node_pool=True, is_create=True)
+    flags.AddNodeGroupFlag(parser)
 
   def ParseCreateNodePoolOptions(self, args):
     ops = ParseCreateNodePoolOptionsBase(args)
@@ -216,11 +218,6 @@ class Create(base.CreateCommand):
                     '`node-pools create` with the flag '
                     '`--metadata disable-legacy-endpoints=true`.')
 
-      if options.enable_autorepair is not None:
-        log.status.Print(
-            messages.AutoUpdateUpgradeRepairMessage(options.enable_autorepair,
-                                                    'autorepair'))
-
       if options.accelerators is not None:
         log.status.Print(constants.KUBERNETES_GPU_LIMITATION_MSG)
 
@@ -246,7 +243,7 @@ class CreateBeta(Create):
   def Args(parser):
     _Args(parser)
     flags.AddClusterAutoscalingFlags(parser)
-    flags.AddLocalSSDFlag(parser)
+    flags.AddLocalSSDsBetaFlags(parser)
     flags.AddBootDiskKmsKeyFlag(parser)
     flags.AddPreemptibleFlag(parser, for_node_pool=True)
     flags.AddEnableAutoRepairFlag(parser, for_node_pool=True, for_create=True)
@@ -264,6 +261,8 @@ class CreateBeta(Create):
         parser, for_node_pool=True, is_create=True)
     flags.AddReservationAffinityFlags(parser, for_node_pool=True)
     flags.AddSystemConfigFlag(parser, hidden=False)
+    flags.AddNodeGroupFlag(parser)
+    flags.AddEnableGcfsFlag(parser, for_node_pool=True)
 
   def ParseCreateNodePoolOptions(self, args):
     ops = ParseCreateNodePoolOptionsBase(args)
@@ -273,6 +272,7 @@ class CreateBeta(Create):
     ops.sandbox = args.sandbox
     ops.node_locations = args.node_locations
     ops.system_config_from_file = args.system_config_from_file
+    ops.enable_gcfs = args.enable_gcfs
     return ops
 
 
@@ -287,10 +287,10 @@ class CreateAlpha(Create):
     ops.local_ssd_volume_configs = args.local_ssd_volumes
     ops.boot_disk_kms_key = args.boot_disk_kms_key
     ops.sandbox = args.sandbox
-    ops.node_group = args.node_group
     ops.linux_sysctls = args.linux_sysctls
     ops.node_locations = args.node_locations
     ops.system_config_from_file = args.system_config_from_file
+    ops.enable_gcfs = args.enable_gcfs
     return ops
 
   @staticmethod
@@ -298,7 +298,7 @@ class CreateAlpha(Create):
     _Args(parser)
     flags.AddClusterAutoscalingFlags(parser)
     flags.AddNodePoolAutoprovisioningFlag(parser, hidden=False)
-    flags.AddLocalSSDAndLocalSSDVolumeConfigsFlag(parser, for_node_pool=True)
+    flags.AddLocalSSDsAlphaFlags(parser, for_node_pool=True)
     flags.AddBootDiskKmsKeyFlag(parser)
     flags.AddPreemptibleFlag(parser, for_node_pool=True)
     flags.AddEnableAutoRepairFlag(parser, for_node_pool=True, for_create=True)
@@ -317,6 +317,7 @@ class CreateAlpha(Create):
     flags.AddNodePoolLocationsFlag(parser, for_create=True)
     flags.AddSystemConfigFlag(parser, hidden=False)
     flags.AddReservationAffinityFlags(parser, for_node_pool=True)
+    flags.AddEnableGcfsFlag(parser, for_node_pool=True)
 
 
 Create.detailed_help = DETAILED_HELP

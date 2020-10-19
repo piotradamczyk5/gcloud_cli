@@ -42,8 +42,8 @@ import six
 from six.moves.urllib import parse as urlparse
 
 
-_CLUSTER_EVENTS_API_NAME = global_methods.SERVERLESS_API_NAME
-_CLUSTER_EVENTS_API_VERSION = 'v1alpha1'
+_CLUSTER_EVENTS_API_NAME = 'anthosevents'
+_CLUSTER_EVENTS_API_VERSION = 'v1beta1'
 
 _MANAGED_EVENTS_API_NAME = 'events'
 _MANAGED_EVENTS_API_VERSION = 'v1beta1'
@@ -191,8 +191,8 @@ class _GKEConnectionContext(ConnectionInfo):
     # Import http only when needed, as it depends on credential infrastructure
     # which is not needed in all cases.
     assert self.active
-    from googlecloudsdk.core.credentials import http as http_creds  # pylint: disable=g-import-not-at-top
-    http_client = http_creds.Http(
+    from googlecloudsdk.core.credentials import transports  # pylint: disable=g-import-not-at-top
+    http_client = transports.GetApitoolsTransport(
         response_encoding=transport.ENCODING,
         ca_certs=self.ca_certs)
     return http_client
@@ -278,8 +278,8 @@ class _KubeconfigConnectionContext(ConnectionInfo):
       http_client.add_certificate(
           self.client_key, self.client_cert, self.client_cert_domain)
       return http_client
-    from googlecloudsdk.core.credentials import http as http_creds  # pylint: disable=g-import-not-at-top
-    http_client = http_creds.Http(
+    from googlecloudsdk.core.credentials import transports  # pylint: disable=g-import-not-at-top
+    http_client = transports.GetApitoolsTransport(
         response_encoding=transport.ENCODING,
         ca_certs=self.ca_certs)
     return http_client
@@ -452,7 +452,8 @@ def _GetApiVersion(product,
 def GetConnectionContext(args,
                          product=flags.Product.RUN,
                          release_track=base.ReleaseTrack.GA,
-                         version_override=None):
+                         version_override=None,
+                         platform=None):
   """Gets the regional, kubeconfig, or GKE connection context.
 
   Args:
@@ -461,6 +462,8 @@ def GetConnectionContext(args,
     release_track: Release track of the command being run.
     version_override: If specified, the given api version will be used no matter
       the other parameters.
+    platform: 'gke', 'kubernetes', or 'managed'. If not specified, the value of
+      the --platform flag will be used instead.
 
   Raises:
     ArgumentError if region or cluster is not specified.
@@ -468,7 +471,9 @@ def GetConnectionContext(args,
   Returns:
     A GKE or regional ConnectionInfo object.
   """
-  if flags.GetPlatform() == flags.PLATFORM_KUBERNETES:
+  if platform is None:
+    platform = flags.GetPlatform()
+  if platform == flags.PLATFORM_KUBERNETES:
     kubeconfig = flags.GetKubeconfig(args)
     api_name = _GetApiName(product, release_track, is_cluster=True)
     api_version = _GetApiVersion(
@@ -479,7 +484,7 @@ def GetConnectionContext(args,
     return _KubeconfigConnectionContext(kubeconfig, api_name, api_version,
                                         args.context)
 
-  if flags.GetPlatform() == flags.PLATFORM_GKE:
+  if platform == flags.PLATFORM_GKE:
     cluster_ref = args.CONCEPTS.cluster.Parse()
     if not cluster_ref:
       raise flags.ArgumentError(
@@ -494,7 +499,7 @@ def GetConnectionContext(args,
         version_override=version_override)
     return _GKEConnectionContext(cluster_ref, api_name, api_version)
 
-  if flags.GetPlatform() == flags.PLATFORM_MANAGED:
+  if platform == flags.PLATFORM_MANAGED:
     region = flags.GetRegion(args, prompt=True)
     if not region:
       raise flags.ArgumentError(

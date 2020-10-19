@@ -1,10 +1,11 @@
 NAME
-    gcloud alpha compute routers nats update - update a NAT on a Google Compute
-        Engine router
+    gcloud alpha compute routers nats update - update a NAT on a Compute Engine
+        router
 
 SYNOPSIS
     gcloud alpha compute routers nats update NAME --router=ROUTER [--async]
-        [--enable-logging] [--log-filter=LOG_FILTER] [--region=REGION]
+        [--enable-endpoint-independent-mapping] [--enable-logging]
+        [--log-filter=LOG_FILTER] [--region=REGION]
         [--auto-allocate-nat-external-ips
           | --nat-external-ip-pool=IP_ADDRESS,[IP_ADDRESS,...]]
         [--clear-icmp-idle-timeout | --icmp-idle-timeout=ICMP_IDLE_TIMEOUT]
@@ -22,7 +23,7 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute routers nats update is used to update a NAT in
-    a Google Compute Engine router.
+    a Compute Engine router.
 
 POSITIONAL ARGUMENTS
      NAME
@@ -36,6 +37,16 @@ OPTIONAL FLAGS
      --async
         Return immediately, without waiting for the operation in progress to
         complete.
+
+     --enable-endpoint-independent-mapping
+        Enable endpoint-independent mapping for the NAT (as defined in RFC
+        5128).
+
+        If not specified, NATs have endpoint-independent mapping enabled by
+        default.
+
+        Use --no-enable-endpoint-independent-mapping to disable
+        endpoint-independent mapping.
 
      --enable-logging
         Enable logging for the NAT. Logs will be exported to Stackdriver. NAT
@@ -200,7 +211,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute routers nats update
         $ gcloud beta compute routers nats update

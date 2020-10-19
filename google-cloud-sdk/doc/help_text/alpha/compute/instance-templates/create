@@ -12,14 +12,16 @@ SYNOPSIS
         [--create-disk=[PROPERTY=VALUE,...]] [--description=DESCRIPTION]
         [--disk=[auto-delete=AUTO-DELETE],
           [boot=BOOT],[device-name=DEVICE-NAME],[mode=MODE],[name=NAME]]
-        [--labels=[KEY=VALUE,...]] [--local-nvdimm=[size=SIZE]]
+        [--[no-]enable-nested-virtualization] [--labels=[KEY=VALUE,...]]
+        [--local-nvdimm=[size=SIZE]]
         [--local-ssd=[device-name=DEVICE-NAME],
           [interface=INTERFACE],[size=SIZE]] [--machine-type=MACHINE_TYPE]
         [--metadata=KEY=VALUE,[KEY=VALUE,...]]
         [--metadata-from-file=KEY=LOCAL_FILE_PATH,[...]]
         [--min-cpu-platform=PLATFORM] [--min-node-cpu=MIN_NODE_CPU]
         [--network=NETWORK] [--network-interface=[PROPERTY=VALUE,...]]
-        [--network-tier=NETWORK_TIER] [--preemptible]
+        [--network-tier=NETWORK_TIER]
+        [--post-key-revocation-action-type=POLICY] [--preemptible]
         [--private-ipv6-google-access-type=PRIVATE_IPV6_GOOGLE_ACCESS_TYPE]
         [--private-network-ip=PRIVATE_NETWORK_IP] [--region=REGION]
         [--no-restart-on-failure] [--shielded-integrity-monitoring]
@@ -303,6 +305,11 @@ FLAGS
             the instance, this option won't apply. The default value for this
             is yes.
 
+     --[no-]enable-nested-virtualization
+        If set to true, enables nested virtualization for the instance. Use
+        --enable-nested-virtualization to enable and
+        --no-enable-nested-virtualization to disable.
+
      --labels=[KEY=VALUE,...]
         List of label KEY=VALUE pairs to add.
 
@@ -457,6 +464,14 @@ FLAGS
         Specifies the network tier that will be used to configure the instance.
         NETWORK_TIER must be one of: PREMIUM, STANDARD. The default value is
         PREMIUM.
+
+     --post-key-revocation-action-type=POLICY
+        The instance will be shut down when the KMS key of one of its disk is
+        revoked, if set to SHUTDOWN.
+
+        Default setting is NOOP.
+
+        POLICY must be one of: noop, shutdown.
 
      --preemptible
         If provided, instances will be preemptible and time-limited. Instances
@@ -787,9 +802,9 @@ FLAGS
 
      --service-proxy=[enabled],[access-log=ACCESS-LOG],[network=NETWORK],[proxy-port=PROXY-PORT],[serving-ports=SERVING-PORTS],[tracing=TRACING]
         Controls whether the Traffic Director service proxy (Envoy) and agent
-        are installed and configured on the VM. "cloud-platform" scope will be
-        enabled to allow connections to the Traffic Director API. Do not use
-        the --no-scopes flag.
+        are installed and configured on the VM. "cloud-platform" scope is
+        enabled automatically to allow connections to the Traffic Director API.
+        Do not use the --no-scopes flag.
 
          enabled
             If specified, the service-proxy software will be installed when the
@@ -858,7 +873,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute instance-templates create
         $ gcloud beta compute instance-templates create

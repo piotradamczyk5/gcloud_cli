@@ -44,7 +44,8 @@ def _Args(parser,
   instances_flags.AddDiskArgs(
       parser, True, container_mount_enabled=container_mount_enabled)
   instances_flags.AddCreateDiskArgs(
-      parser, container_mount_enabled=container_mount_enabled,
+      parser,
+      container_mount_enabled=container_mount_enabled,
       support_multi_writer=support_multi_writer)
   instances_flags.AddCanIpForwardArgs(parser)
   instances_flags.AddContainerMountDiskFlag(parser)
@@ -84,6 +85,7 @@ class CreateWithContainer(base.CreateCommand):
   _support_create_boot_disk = True
   _support_match_container_mount_disks = True
   _support_nvdimm = False
+  _support_enable_nested_virtualization = False
 
   @staticmethod
   def Args(parser):
@@ -91,8 +93,8 @@ class CreateWithContainer(base.CreateCommand):
     _Args(parser, container_mount_enabled=True, support_multi_writer=False)
     instances_flags.AddNetworkTierArgs(parser, instance=True)
     instances_flags.AddMinCpuPlatformArgs(parser, base.ReleaseTrack.GA)
-    instances_flags.AddPrivateIpv6GoogleAccessArg(
-        parser, utils.COMPUTE_GA_API_VERSION)
+    instances_flags.AddPrivateIpv6GoogleAccessArg(parser,
+                                                  utils.COMPUTE_GA_API_VERSION)
 
   def _ValidateArgs(self, args):
     self._ValidateTrackSpecificArgs(args)
@@ -172,8 +174,8 @@ class CreateWithContainer(base.CreateCommand):
     source_instance_template = instance_utils.GetSourceInstanceTemplate(
         args, resource_parser, self.SOURCE_INSTANCE_TEMPLATE)
     skip_defaults = instance_utils.GetSkipDefaults(source_instance_template)
-    scheduling = instance_utils.GetScheduling(args, compute_client,
-                                              skip_defaults)
+    scheduling = instance_utils.GetScheduling(
+        args, compute_client, skip_defaults, support_min_node_cpu=False)
     service_accounts = instance_utils.GetServiceAccounts(
         args, compute_client, skip_defaults)
     user_metadata = instance_utils.GetValidatedMetadata(args, compute_client)
@@ -256,6 +258,12 @@ class CreateWithContainer(base.CreateCommand):
                 compute_client.messages).GetEnumForChoice(
                     args.private_ipv6_google_access_type))
 
+      if (self._support_enable_nested_virtualization and
+          args.enable_nested_virtualization is not None):
+        instance.advancedMachineFeatures = (
+            instance_utils.CreateAdvancedMachineFeaturesMessage(
+                compute_client.messages, args.enable_nested_virtualization))
+
       request = compute_client.messages.ComputeInstancesInsertRequest(
           instance=instance,
           sourceInstanceTemplate=source_instance_template,
@@ -276,6 +284,7 @@ class CreateWithContainerBeta(CreateWithContainer):
   _support_create_boot_disk = True
   _support_match_container_mount_disks = True
   _support_nvdimm = False
+  _support_enable_nested_virtualization = False
 
   @staticmethod
   def Args(parser):
@@ -299,6 +308,7 @@ class CreateWithContainerAlpha(CreateWithContainerBeta):
   _support_create_boot_disk = True
   _support_match_container_mount_disks = True
   _support_nvdimm = True
+  _support_enable_nested_virtualization = True
 
   @staticmethod
   def Args(parser):
@@ -312,33 +322,29 @@ class CreateWithContainerAlpha(CreateWithContainerBeta):
     instances_flags.AddPublicDnsArgs(parser, instance=True)
     instances_flags.AddPrivateIpv6GoogleAccessArg(
         parser, utils.COMPUTE_ALPHA_API_VERSION)
+    instances_flags.AddNestedVirtualizationArgs(parser)
 
   def _ValidateTrackSpecificArgs(self, args):
     instances_flags.ValidateLocalSsdFlags(args)
     instances_flags.ValidatePublicDnsFlags(args)
     instances_flags.ValidatePublicPtrFlags(args)
 
-  def _GetNetworkInterfaces(self, args, client, holder, project, location, scope,
-                            skip_defaults):
-    return create_utils.GetNetworkInterfacesAlpha(
-        args,
-        client,
-        holder,
-        project,
-        location,
-        scope,
-        skip_defaults)
+  def _GetNetworkInterfaces(self, args, client, holder, project, location,
+                            scope, skip_defaults):
+    return create_utils.GetNetworkInterfacesAlpha(args, client, holder, project,
+                                                  location, scope,
+                                                  skip_defaults)
 
 
 CreateWithContainer.detailed_help = {
     'brief':
         """\
-    Creates Google Compute engine virtual machine instances running
+    Creates Compute Engine virtual machine instances running
     container images.
     """,
     'DESCRIPTION':
         """\
-        *{command}* creates Google Compute Engine virtual
+        *{command}* creates Compute Engine virtual
         machines that runs a Docker image. For example:
 
           $ {command} instance-1 --zone us-central1-a \

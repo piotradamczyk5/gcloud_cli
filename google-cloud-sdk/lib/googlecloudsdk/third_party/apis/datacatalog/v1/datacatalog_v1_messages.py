@@ -18,6 +18,8 @@ class Binding(_messages.Message):
   r"""Associates `members` with a `role`.
 
   Fields:
+    bindingId: A client-specified ID for this binding. Expected to be globally
+      unique to support the internal bindings-by-ID API.
     condition: The condition that is associated with this binding. If the
       condition evaluates to `true`, then this binding applies to the current
       request. If the condition evaluates to `false`, then this binding does
@@ -61,9 +63,10 @@ class Binding(_messages.Message):
       `roles/editor`, or `roles/owner`.
   """
 
-  condition = _messages.MessageField('Expr', 1)
-  members = _messages.StringField(2, repeated=True)
-  role = _messages.StringField(3)
+  bindingId = _messages.StringField(1)
+  condition = _messages.MessageField('Expr', 2)
+  members = _messages.StringField(3, repeated=True)
+  role = _messages.StringField(4)
 
 
 class DatacatalogEntriesLookupRequest(_messages.Message):
@@ -1173,10 +1176,11 @@ class GoogleCloudDatacatalogV1SearchCatalogRequest(_messages.Message):
       continuation of a prior SearchCatalogRequest call, and that the system
       should return the next page of data. If empty, the first page is
       returned.
-    query: Required. The query string in search query syntax. The query must
-      be non-empty. Query strings can be simple as "x" or more qualified as: *
-      name:x * column:x * description:y Note: Query tokens need to have a
-      minimum of 3 characters for substring matching to work correctly. See
+    query: Optional. The query string in search query syntax. An empty query
+      string will result in all data assets (in the specified scope) that the
+      user has access to. Query strings can be simple as "x" or more qualified
+      as: * name:x * column:x * description:y Note: Query tokens need to have
+      a minimum of 3 characters for substring matching to work correctly. See
       [Data Catalog Search Syntax](https://cloud.google.com/data-
       catalog/docs/how-to/search-reference) for more information.
     scope: Required. The scope of this search request. A `scope` that has
@@ -1239,7 +1243,7 @@ class GoogleCloudDatacatalogV1SearchCatalogResponse(_messages.Message):
       from those locations. Users can get additional information on the error
       by repeating the search request with a more restrictive parameter --
       setting the value for
-      `SearchDataCatalogRequest.scope.include_locations`.
+      `SearchDataCatalogRequest.scope.restricted_locations`.
   """
 
   nextPageToken = _messages.StringField(1)

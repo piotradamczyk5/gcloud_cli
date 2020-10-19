@@ -34,12 +34,12 @@ The project of the destination role.
 
 .TP 2m
 \fB\-\-destination\fR=\fIDESTINATION\fR
-The destination role id for the new custom role. For example: viewer.
+The destination role ID for the new custom role. For example: viewer.
 
 .TP 2m
 \fB\-\-source\fR=\fISOURCE\fR
-The source role name or id.For curated roles, for example: roles/viewer.For
-custom roles, for example: viewer.
+The source role ID. For predefined roles, for example: roles/viewer. For custom
+roles, for example: myCompanyAdmin.
 
 .TP 2m
 \fB\-\-source\-organization\fR=\fISOURCE_ORGANIZATION\fR
@@ -93,7 +93,7 @@ To modify the newly created role see the roles update command.
 This command is currently in ALPHA and may change without notice. If this
 command fails with API permission errors despite specifying the right project,
 you may be trying to access an API with an invitation\-only early access
-whitelist. These variants are also available:
+allowlist. These variants are also available:
 
 .RS 2m
 $ gcloud iam roles copy

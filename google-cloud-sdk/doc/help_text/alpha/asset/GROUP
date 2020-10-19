@@ -27,9 +27,6 @@ GROUPS
 COMMANDS
     COMMAND is one of the following:
 
-     analyze-iam-policy
-        (ALPHA) Analyzes accessible IAM policies that match a request.
-
      export
         (ALPHA) Export the cloud assets to Google Cloud Storage.
 
@@ -43,7 +40,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud asset
         $ gcloud beta asset

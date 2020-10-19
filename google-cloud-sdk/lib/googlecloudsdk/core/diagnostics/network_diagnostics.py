@@ -52,8 +52,7 @@ def DefaultUrls():
   Returns:
     A list of urls (str) to check reachability for.
   """
-  urls = ['https://www.google.com',
-          'https://accounts.google.com',
+  urls = ['https://accounts.google.com',
           'https://cloudresourcemanager.googleapis.com/v1beta1/projects',
           'https://www.googleapis.com/auth/cloud-platform']
 
@@ -108,7 +107,6 @@ class ReachabilityChecker(check_base.Checker):
   def _CheckURL(self, url):
     try:
       http.Http().request(url, method='GET')
-    # TODO(b/29218762): Investigate other possible exceptions.
     except (http_client.HTTPException, socket.error, ssl.SSLError,
             httplib2.HttpLib2Error, socks.HTTPError) as err:
       msg = 'Cannot reach {0} ({1})'.format(url, type(err).__name__)

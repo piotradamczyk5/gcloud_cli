@@ -20,15 +20,16 @@ from __future__ import unicode_literals
 
 from googlecloudsdk.api_lib.events import trigger
 from googlecloudsdk.calliope import base as calliope_base
+from googlecloudsdk.command_lib.run import exceptions as serverless_exceptions
 from tests.lib.surface.events import base
 
 import six
 
 
-class TriggersListTestAlpha(base.EventsBase):
+class TriggersListAnthosTestBeta(base.EventsBase):
 
   def PreSetUp(self):
-    self.track = calliope_base.ReleaseTrack.ALPHA
+    self.track = calliope_base.ReleaseTrack.BETA
 
   def _MakeTriggers(self, num_triggers, use_uri=False):
     """Creates triggers and assigns them as output to ListTriggers."""
@@ -38,10 +39,18 @@ class TriggersListTestAlpha(base.EventsBase):
     ]
     for i, t in enumerate(self.triggers):
       t.name = 't{}'.format(i)
-      t.status.conditions = [
-          self.messages.TriggerCondition(
-              type='Ready', status=six.text_type(bool(i % 2)))
-      ]
+
+      if self.api_name == 'anthosevents':
+        t.status.conditions = [
+            self.messages.Condition(
+                type='Ready', status=six.text_type(bool(i % 2)))
+        ]
+      else:
+        t.status.conditions = [
+            self.messages.TriggerCondition(
+                type='Ready', status=six.text_type(bool(i % 2)))
+        ]
+
       t.metadata.selfLink = '/apis/serving.knative.dev/v1alpha1/namespaces/{}/triggers/{}'.format(
           self.namespace.Name(), t.name)
       t.filter_attributes[
@@ -53,19 +62,9 @@ class TriggersListTestAlpha(base.EventsBase):
     self.operations.ListTriggers.return_value = self.triggers
 
   def testListManaged(self):
-    """Two triggers are listable."""
-    self._MakeTriggers(num_triggers=2)
-    out = self.Run('events triggers list --region=us-central1')
-
-    self.operations.ListTriggers.assert_called_once_with(
-        self._NamespaceRef(project='fake-project'))
-    self.assertEqual(out, self.triggers)
-    self.AssertOutputEquals(
-        """  TRIGGER EVENT TYPE TARGET
-           X t0 com.google.event.type.0 s0
-           + t1 com.google.event.type.1 s1
-        """,
-        normalize_space=True)
+    """This command is for Anthos only."""
+    with self.assertRaises(serverless_exceptions.ConfigurationError):
+      self.Run('events triggers list --platform=managed')
 
   def testListWithSubscriberRef(self):
     """Two triggers are listable."""
@@ -112,5 +111,38 @@ class TriggersListTestAlpha(base.EventsBase):
     self.AssertOutputEquals(
         """https://kubernetes.default/apis/serving.knative.dev/v1alpha1/namespaces/fake-project/triggers/t0
         https://kubernetes.default/apis/serving.knative.dev/v1alpha1/namespaces/fake-project/triggers/t1
+        """,
+        normalize_space=True)
+
+
+class TriggersListAnthosTestAlpha(TriggersListAnthosTestBeta):
+
+  def PreSetUp(self):
+    self.track = calliope_base.ReleaseTrack.ALPHA
+
+  def testListManaged(self):
+    pass
+
+
+class TriggersListManagedTestAlpha(TriggersListAnthosTestBeta):
+
+  def PreSetUp(self):
+    self.track = calliope_base.ReleaseTrack.ALPHA
+    self.api_name = 'run'
+    self.api_version = 'v1alpha1'
+
+  def testListManaged(self):
+    """Two triggers are listable."""
+    self._MakeTriggers(num_triggers=2)
+    out = self.Run('events triggers list --platform=managed '
+                   '--region=us-central1')
+
+    self.operations.ListTriggers.assert_called_once_with(
+        self._NamespaceRef(project='fake-project'))
+    self.assertEqual(out, self.triggers)
+    self.AssertOutputEquals(
+        """  TRIGGER EVENT TYPE TARGET
+           X t0 com.google.event.type.0 s0
+           + t1 com.google.event.type.1 s1
         """,
         normalize_space=True)

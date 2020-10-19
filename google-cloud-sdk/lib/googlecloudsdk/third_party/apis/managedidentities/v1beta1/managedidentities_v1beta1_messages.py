@@ -29,6 +29,8 @@ class Binding(_messages.Message):
   r"""Associates `members` with a `role`.
 
   Fields:
+    bindingId: A client-specified ID for this binding. Expected to be globally
+      unique to support the internal bindings-by-ID API.
     condition: The condition that is associated with this binding. If the
       condition evaluates to `true`, then this binding applies to the current
       request. If the condition evaluates to `false`, then this binding does
@@ -72,9 +74,10 @@ class Binding(_messages.Message):
       `roles/editor`, or `roles/owner`.
   """
 
-  condition = _messages.MessageField('Expr', 1)
-  members = _messages.StringField(2, repeated=True)
-  role = _messages.StringField(3)
+  bindingId = _messages.StringField(1)
+  condition = _messages.MessageField('Expr', 2)
+  members = _messages.StringField(3, repeated=True)
+  role = _messages.StringField(4)
 
 
 class CancelOperationRequest(_messages.Message):
@@ -105,6 +108,8 @@ class Domain(_messages.Message):
     admin: Optional. The name of delegated administrator account used to
       perform Active Directory operations. If not specified, `setupadmin` will
       be used.
+    auditLogsEnabled: Optional. Configuration for audit logs. True if audit
+      logs are enabled, else false. Default is audit logs disabled.
     authorizedNetworks: Optional. The full names of the Google Compute Engine
       [networks](/compute/docs/networks-and-firewalls#networks) the domain
       instance is connected to. Networks can be added using UpdateDomain. The
@@ -179,17 +184,18 @@ class Domain(_messages.Message):
     additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
 
   admin = _messages.StringField(1)
-  authorizedNetworks = _messages.StringField(2, repeated=True)
-  createTime = _messages.StringField(3)
-  fqdn = _messages.StringField(4)
-  labels = _messages.MessageField('LabelsValue', 5)
-  locations = _messages.StringField(6, repeated=True)
-  name = _messages.StringField(7)
-  reservedIpRange = _messages.StringField(8)
-  state = _messages.EnumField('StateValueValuesEnum', 9)
-  statusMessage = _messages.StringField(10)
-  trusts = _messages.MessageField('Trust', 11, repeated=True)
-  updateTime = _messages.StringField(12)
+  auditLogsEnabled = _messages.BooleanField(2)
+  authorizedNetworks = _messages.StringField(3, repeated=True)
+  createTime = _messages.StringField(4)
+  fqdn = _messages.StringField(5)
+  labels = _messages.MessageField('LabelsValue', 6)
+  locations = _messages.StringField(7, repeated=True)
+  name = _messages.StringField(8)
+  reservedIpRange = _messages.StringField(9)
+  state = _messages.EnumField('StateValueValuesEnum', 10)
+  statusMessage = _messages.StringField(11)
+  trusts = _messages.MessageField('Trust', 12, repeated=True)
+  updateTime = _messages.StringField(13)
 
 
 class Empty(_messages.Message):
@@ -1536,8 +1542,8 @@ class Trust(_messages.Message):
       trust with the current domain.
     trustDirection: The trust direction, which decides if the current domain
       is trusted, trusting, or both.
-    trustHandshakeSecret: Input only, and will not be stored. The trust secret
-      used for the handshake with the target domain.
+    trustHandshakeSecret: Input only. The trust secret used for the handshake
+      with the target domain. It will not be stored.
     trustType: The type of trust represented by the trust resource.
     updateTime: Output only. The last update time.
   """

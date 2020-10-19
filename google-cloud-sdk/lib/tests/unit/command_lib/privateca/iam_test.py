@@ -87,8 +87,8 @@ class IamUtilsTest(cli_test_base.CliTestBase, sdk_test_base.WithFakeAuth):
     key_ref = GetCryptoKeyRef(self._KMS_KEY_NAME)
     self._ExpectProjectIamCall(
         project_ref,
-        ['privateca.certificateAuthorities.create', 'storage.buckets.create'],
-        ['privateca.certificateAuthorities.create', 'storage.buckets.create'])
+        ['privateca.certificateAuthorities.create'],
+        ['privateca.certificateAuthorities.create'])
     self._ExpectKmsIamCall(
         key_ref,
         ['cloudkms.cryptoKeys.setIamPolicy'],
@@ -100,8 +100,8 @@ class IamUtilsTest(cli_test_base.CliTestBase, sdk_test_base.WithFakeAuth):
     key_ref = GetCryptoKeyRef(self._KMS_KEY_NAME)
     self._ExpectProjectIamCall(
         project_ref,
-        ['privateca.certificateAuthorities.create', 'storage.buckets.create'],
-        ['privateca.certificateAuthorities.create'])
+        ['privateca.certificateAuthorities.create'],
+        [])
 
     with self.AssertRaisesExceptionMatches(
         exceptions.InsufficientPermissionException,
@@ -113,8 +113,8 @@ class IamUtilsTest(cli_test_base.CliTestBase, sdk_test_base.WithFakeAuth):
     key_ref = GetCryptoKeyRef(self._KMS_KEY_NAME)
     self._ExpectProjectIamCall(
         project_ref,
-        ['privateca.certificateAuthorities.create', 'storage.buckets.create'],
-        ['privateca.certificateAuthorities.create', 'storage.buckets.create'])
+        ['privateca.certificateAuthorities.create'],
+        ['privateca.certificateAuthorities.create'])
     self._ExpectKmsIamCall(
         key_ref,
         ['cloudkms.cryptoKeys.setIamPolicy'],
@@ -124,6 +124,15 @@ class IamUtilsTest(cli_test_base.CliTestBase, sdk_test_base.WithFakeAuth):
         exceptions.InsufficientPermissionException,
         'KMS key'):
       iam.CheckCreateCertificateAuthorityPermissions(project_ref, key_ref)
+
+  def testCreateCertificatePermissionsIgnoresMissingKmsKey(self):
+    project_ref = projects_command_util.ParseProject(self._PROJECT_NAME)
+    self._ExpectProjectIamCall(
+        project_ref,
+        ['privateca.certificateAuthorities.create'],
+        ['privateca.certificateAuthorities.create'])
+
+    iam.CheckCreateCertificateAuthorityPermissions(project_ref, None)
 
 
 if __name__ == '__main__':

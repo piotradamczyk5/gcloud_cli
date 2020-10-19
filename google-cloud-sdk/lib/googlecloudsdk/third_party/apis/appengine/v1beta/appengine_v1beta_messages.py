@@ -153,8 +153,10 @@ class AppengineAppsAuthorizedCertificatesGetRequest(_messages.Message):
     r"""Controls the set of fields returned in the GET response.
 
     Values:
-      BASIC_CERTIFICATE: <no description>
-      FULL_CERTIFICATE: <no description>
+      BASIC_CERTIFICATE: Basic certificate information, including applicable
+        domains and expiration date.
+      FULL_CERTIFICATE: The information from BASIC_CERTIFICATE, plus detailed
+        information on the domain mappings that have this certificate mapped.
     """
     BASIC_CERTIFICATE = 0
     FULL_CERTIFICATE = 1
@@ -181,8 +183,10 @@ class AppengineAppsAuthorizedCertificatesListRequest(_messages.Message):
     r"""Controls the set of fields returned in the LIST response.
 
     Values:
-      BASIC_CERTIFICATE: <no description>
-      FULL_CERTIFICATE: <no description>
+      BASIC_CERTIFICATE: Basic certificate information, including applicable
+        domains and expiration date.
+      FULL_CERTIFICATE: The information from BASIC_CERTIFICATE, plus detailed
+        information on the domain mappings that have this certificate mapped.
     """
     BASIC_CERTIFICATE = 0
     FULL_CERTIFICATE = 1
@@ -245,9 +249,15 @@ class AppengineAppsDomainMappingsCreateRequest(_messages.Message):
     this domain. By default, overrides are rejected.
 
     Values:
-      UNSPECIFIED_DOMAIN_OVERRIDE_STRATEGY: <no description>
-      STRICT: <no description>
-      OVERRIDE: <no description>
+      UNSPECIFIED_DOMAIN_OVERRIDE_STRATEGY: Strategy unspecified. Defaults to
+        STRICT.
+      STRICT: Overrides not allowed. If a mapping already exists for the
+        specified domain, the request will return an ALREADY_EXISTS (409).
+      OVERRIDE: Overrides allowed. If a mapping already exists for the
+        specified domain, the request will overwrite it. Note that this might
+        stop another Google product from serving. For example, if the domain
+        is mapped to another App Engine application, that app will no longer
+        serve from that domain.
     """
     UNSPECIFIED_DOMAIN_OVERRIDE_STRATEGY = 0
     STRICT = 1
@@ -588,8 +598,11 @@ class AppengineAppsServicesVersionsGetRequest(_messages.Message):
     r"""Controls the set of fields returned in the Get response.
 
     Values:
-      BASIC: <no description>
-      FULL: <no description>
+      BASIC: Basic version information including scaling and inbound services,
+        but not detailed deployment information.
+      FULL: The information from BASIC, plus detailed information about the
+        deployment. This format is required when creating resources, but is
+        not returned in Get or List by default.
     """
     BASIC = 0
     FULL = 1
@@ -668,8 +681,11 @@ class AppengineAppsServicesVersionsListRequest(_messages.Message):
     r"""Controls the set of fields returned in the List response.
 
     Values:
-      BASIC: <no description>
-      FULL: <no description>
+      BASIC: Basic version information including scaling and inbound services,
+        but not detailed deployment information.
+      FULL: The information from BASIC, plus detailed information about the
+        deployment. This format is required when creating resources, but is
+        not returned in Get or List by default.
     """
     BASIC = 0
     FULL = 1
@@ -959,13 +975,11 @@ class CertificateRawData(_messages.Message):
   Fields:
     privateKey: Unencrypted PEM encoded RSA private key. This field is set
       once on certificate creation and then encrypted. The key size must be
-      2048 bits or fewer. Must include the header and footer. Example: <pre>
-      -----BEGIN RSA PRIVATE KEY----- <unencrypted_key_value> -----END RSA
-      PRIVATE KEY----- </pre> @InputOnly
+      2048 bits or fewer. Must include the header and footer. Example:
+      -----BEGIN RSA PRIVATE KEY----- -----END RSA PRIVATE KEY----- @InputOnly
     publicCertificate: PEM encoded x.509 public key certificate. This field is
       set once on certificate creation. Must include the header and footer.
-      Example: <pre> -----BEGIN CERTIFICATE----- <certificate_value> -----END
-      CERTIFICATE----- </pre>
+      Example: -----BEGIN CERTIFICATE----- -----END CERTIFICATE-----
   """
 
   privateKey = _messages.StringField(1)
@@ -1190,7 +1204,7 @@ class DomainMapping(_messages.Message):
 class Empty(_messages.Message):
   r"""A generic empty message that you can re-use to avoid defining duplicated
   empty messages in your APIs. A typical example is to use it as the request
-  or the response type of an API method. For instance: service Foo {   rpc
+  or the response type of an API method. For instance: service Foo { rpc
   Bar(google.protobuf.Empty) returns (google.protobuf.Empty); } The JSON
   representation for Empty is empty JSON object {}.
   """
@@ -1324,7 +1338,7 @@ class FileInfo(_messages.Message):
     sha1Sum: The SHA1 hash of the file, in hex.
     sourceUrl: URL source to use to fetch this file. Must be a URL to a
       resource in Google Cloud Storage in the form
-      'http(s)://storage.googleapis.com/<bucket>/<object>'.
+      'http(s)://storage.googleapis.com//'.
   """
 
   mimeType = _messages.StringField(1)
@@ -1351,8 +1365,8 @@ class FirewallRule(_messages.Message):
     sourceRange: IP address or range, defined using CIDR notation, of requests
       that this rule applies to. You can use the wildcard character "*" to
       match all IPs equivalent to "0/0" and "::/0" together. Examples:
-      192.168.1.1 or 192.168.0.0/16 or 2001:db8::/32  or
-      2001:0db8:0000:0042:0000:8a2e:0370:7334.<p>Truncation will be silently
+      192.168.1.1 or 192.168.0.0/16 or 2001:db8::/32 or
+      2001:0db8:0000:0042:0000:8a2e:0370:7334. Truncation will be silently
       performed on addresses which are not properly truncated. For example,
       1.2.3.4/24 is accepted as the same address as 1.2.3.0/24. Similarly, for
       IPv6, 2001:db8::1/32 is accepted as the same address as 2001:db8::/32.
@@ -1432,38 +1446,43 @@ class Instance(_messages.Message):
   automatically scale an application.
 
   Enums:
-    AvailabilityValueValuesEnum: Availability of the instance.@OutputOnly
+    AvailabilityValueValuesEnum: Output only. Availability of the instance.
+    VmLivenessValueValuesEnum: Output only. The liveness health check of this
+      instance. Only applicable for instances in App Engine flexible
+      environment.
 
   Fields:
-    appEngineRelease: App Engine release this instance is running
-      on.@OutputOnly
-    availability: Availability of the instance.@OutputOnly
-    averageLatency: Average latency (ms) over the last minute.@OutputOnly
-    errors: Number of errors since this instance was started.@OutputOnly
-    id: Relative name of the instance within the version. Example:
-      instance-1.@OutputOnly
-    memoryUsage: Total memory in use (bytes).@OutputOnly
-    name: Full path to the Instance resource in the API. Example:
-      apps/myapp/services/default/versions/v1/instances/instance-1.@OutputOnly
-    qps: Average queries per second (QPS) over the last minute.@OutputOnly
-    requests: Number of requests since this instance was started.@OutputOnly
-    startTime: Time that this instance was started.@OutputOnly
-    vmDebugEnabled: Whether this instance is in debug mode. Only applicable
-      for instances in App Engine flexible environment.@OutputOnly
-    vmId: Virtual machine ID of this instance. Only applicable for instances
-      in App Engine flexible environment.@OutputOnly
-    vmIp: The IP address of this instance. Only applicable for instances in
-      App Engine flexible environment.@OutputOnly
-    vmName: Name of the virtual machine where this instance lives. Only
-      applicable for instances in App Engine flexible environment.@OutputOnly
-    vmStatus: Status of the virtual machine where this instance lives. Only
-      applicable for instances in App Engine flexible environment.@OutputOnly
-    vmZoneName: Zone where the virtual machine is located. Only applicable for
-      instances in App Engine flexible environment.@OutputOnly
+    appEngineRelease: Output only. App Engine release this instance is running
+      on.
+    availability: Output only. Availability of the instance.
+    averageLatency: Output only. Average latency (ms) over the last minute.
+    errors: Output only. Number of errors since this instance was started.
+    id: Output only. Relative name of the instance within the version.
+      Example: instance-1.
+    memoryUsage: Output only. Total memory in use (bytes).
+    name: Output only. Full path to the Instance resource in the API. Example:
+      apps/myapp/services/default/versions/v1/instances/instance-1.
+    qps: Output only. Average queries per second (QPS) over the last minute.
+    requests: Output only. Number of requests since this instance was started.
+    startTime: Output only. Time that this instance was started.@OutputOnly
+    vmDebugEnabled: Output only. Whether this instance is in debug mode. Only
+      applicable for instances in App Engine flexible environment.
+    vmId: Output only. Virtual machine ID of this instance. Only applicable
+      for instances in App Engine flexible environment.
+    vmIp: Output only. The IP address of this instance. Only applicable for
+      instances in App Engine flexible environment.
+    vmLiveness: Output only. The liveness health check of this instance. Only
+      applicable for instances in App Engine flexible environment.
+    vmName: Output only. Name of the virtual machine where this instance
+      lives. Only applicable for instances in App Engine flexible environment.
+    vmStatus: Output only. Status of the virtual machine where this instance
+      lives. Only applicable for instances in App Engine flexible environment.
+    vmZoneName: Output only. Zone where the virtual machine is located. Only
+      applicable for instances in App Engine flexible environment.
   """
 
   class AvailabilityValueValuesEnum(_messages.Enum):
-    r"""Availability of the instance.@OutputOnly
+    r"""Output only. Availability of the instance.
 
     Values:
       UNSPECIFIED: <no description>
@@ -1473,6 +1492,33 @@ class Instance(_messages.Message):
     UNSPECIFIED = 0
     RESIDENT = 1
     DYNAMIC = 2
+
+  class VmLivenessValueValuesEnum(_messages.Enum):
+    r"""Output only. The liveness health check of this instance. Only
+    applicable for instances in App Engine flexible environment.
+
+    Values:
+      STATE_UNSPECIFIED: There is no liveness health check for the instance.
+        Only applicable for instances in App Engine standard environment.
+      UNKNOWN: The health checking system is aware of the instance but its
+        health is not known at the moment.
+      HEALTHY: The instance is reachable i.e. a connection to the application
+        health checking endpoint can be established, and conforms to the
+        requirements defined by the health check.
+      UNHEALTHY: The instance is reachable, but does not conform to the
+        requirements defined by the health check.
+      DRAINING: The instance is being drained. The existing connections to the
+        instance have time to complete, but the new ones are being refused.
+      TIMEOUT: The instance is unreachable i.e. a connection to the
+        application health checking endpoint cannot be established, or the
+        server does not respond within the specified timeout.
+    """
+    STATE_UNSPECIFIED = 0
+    UNKNOWN = 1
+    HEALTHY = 2
+    UNHEALTHY = 3
+    DRAINING = 4
+    TIMEOUT = 5
 
   appEngineRelease = _messages.StringField(1)
   availability = _messages.EnumField('AvailabilityValueValuesEnum', 2)
@@ -1487,9 +1533,10 @@ class Instance(_messages.Message):
   vmDebugEnabled = _messages.BooleanField(11)
   vmId = _messages.StringField(12)
   vmIp = _messages.StringField(13)
-  vmName = _messages.StringField(14)
-  vmStatus = _messages.StringField(15)
-  vmZoneName = _messages.StringField(16)
+  vmLiveness = _messages.EnumField('VmLivenessValueValuesEnum', 14)
+  vmName = _messages.StringField(15)
+  vmStatus = _messages.StringField(16)
+  vmZoneName = _messages.StringField(17)
 
 
 class Library(_messages.Message):
@@ -1841,6 +1888,38 @@ class Network(_messages.Message):
   subnetworkName = _messages.StringField(5)
 
 
+class NetworkSettings(_messages.Message):
+  r"""A NetworkSettings resource is a container for ingress settings for a
+  version or service.
+
+  Enums:
+    IngressTrafficAllowedValueValuesEnum: The ingress settings for version or
+      service.
+
+  Fields:
+    ingressTrafficAllowed: The ingress settings for version or service.
+  """
+
+  class IngressTrafficAllowedValueValuesEnum(_messages.Enum):
+    r"""The ingress settings for version or service.
+
+    Values:
+      INGRESS_TRAFFIC_ALLOWED_UNSPECIFIED: Unspecified
+      INGRESS_TRAFFIC_ALLOWED_ALL: Allow HTTP traffic from public and private
+        sources.
+      INGRESS_TRAFFIC_ALLOWED_INTERNAL_ONLY: Allow HTTP traffic from only
+        private VPC sources.
+      INGRESS_TRAFFIC_ALLOWED_INTERNAL_AND_LB: Allow HTTP traffic from private
+        VPC sources and through load balancers.
+    """
+    INGRESS_TRAFFIC_ALLOWED_UNSPECIFIED = 0
+    INGRESS_TRAFFIC_ALLOWED_ALL = 1
+    INGRESS_TRAFFIC_ALLOWED_INTERNAL_ONLY = 2
+    INGRESS_TRAFFIC_ALLOWED_INTERNAL_AND_LB = 3
+
+  ingressTrafficAllowed = _messages.EnumField('IngressTrafficAllowedValueValuesEnum', 1)
+
+
 class NetworkUtilization(_messages.Message):
   r"""Target scaling by network usage. Only applicable in the App Engine
   flexible environment.
@@ -2131,14 +2210,17 @@ class Resources(_messages.Message):
   Fields:
     cpu: Number of CPU cores needed.
     diskGb: Disk size (GB) needed.
+    kmsKeyReference: The name of the encryption key that is stored in Google
+      Cloud KMS. Only should be used by Cloud Composer to encrypt the vm disk
     memoryGb: Memory (GB) needed.
     volumes: User specified volumes.
   """
 
   cpu = _messages.FloatField(1)
   diskGb = _messages.FloatField(2)
-  memoryGb = _messages.FloatField(3)
-  volumes = _messages.MessageField('Volume', 4, repeated=True)
+  kmsKeyReference = _messages.StringField(3)
+  memoryGb = _messages.FloatField(4)
+  volumes = _messages.MessageField('Volume', 5, repeated=True)
 
 
 class ScriptHandler(_messages.Message):
@@ -2165,13 +2247,16 @@ class Service(_messages.Message):
       default.@OutputOnly
     name: Full path to the Service resource in the API. Example:
       apps/myapp/services/default.@OutputOnly
+    networkSettings: Ingress settings for this service. Will apply to all
+      versions.
     split: Mapping that defines fractional HTTP traffic diversion to different
       versions within the service.
   """
 
   id = _messages.StringField(1)
   name = _messages.StringField(2)
-  split = _messages.MessageField('TrafficSplit', 3)
+  networkSettings = _messages.MessageField('NetworkSettings', 3)
+  split = _messages.MessageField('TrafficSplit', 4)
 
 
 class SslSettings(_messages.Message):
@@ -2667,6 +2752,8 @@ class Version(_messages.Message):
   Messages:
     BetaSettingsValue: Metadata settings that are supplied to this version to
       enable beta runtime features.
+    BuildEnvVariablesValue: Environment variables available to the build
+      environment.Only returned in GET requests if view=FULL is set.
     EnvVariablesValue: Environment variables available to the application.Only
       returned in GET requests if view=FULL is set.
 
@@ -2675,13 +2762,16 @@ class Version(_messages.Message):
       (https://cloud.google.com/appengine/docs/python/endpoints/).Only
       returned in GET requests if view=FULL is set.
     automaticScaling: Automatic scaling is based on request rate, response
-      latencies, and other application metrics.
+      latencies, and other application metrics. Instances are dynamically
+      created and destroyed as needed in order to handle traffic.
     basicScaling: A service with basic scaling will create an instance when
       the application receives a request. The instance will be turned down
       when the app becomes idle. Basic scaling is ideal for work that is
       intermittent or driven by user activity.
     betaSettings: Metadata settings that are supplied to this version to
       enable beta runtime features.
+    buildEnvVariables: Environment variables available to the build
+      environment.Only returned in GET requests if view=FULL is set.
     createTime: Time that this version was created.@OutputOnly
     createdBy: Email address of the user who created this version.@OutputOnly
     defaultExpiration: Duration that static files should be cached by web
@@ -2729,7 +2819,8 @@ class Version(_messages.Message):
       returned in GET requests if view=FULL is set.
     manualScaling: A service with manual scaling runs continuously, allowing
       you to perform complex initialization and rely on the state of its
-      memory over time.
+      memory over time. Manually scaled versions are sometimes referred to as
+      "backends".
     name: Full path to the Version resource in the API. Example:
       apps/myapp/services/default/versions/v1.@OutputOnly
     network: Extra network settings. Only applicable in the App Engine
@@ -2744,8 +2835,8 @@ class Version(_messages.Message):
       Engine flexible environment.
     runtime: Desired runtime. Example: python27.
     runtimeApiVersion: The version of the API in the given runtime
-      environment. Please see the app.yaml reference for valid values at https
-      ://cloud.google.com/appengine/docs/standard/<language>/config/appref
+      environment. Please see the app.yaml reference for valid values at
+      https://cloud.google.com/appengine/docs/standard//config/appref
     runtimeChannel: The channel of the runtime to use. Only available for some
       runtimes. Defaults to the default channel.
     runtimeMainExecutablePath: The path or name of the app's main executable.
@@ -2767,15 +2858,21 @@ class Version(_messages.Message):
     r"""InboundServicesValueListEntryValuesEnum enum type.
 
     Values:
-      INBOUND_SERVICE_UNSPECIFIED: <no description>
-      INBOUND_SERVICE_MAIL: <no description>
-      INBOUND_SERVICE_MAIL_BOUNCE: <no description>
-      INBOUND_SERVICE_XMPP_ERROR: <no description>
-      INBOUND_SERVICE_XMPP_MESSAGE: <no description>
-      INBOUND_SERVICE_XMPP_SUBSCRIBE: <no description>
-      INBOUND_SERVICE_XMPP_PRESENCE: <no description>
-      INBOUND_SERVICE_CHANNEL_PRESENCE: <no description>
-      INBOUND_SERVICE_WARMUP: <no description>
+      INBOUND_SERVICE_UNSPECIFIED: Not specified.
+      INBOUND_SERVICE_MAIL: Allows an application to receive mail.
+      INBOUND_SERVICE_MAIL_BOUNCE: Allows an application to receive email-
+        bound notifications.
+      INBOUND_SERVICE_XMPP_ERROR: Allows an application to receive error
+        stanzas.
+      INBOUND_SERVICE_XMPP_MESSAGE: Allows an application to receive instant
+        messages.
+      INBOUND_SERVICE_XMPP_SUBSCRIBE: Allows an application to receive user
+        subscription POSTs.
+      INBOUND_SERVICE_XMPP_PRESENCE: Allows an application to receive a user's
+        chat presence.
+      INBOUND_SERVICE_CHANNEL_PRESENCE: Registers an application for
+        notifications when a client connects or disconnects from a channel.
+      INBOUND_SERVICE_WARMUP: Enables warmup requests.
     """
     INBOUND_SERVICE_UNSPECIFIED = 0
     INBOUND_SERVICE_MAIL = 1
@@ -2831,6 +2928,33 @@ class Version(_messages.Message):
     additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
 
   @encoding.MapUnrecognizedFields('additionalProperties')
+  class BuildEnvVariablesValue(_messages.Message):
+    r"""Environment variables available to the build environment.Only returned
+    in GET requests if view=FULL is set.
+
+    Messages:
+      AdditionalProperty: An additional property for a BuildEnvVariablesValue
+        object.
+
+    Fields:
+      additionalProperties: Additional properties of type
+        BuildEnvVariablesValue
+    """
+
+    class AdditionalProperty(_messages.Message):
+      r"""An additional property for a BuildEnvVariablesValue object.
+
+      Fields:
+        key: Name of the additional property.
+        value: A string attribute.
+      """
+
+      key = _messages.StringField(1)
+      value = _messages.StringField(2)
+
+    additionalProperties = _messages.MessageField('AdditionalProperty', 1, repeated=True)
+
+  @encoding.MapUnrecognizedFields('additionalProperties')
   class EnvVariablesValue(_messages.Message):
     r"""Environment variables available to the application.Only returned in
     GET requests if view=FULL is set.
@@ -2860,39 +2984,40 @@ class Version(_messages.Message):
   automaticScaling = _messages.MessageField('AutomaticScaling', 2)
   basicScaling = _messages.MessageField('BasicScaling', 3)
   betaSettings = _messages.MessageField('BetaSettingsValue', 4)
-  createTime = _messages.StringField(5)
-  createdBy = _messages.StringField(6)
-  defaultExpiration = _messages.StringField(7)
-  deployment = _messages.MessageField('Deployment', 8)
-  diskUsageBytes = _messages.IntegerField(9)
-  endpointsApiService = _messages.MessageField('EndpointsApiService', 10)
-  entrypoint = _messages.MessageField('Entrypoint', 11)
-  env = _messages.StringField(12)
-  envVariables = _messages.MessageField('EnvVariablesValue', 13)
-  errorHandlers = _messages.MessageField('ErrorHandler', 14, repeated=True)
-  handlers = _messages.MessageField('UrlMap', 15, repeated=True)
-  healthCheck = _messages.MessageField('HealthCheck', 16)
-  id = _messages.StringField(17)
-  inboundServices = _messages.EnumField('InboundServicesValueListEntryValuesEnum', 18, repeated=True)
-  instanceClass = _messages.StringField(19)
-  libraries = _messages.MessageField('Library', 20, repeated=True)
-  livenessCheck = _messages.MessageField('LivenessCheck', 21)
-  manualScaling = _messages.MessageField('ManualScaling', 22)
-  name = _messages.StringField(23)
-  network = _messages.MessageField('Network', 24)
-  nobuildFilesRegex = _messages.StringField(25)
-  readinessCheck = _messages.MessageField('ReadinessCheck', 26)
-  resources = _messages.MessageField('Resources', 27)
-  runtime = _messages.StringField(28)
-  runtimeApiVersion = _messages.StringField(29)
-  runtimeChannel = _messages.StringField(30)
-  runtimeMainExecutablePath = _messages.StringField(31)
-  servingStatus = _messages.EnumField('ServingStatusValueValuesEnum', 32)
-  threadsafe = _messages.BooleanField(33)
-  versionUrl = _messages.StringField(34)
-  vm = _messages.BooleanField(35)
-  vpcAccessConnector = _messages.MessageField('VpcAccessConnector', 36)
-  zones = _messages.StringField(37, repeated=True)
+  buildEnvVariables = _messages.MessageField('BuildEnvVariablesValue', 5)
+  createTime = _messages.StringField(6)
+  createdBy = _messages.StringField(7)
+  defaultExpiration = _messages.StringField(8)
+  deployment = _messages.MessageField('Deployment', 9)
+  diskUsageBytes = _messages.IntegerField(10)
+  endpointsApiService = _messages.MessageField('EndpointsApiService', 11)
+  entrypoint = _messages.MessageField('Entrypoint', 12)
+  env = _messages.StringField(13)
+  envVariables = _messages.MessageField('EnvVariablesValue', 14)
+  errorHandlers = _messages.MessageField('ErrorHandler', 15, repeated=True)
+  handlers = _messages.MessageField('UrlMap', 16, repeated=True)
+  healthCheck = _messages.MessageField('HealthCheck', 17)
+  id = _messages.StringField(18)
+  inboundServices = _messages.EnumField('InboundServicesValueListEntryValuesEnum', 19, repeated=True)
+  instanceClass = _messages.StringField(20)
+  libraries = _messages.MessageField('Library', 21, repeated=True)
+  livenessCheck = _messages.MessageField('LivenessCheck', 22)
+  manualScaling = _messages.MessageField('ManualScaling', 23)
+  name = _messages.StringField(24)
+  network = _messages.MessageField('Network', 25)
+  nobuildFilesRegex = _messages.StringField(26)
+  readinessCheck = _messages.MessageField('ReadinessCheck', 27)
+  resources = _messages.MessageField('Resources', 28)
+  runtime = _messages.StringField(29)
+  runtimeApiVersion = _messages.StringField(30)
+  runtimeChannel = _messages.StringField(31)
+  runtimeMainExecutablePath = _messages.StringField(32)
+  servingStatus = _messages.EnumField('ServingStatusValueValuesEnum', 33)
+  threadsafe = _messages.BooleanField(34)
+  versionUrl = _messages.StringField(35)
+  vm = _messages.BooleanField(36)
+  vpcAccessConnector = _messages.MessageField('VpcAccessConnector', 37)
+  zones = _messages.StringField(38, repeated=True)
 
 
 class Volume(_messages.Message):
@@ -2931,7 +3056,7 @@ class ZipInfo(_messages.Message):
       may be slow.
     sourceUrl: URL of the zip file to deploy from. Must be a URL to a resource
       in Google Cloud Storage in the form
-      'http(s)://storage.googleapis.com/<bucket>/<object>'.
+      'http(s)://storage.googleapis.com//'.
   """
 
   filesCount = _messages.IntegerField(1, variant=_messages.Variant.INT32)

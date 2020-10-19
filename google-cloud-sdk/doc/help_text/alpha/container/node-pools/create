@@ -89,8 +89,9 @@ FLAGS
             $ gcloud alpha container node-pools create node-pool-1 \
                 --cluster=example-cluster --enable-autorepair
 
-        Node autorepair is enabled by default for node pools using COS or
-        COS_CONTAINERD as a base image, use --no-enable-autorepair to disable.
+        Node autorepair is enabled by default for node pools using COS,
+        COS_CONTAINERD, UBUNTU or UBUNTU_CONTAINERD as a base image, use
+        --no-enable-autorepair to disable.
 
         See
         https://cloud.google.com/kubernetes-engine/docs/how-to/node-auto-repair
@@ -131,9 +132,8 @@ FLAGS
              87380 6291456"
 
      --machine-type=MACHINE_TYPE, -m MACHINE_TYPE
-        The type of machine to use for nodes. Defaults to n1-standard-1. The
-        list of predefined machine types is available using the following
-        command:
+        The type of machine to use for nodes. Defaults to e2-medium. The list
+        of predefined machine types is available using the following command:
 
             $ gcloud compute machine-types list
 
@@ -212,6 +212,10 @@ FLAGS
         * kube-env
         * startup-script
         * user-data
+
+    Google Kubernetes Engine sets the following keys by default:
+
+      o serial-port-logging-enable
 
     See also Compute Engine's documentation
     (https://cloud.google.com/compute/docs/storing-retrieving-metadata) on
@@ -351,7 +355,7 @@ FLAGS
         List of supported kubelet configs in 'kubeletConfig'.
 
           KEY                VALUE
-          cpuManagerPolicy   either 'static' or 'default'
+          cpuManagerPolicy   either 'static' or 'none'
           cpuCFSQuota        true or false (enabled by default)
           cpuCFSQuotaPeriod  interval (e.g., '100ms')
 
@@ -414,8 +418,8 @@ FLAGS
             feature can only be enabled if Workload Identity is enabled at the
             cluster level.
          SECURE
-            [DPRECATED] Prevents pods not in hostNetwork from accessing certain
-            VM metadata, specifically kube-env, which contains Kubelet
+            [DEPRECATED] Prevents pods not in hostNetwork from accessing
+            certain VM metadata, specifically kube-env, which contains Kubelet
             credentials, and the instance identity token. This is a temporary
             security solution available while the bootstrapping process for
             cluster nodes is being redesigned with significant security
@@ -607,7 +611,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud container node-pools create
         $ gcloud beta container node-pools create

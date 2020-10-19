@@ -43,6 +43,8 @@ class VideointelligenceV1(base_api.BaseApiClient):
     self.operations_projects_locations = self.OperationsProjectsLocationsService(self)
     self.operations_projects = self.OperationsProjectsService(self)
     self.operations = self.OperationsService(self)
+    self.projects_locations_corpora_operations = self.ProjectsLocationsCorporaOperationsService(self)
+    self.projects_locations_corpora = self.ProjectsLocationsCorporaService(self)
     self.projects_locations_corpura_operations = self.ProjectsLocationsCorpuraOperationsService(self)
     self.projects_locations_corpura = self.ProjectsLocationsCorpuraService(self)
     self.projects_locations_operations = self.ProjectsLocationsOperationsService(self)
@@ -61,16 +63,7 @@ class VideointelligenceV1(base_api.BaseApiClient):
           }
 
     def Cancel(self, request, global_params=None):
-      r"""Starts asynchronous cancellation on a long-running operation.  The server.
-makes a best effort to cancel the operation, but success is not
-guaranteed.  If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.  Clients can use
-Operations.GetOperation or
-other methods to check whether the cancellation succeeded or whether the
-operation completed despite cancellation. On successful cancellation,
-the operation is not deleted; instead, it becomes an operation with
-an Operation.error value with a google.rpc.Status.code of 1,
-corresponding to `Code.CANCELLED`.
+      r"""Starts asynchronous cancellation on a long-running operation. The server makes a best effort to cancel the operation, but success is not guaranteed. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`. Clients can use Operations.GetOperation or other methods to check whether the cancellation succeeded or whether the operation completed despite cancellation. On successful cancellation, the operation is not deleted; instead, it becomes an operation with an Operation.error value with a google.rpc.Status.code of 1, corresponding to `Code.CANCELLED`.
 
       Args:
         request: (VideointelligenceOperationsProjectsLocationsOperationsCancelRequest) input message
@@ -97,10 +90,7 @@ corresponding to `Code.CANCELLED`.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes a long-running operation. This method indicates that the client is.
-no longer interested in the operation result. It does not cancel the
-operation. If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.
+      r"""Deletes a long-running operation. This method indicates that the client is no longer interested in the operation result. It does not cancel the operation. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`.
 
       Args:
         request: (VideointelligenceOperationsProjectsLocationsOperationsDeleteRequest) input message
@@ -127,9 +117,7 @@ operation. If the server doesn't support this method, it returns
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the latest state of a long-running operation.  Clients can use this.
-method to poll the operation result at intervals as recommended by the API
-service.
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
 
       Args:
         request: (VideointelligenceOperationsProjectsLocationsOperationsGetRequest) input message
@@ -185,6 +173,53 @@ service.
       self._upload_configs = {
           }
 
+  class ProjectsLocationsCorporaOperationsService(base_api.BaseApiService):
+    """Service class for the projects_locations_corpora_operations resource."""
+
+    _NAME = 'projects_locations_corpora_operations'
+
+    def __init__(self, client):
+      super(VideointelligenceV1.ProjectsLocationsCorporaOperationsService, self).__init__(client)
+      self._upload_configs = {
+          }
+
+    def Get(self, request, global_params=None):
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
+
+      Args:
+        request: (VideointelligenceProjectsLocationsCorporaOperationsGetRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (GoogleLongrunningOperation) The response message.
+      """
+      config = self.GetMethodConfig('Get')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    Get.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/locations/{locationsId}/corpora/{corporaId}/operations/{operationsId}',
+        http_method='GET',
+        method_id='videointelligence.projects.locations.corpora.operations.get',
+        ordered_params=['name'],
+        path_params=['name'],
+        query_params=[],
+        relative_path='v1/{+name}',
+        request_field='',
+        request_type_name='VideointelligenceProjectsLocationsCorporaOperationsGetRequest',
+        response_type_name='GoogleLongrunningOperation',
+        supports_download=False,
+    )
+
+  class ProjectsLocationsCorporaService(base_api.BaseApiService):
+    """Service class for the projects_locations_corpora resource."""
+
+    _NAME = 'projects_locations_corpora'
+
+    def __init__(self, client):
+      super(VideointelligenceV1.ProjectsLocationsCorporaService, self).__init__(client)
+      self._upload_configs = {
+          }
+
   class ProjectsLocationsCorpuraOperationsService(base_api.BaseApiService):
     """Service class for the projects_locations_corpura_operations resource."""
 
@@ -196,9 +231,7 @@ service.
           }
 
     def Get(self, request, global_params=None):
-      r"""Gets the latest state of a long-running operation.  Clients can use this.
-method to poll the operation result at intervals as recommended by the API
-service.
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
 
       Args:
         request: (VideointelligenceProjectsLocationsCorpuraOperationsGetRequest) input message
@@ -245,16 +278,7 @@ service.
           }
 
     def Cancel(self, request, global_params=None):
-      r"""Starts asynchronous cancellation on a long-running operation.  The server.
-makes a best effort to cancel the operation, but success is not
-guaranteed.  If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.  Clients can use
-Operations.GetOperation or
-other methods to check whether the cancellation succeeded or whether the
-operation completed despite cancellation. On successful cancellation,
-the operation is not deleted; instead, it becomes an operation with
-an Operation.error value with a google.rpc.Status.code of 1,
-corresponding to `Code.CANCELLED`.
+      r"""Starts asynchronous cancellation on a long-running operation. The server makes a best effort to cancel the operation, but success is not guaranteed. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`. Clients can use Operations.GetOperation or other methods to check whether the cancellation succeeded or whether the operation completed despite cancellation. On successful cancellation, the operation is not deleted; instead, it becomes an operation with an Operation.error value with a google.rpc.Status.code of 1, corresponding to `Code.CANCELLED`.
 
       Args:
         request: (VideointelligenceProjectsLocationsOperationsCancelRequest) input message
@@ -281,10 +305,7 @@ corresponding to `Code.CANCELLED`.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes a long-running operation. This method indicates that the client is.
-no longer interested in the operation result. It does not cancel the
-operation. If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.
+      r"""Deletes a long-running operation. This method indicates that the client is no longer interested in the operation result. It does not cancel the operation. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`.
 
       Args:
         request: (VideointelligenceProjectsLocationsOperationsDeleteRequest) input message
@@ -311,9 +332,7 @@ operation. If the server doesn't support this method, it returns
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the latest state of a long-running operation.  Clients can use this.
-method to poll the operation result at intervals as recommended by the API
-service.
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
 
       Args:
         request: (VideointelligenceProjectsLocationsOperationsGetRequest) input message
@@ -340,16 +359,7 @@ service.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists operations that match the specified filter in the request. If the.
-server doesn't support this method, it returns `UNIMPLEMENTED`.
-
-NOTE: the `name` binding allows API services to override the binding
-to use different resource name schemes, such as `users/*/operations`. To
-override the binding, API services can add a binding such as
-`"/v1/{name=users/*}/operations"` to their service configuration.
-For backwards compatibility, the default name includes the operations
-collection id, however overriding users must ensure the name binding
-is the parent resource, without the operations collection id.
+      r"""Lists operations that match the specified filter in the request. If the server doesn't support this method, it returns `UNIMPLEMENTED`. NOTE: the `name` binding allows API services to override the binding to use different resource name schemes, such as `users/*/operations`. To override the binding, API services can add a binding such as `"/v1/{name=users/*}/operations"` to their service configuration. For backwards compatibility, the default name includes the operations collection id, however overriding users must ensure the name binding is the parent resource, without the operations collection id.
 
       Args:
         request: (VideointelligenceProjectsLocationsOperationsListRequest) input message
@@ -406,10 +416,7 @@ is the parent resource, without the operations collection id.
           }
 
     def Annotate(self, request, global_params=None):
-      r"""Performs asynchronous video annotation. Progress and results can be.
-retrieved through the `google.longrunning.Operations` interface.
-`Operation.metadata` contains `AnnotateVideoProgress` (progress).
-`Operation.response` contains `AnnotateVideoResponse` (results).
+      r"""Performs asynchronous video annotation. Progress and results can be retrieved through the `google.longrunning.Operations` interface. `Operation.metadata` contains `AnnotateVideoProgress` (progress). `Operation.response` contains `AnnotateVideoResponse` (results).
 
       Args:
         request: (GoogleCloudVideointelligenceV1AnnotateVideoRequest) input message

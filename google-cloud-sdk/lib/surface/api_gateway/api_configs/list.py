@@ -24,7 +24,7 @@ from googlecloudsdk.calliope import base
 from googlecloudsdk.command_lib.api_gateway import resource_args
 
 
-@base.ReleaseTracks(base.ReleaseTrack.ALPHA)
+@base.ReleaseTracks(base.ReleaseTrack.ALPHA, base.ReleaseTrack.BETA)
 class List(base.ListCommand):
   """List configs for an API."""
 
@@ -41,10 +41,10 @@ class List(base.ListCommand):
 
   LIST_FORMAT = """
     table(
-      name.segment(8):label=CONFIG_ID,
-      name.segment(6):label=API_ID,
+      name.segment(7):label=CONFIG_ID,
+      name.segment(5):label=API_ID,
       displayName,
-      serviceRollout.rolloutId,
+      serviceConfigId,
       state,
       createTime.date()
       )

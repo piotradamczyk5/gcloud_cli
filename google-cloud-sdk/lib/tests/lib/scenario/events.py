@@ -23,6 +23,7 @@ import collections
 import enum
 import json
 import os
+import traceback
 
 from googlecloudsdk.core import yaml
 from googlecloudsdk.core.console import console_io
@@ -30,7 +31,7 @@ from googlecloudsdk.core.resource import resource_transform
 from googlecloudsdk.core.util import http_encoding
 from tests.lib.scenario import assertions
 from tests.lib.scenario import updates
-import httplib2
+
 import six
 from six.moves import http_client as httplib
 from six.moves import urllib
@@ -63,17 +64,6 @@ class Request(object):
                apitools_request.headers,
                apitools_request.body)
 
-  @classmethod
-  def FromRequestArgs(cls, *args, **kwargs):
-    uri, method, headers, body = cls._FromHttplib2(*args, **kwargs)
-    return cls(uri, method, headers, body)
-
-  @classmethod
-  def _FromHttplib2(cls, uri, method='GET', body=None, headers=None,
-                    redirections=5, connection_type=None, **kwargs):
-    del redirections, connection_type, kwargs  # Unused
-    return uri, method, headers or {}, body
-
   def __init__(self, uri, method, headers, body):
     self.uri = uri
     self.method = method
@@ -96,13 +86,6 @@ class Response(object):
     status = int(headers.pop('status', httplib.OK))
     return cls(status, headers, apitools_response.content)
 
-  @classmethod
-  def FromTransportResponse(cls, response):
-    info, content = response
-    headers = info.copy()
-    status = int(headers.pop('status', httplib.OK))
-    return cls(status, headers, content.decode('utf-8'))
-
   def __init__(self, status, headers, body):
     self.status = status
     self.headers = headers
@@ -119,12 +102,6 @@ class Response(object):
     except (ValueError, TypeError):
       # Not a json object.
       return self.body
-
-  def ToTransportResponse(self):
-    """Converts a Response object to the response returned by the transport."""
-    headers = self.headers.copy()
-    headers['status'] = self.status
-    return (httplib2.Response(headers), http_encoding.Encode(self.body))
 
 
 class Event(six.with_metaclass(abc.ABCMeta, object)):
@@ -258,20 +235,24 @@ class ExitEvent(Event):
     self._code_assertion = code_assertion
     self._message_assertion = message_assertion
 
-  def Handle(self, exc):
+  def Handle(self, exc, exc_tb=None):
     code = getattr(exc, 'exit_code', 1) if exc else 0
     message = six.text_type(exc) if exc else None
-    return self.HandleReturnCode(code, message)
+    details = '\n'.join(traceback.format_tb(exc_tb)) if exc_tb else None
+    return self.HandleReturnCode(code, message, details=details)
 
-  def HandleReturnCode(self, return_code, message=None):
+  def HandleReturnCode(self, return_code, message=None, details=None):
     failures = []
     failures.extend(
         self._code_assertion.Check(
             self._update_context.ForKey('code'), return_code))
     if self._message_assertion or (failures and message):
       msg_assertion = self._message_assertion or assertions.EqualsAssertion('')
-      failures.extend(
-          msg_assertion.Check(self._update_context.ForKey('message'), message))
+      failure = msg_assertion.Check(
+          self._update_context.ForKey('message'), message)
+      if details and failure:
+        failure[0].details = details
+      failures.extend(failure)
     return failures
 
   def Summary(self):

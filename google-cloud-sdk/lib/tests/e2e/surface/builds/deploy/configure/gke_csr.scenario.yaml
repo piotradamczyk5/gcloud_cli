@@ -75,12 +75,7 @@ summary:
       Deleted [0] file.
       Deleted bucket [gs://$$bucket$$].
 - execute:
-  - command: container clusters delete $$cluster$$ --zone=$$location$$ --async
-  - prompt:
-    - message: |
-        The following clusters will be deleted.
-         - [$$cluster$$] in [$$location$$]
-    - input: y
+  - command: container clusters delete $$cluster$$ --zone=$$location$$ --async -q
 actions:
 - define_reference:
     reference: project
@@ -131,8 +126,6 @@ actions:
       --disk-size=10GB
     validation_only: true
     events:
-    - expect_stderr: |
-        This will enable the autorepair feature for nodes. Please see https://cloud.google.com/kubernetes-engine/docs/node-auto-repair for more information on node autorepairs.
     - expect_progress_tracker:
         message: Creating cluster $$cluster$$ in $$location$$
         status: SUCCESS
@@ -869,14 +862,9 @@ actions:
         code: 0
 
 - execute_command:
-    command: container clusters delete $$cluster$$ --zone=$$location$$ --async
+    command: container clusters delete $$cluster$$ --zone=$$location$$ --async -q
     validation_only: true
     cleanup_for: cluster
     events:
-    - expect_prompt_continue:
-        message: |
-          The following clusters will be deleted.
-           - [$$cluster$$] in [$$location$$]
-        user_input: y
     - expect_exit:
         code: 0

@@ -63,7 +63,7 @@ class Publish(base.Command):
           To publish messages in a batch to a specific Cloud Pub/Sub topic,
           run:
 
-            $ {command} mytopic --message "Hello World!" --attribute KEY1=VAL1,KEY2=VAL2
+            $ {command} mytopic --message="Hello World!" --attribute=KEY1=VAL1,KEY2=VAL2
       """
   }
 
@@ -83,8 +83,7 @@ class PublishBeta(Publish):
   @classmethod
   def Args(cls, parser):
     resource_args.AddTopicResourceArg(parser, 'to publish messages to.')
-    flags.AddPublishMessageFlags(
-        parser, add_deprecated=True, support_message_ordering=True)
+    flags.AddPublishMessageFlags(parser, add_deprecated=True)
 
   def Run(self, args):
     message_body = flags.ParseMessageBody(args)

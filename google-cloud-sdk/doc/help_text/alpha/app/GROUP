@@ -62,16 +62,11 @@ EXAMPLES
 
         $ gcloud alpha app versions list
 
-    To generate all relevant config files for ~/my_app (or emit an error
-    message if the directory contents are not recognized), run:
-
-        $ gcloud alpha app gen-config ~/my_app
-
 NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud app
         $ gcloud beta app

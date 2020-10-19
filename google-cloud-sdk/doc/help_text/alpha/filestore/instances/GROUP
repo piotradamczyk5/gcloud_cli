@@ -31,6 +31,9 @@ COMMANDS
      list
         (ALPHA) List Cloud Filestore instances.
 
+     restore
+        (ALPHA) Restore a Cloud Filestore instance to a snapshot or backup.
+
      update
         (ALPHA) Update a Cloud Filestore instance in the current project.
 
@@ -38,7 +41,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud filestore instances
         $ gcloud beta filestore instances

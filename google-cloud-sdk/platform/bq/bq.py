@@ -62,13 +62,6 @@ import oauth2client_4_0.tools
 
 from pyglib import appcommands
 
-import six
-from six.moves import input
-from six.moves import map
-from six.moves import range
-from six.moves import zip
-import six.moves.http_client
-
 import yaml
 
 
@@ -76,6 +69,14 @@ import yaml
 # google.apputils package.
 if sys.path and sys.path[0] != _THIRD_PARTY_DIR:
   sys.path.insert(0, _THIRD_PARTY_DIR)
+
+# pylint: disable=g-bad-import-order
+import six
+from six.moves import input
+from six.moves import map
+from six.moves import range
+from six.moves import zip
+import six.moves.http_client
 
 import table_formatter
 import bigquery_client
@@ -1818,6 +1819,12 @@ class _Query(BigqueryCmd):
         False,
         'If true, use rpc-style query API instead of jobs.insert().',
         flag_values=fv)
+    flags.DEFINE_string(
+        'request_id',
+        None,
+        'The request_id to use for the jobs.query request. '
+        'Only valid when used in combination with --rpc.',
+        flag_values=fv)
     flags.DEFINE_boolean(
         'replace',
         False,
@@ -2013,7 +2020,7 @@ class _Query(BigqueryCmd):
     # pylint: disable=g-doc-exception
     """Execute a query.
 
-    Query should be specifed on command line, or passed on stdin.
+    Query should be specified on command line, or passed on stdin.
 
     Examples:
       bq query 'select count(*) from publicdata:samples.shakespeare'
@@ -2050,6 +2057,8 @@ class _Query(BigqueryCmd):
       kwds['schema_update_options'] = self.schema_update_option
     if self.label is not None:
       kwds['labels'] = _ParseLabels(self.label)
+    if self.request_id is not None:
+      kwds['request_id'] = self.request_id
     if self.parameter:
       kwds['query_parameters'] = _ParseParameters(self.parameter)
     query = ' '.join(args)
@@ -2118,11 +2127,6 @@ class _Query(BigqueryCmd):
             self.destination_table).GetDatasetReference().datasetId
         destination_table = client.GetTableReference(
             self.destination_table).tableId
-      if not target_dataset:
-        raise app.UsageError(
-            'target_dataset is required to create a scheduled query, you could '
-            'set the target_dataset with --target_dataset flag or '
-            '--destination_table flag.')
       credentials = transfer_client.projects().dataSources().checkValidCreds(
           name=scheduled_queries_reference, body={}).execute()
       auth_info = {}
@@ -2148,7 +2152,8 @@ class _Query(BigqueryCmd):
           display_name=self.display_name,
           params=json.dumps(params),
           auth_info=auth_info,
-          schedule_args=schedule_args)
+          schedule_args=schedule_args,
+          location=FLAGS.location)
       print(('Transfer configuration \'%s\' successfully created.' %
              transfer_name))
       return
@@ -2339,14 +2344,15 @@ def _GetExternalDataConfig(file_path_or_simple_spec):
     UsageError: when incorrect usage or invalid args are used.
   """
 
-  if os.path.isfile(file_path_or_simple_spec):
+  maybe_filepath = os.path.expanduser(file_path_or_simple_spec)
+  if os.path.isfile(maybe_filepath):
     try:
-      with open(file_path_or_simple_spec) as external_config_file:
+      with open(maybe_filepath) as external_config_file:
         return yaml.safe_load(external_config_file)
     except yaml.error.YAMLError as e:
       raise app.UsageError(
           ('Error decoding YAML external table definition from '
-           'file %s: %s') % (file_path_or_simple_spec, e))
+           'file %s: %s') % (maybe_filepath, e))
   else:
     source_format = 'CSV'
     schema = None
@@ -2971,10 +2977,10 @@ class _List(BigqueryCmd):  # pylint: disable=missing-docstring
           size_in_bytes = int(bi_response['size'])
           size_in_gbytes = size_in_bytes / (1024 * 1024 * 1024)
           print('BI Engine reservation: %sGB' % size_in_gbytes)
+      except bigquery_client.BigqueryNotFoundError:
+        pass
       except BaseException as e:
-        if 'was not found' not in e.message and (
-            'is disabled' not in e.message):
-          print("Failed to list BI reservations '%s': %s" % (identifier, e))
+        print("Failed to list BI reservations '%s': %s" % (identifier, e))
 
       try:
         response = client.ListReservations(
@@ -2982,9 +2988,8 @@ class _List(BigqueryCmd):  # pylint: disable=missing-docstring
             page_size=self.max_results,
             page_token=self.page_token)
       except BaseException as e:
-        if 'is disabled' not in e.message:
-          raise bigquery_client.BigqueryError(
-              "Failed to list reservations '%s': %s" % (identifier, e))
+        raise bigquery_client.BigqueryError(
+            "Failed to list reservations '%s': %s" % (identifier, e))
       if 'reservations' in response:
         results = response['reservations']
       else:
@@ -3311,6 +3316,23 @@ class _Copy(BigqueryCmd):
         None,
         'Cloud KMS key for encryption of the destination table data.',
         flag_values=fv)
+    flags.DEFINE_boolean(
+        'snapshot',
+        False,
+        'Create a table snapshot of source table.',
+        short_name='s',
+        flag_values=fv)
+    flags.DEFINE_boolean(
+        'restore',
+        False,
+        'Restore table snapshot to a live table.',
+        short_name='r',
+        flag_values=fv)
+    flags.DEFINE_integer(
+        'expiration',
+        None,
+        'Expiration time, in seconds from now, of the destination table.',
+        flag_values=fv)
     self._ProcessCommandRc(fv)
 
   def RunWithArgs(self, source_tables, dest_table):
@@ -3341,10 +3363,20 @@ class _Copy(BigqueryCmd):
           if 'y' != _PromptYN('cp: replace %s? (y/N) ' % (dest_reference,)):
             print('NOT copying %s, exiting.' % (source_references_str,))
             return 0
+    operation = 'copied'
+    if self.snapshot:
+      operation_type = 'SNAPSHOT'
+      operation = 'snapshotted'
+    elif self.restore:
+      operation_type = 'RESTORE'
+      operation = 'restored'
+    else:
+      operation_type = 'COPY'
     kwds = {
         'write_disposition': write_disposition,
         'ignore_already_exists': ignore_already_exists,
         'job_id': _GetJobIdFromFlags(),
+        'operation_type': operation_type,
     }
     if FLAGS.location:
       kwds['location'] = FLAGS.location
@@ -3353,6 +3385,10 @@ class _Copy(BigqueryCmd):
       kwds['encryption_configuration'] = {
           'kmsKeyName': self.destination_kms_key
       }
+    if self.expiration:
+      datetime_utc = datetime.datetime.utcfromtimestamp(
+          int(self.expiration + time.time()))
+      kwds['destination_expiration_time'] = _FormatRfc3339(datetime_utc)
     job = client.CopyTable(source_references, dest_reference, **kwds)
     if job is None:
       print("Table '%s' already exists, skipping" % (dest_reference,))
@@ -3360,10 +3396,14 @@ class _Copy(BigqueryCmd):
       self.PrintJobStartInfo(job)
     else:
       plurality = 's' if len(source_references) > 1 else ''
-      print("Table%s '%s' successfully copied to '%s'" %
-            (plurality, source_references_str, dest_reference))
+      print("Table%s '%s' successfully %s to '%s'" %
+            (plurality, source_references_str, operation, dest_reference))
       # If we are here, the job succeeded, but print warnings if any.
       _PrintJobMessages(client.FormatJobInfo(job))
+
+
+
+
 
 
 def _ParseTimePartitioning(partitioning_type=None,
@@ -3565,6 +3605,12 @@ class _Make(BigqueryCmd):
         'service_account_name',
         '',
         'Service account used as the credential on the transfer config.',
+        flag_values=fv)
+    flags.DEFINE_string(
+        'notification_pubsub_topic',
+        '',
+        'Pub/Sub topic used for notification after transfer run completed or '
+        'failed.',
         flag_values=fv)
     flags.DEFINE_bool(
         'transfer_run',
@@ -3808,6 +3854,13 @@ class _Make(BigqueryCmd):
         'use_idle_slots',
         True,
         'If true, any query running in this reservation will be able to use '
+        'idle slots from other reservations. Used if ignore_idle_slots is '
+        'None.',
+        flag_values=fv)
+    flags.DEFINE_boolean(
+        'ignore_idle_slots',
+        None,
+        'If false, any query running in this reservation will be able to use '
         'idle slots from other reservations.',
         flag_values=fv)
     flags.DEFINE_integer(
@@ -3885,6 +3938,11 @@ class _Make(BigqueryCmd):
         '[Experimental] IAM role id.',
         flag_values=fv)
     flags.DEFINE_string(
+        'tenant_id',
+        None,
+        '[Experimental] Tenant id.',
+        flag_values=fv)
+    flags.DEFINE_string(
         'default_kms_key',
         None,
         'Defines default KMS key name for all newly objects created in the '
@@ -3949,10 +4007,13 @@ class _Make(BigqueryCmd):
       reference = client.GetReservationReference(
           identifier=identifier, default_location=FLAGS.location)
       try:
+        ignore_idle_arg = self.ignore_idle_slots
+        if ignore_idle_arg is None:
+          ignore_idle_arg = not self.use_idle_slots
         object_info = client.CreateReservation(
             reference=reference,
             slots=self.slots,
-            use_idle_slots=self.use_idle_slots,
+            ignore_idle_slots=ignore_idle_arg,
             autoscale_max_slots=self.autoscale_max_slots)
       except BaseException as e:
         raise bigquery_client.BigqueryError(
@@ -4000,15 +4061,6 @@ class _Make(BigqueryCmd):
       if self.data_source:
         data_sources_reference = (
             reference + '/dataSources/' + self.data_source)
-        try:
-          transfer_client.projects().dataSources().get(
-              name=data_sources_reference).execute()
-        except:
-          raise bigquery_client.BigqueryNotFoundError(
-              'Unknown data source %r. Please make sure BQ Data Transfer API '
-              'is enabled in Cloud Console, and the data source is enrolled in '
-              'Cloud Marketplace.' % (self.data_source), {'reason': 'notFound'},
-              [])
         credentials = transfer_client.projects().dataSources().checkValidCreds(
             name=data_sources_reference, body={}).execute()
       else:
@@ -4019,6 +4071,7 @@ class _Make(BigqueryCmd):
           and not self.service_account_name):
         auth_info = RetrieveAuthorizationInfo(reference, self.data_source,
                                               transfer_client)
+      location = self.data_location or FLAGS.location
       schedule_args = bigquery_client.TransferScheduleArgs(
           schedule=self.schedule,
           start_time=self.schedule_start_time,
@@ -4033,7 +4086,9 @@ class _Make(BigqueryCmd):
           params=self.params,
           auth_info=auth_info,
           service_account_name=self.service_account_name,
-          schedule_args=schedule_args)
+          notification_pubsub_topic=self.notification_pubsub_topic,
+          schedule_args=schedule_args,
+          location=location)
       print(('Transfer configuration \'%s\' successfully created.' %
              transfer_name))
     elif self.transfer_run:
@@ -4071,6 +4126,9 @@ class _Make(BigqueryCmd):
       if self.connection_type == 'AWS' and self.iam_role_id:
         self.properties = bigquery_client.MakeIamRoleIdPropertiesJson(
             self.iam_role_id)
+      if self.connection_type == 'Azure' and self.tenant_id:
+        self.properties = bigquery_client.MakeTenantIdPropertiesJson(
+            self.tenant_id)
       if not self.properties:
         raise app.UsageError('Need to specify --properties')
       created_connection = client.CreateConnection(
@@ -4078,15 +4136,13 @@ class _Make(BigqueryCmd):
           location=FLAGS.location,
           connection_type=self.connection_type,
           properties=self.properties,
+          connection_credential=self.connection_credential,
           display_name=self.display_name,
           description=self.description,
           connection_id=identifier)
       if created_connection:
-        path = created_connection['name']
-        reference = client.GetConnectionReference(path=path)
-        if self.connection_credential:
-          client.UpdateConnectionCredential(reference, self.connection_type,
-                                            self.connection_credential)
+        reference = client.GetConnectionReference(
+            path=created_connection['name'])
         print('Connection %s successfully created' % reference)
         bigquery_client.MaybePrintManualInstructionsForConnection(
             created_connection)
@@ -4296,6 +4352,13 @@ class _Update(BigqueryCmd):
         'use_idle_slots',
         None,
         'If true, any query running in this reservation will be able to use '
+        'idle slots from other reservations. Used if ignore_idle_slots is '
+        'None.',
+        flag_values=fv)
+    flags.DEFINE_boolean(
+        'ignore_idle_slots',
+        None,
+        'If false, any query running in this reservation will be able to use '
         'idle slots from other reservations.',
         flag_values=fv)
     flags.DEFINE_integer(
@@ -4377,6 +4440,12 @@ class _Update(BigqueryCmd):
         'service_account_name',
         '',
         'Service account used as the credential on the transfer config.',
+        flag_values=fv)
+    flags.DEFINE_string(
+        'notification_pubsub_topic',
+        '',
+        'Pub/Sub topic used for notification after transfer run completed or '
+        'failed.',
         flag_values=fv)
     flags.DEFINE_string(
         'schema',
@@ -4614,10 +4683,13 @@ class _Update(BigqueryCmd):
           reference = client.GetReservationReference(
               identifier=identifier,
               default_location=FLAGS.location)
+          ignore_idle_arg = self.ignore_idle_slots
+          if ignore_idle_arg is None and self.use_idle_slots is not None:
+            ignore_idle_arg = not self.use_idle_slots
           object_info = client.UpdateReservation(
               reference=reference,
               slots=self.slots,
-              use_idle_slots=self.use_idle_slots,
+              ignore_idle_slots=ignore_idle_arg,
               autoscale_max_slots=self.autoscale_max_slots)
           _PrintObjectInfo(object_info, reference, custom_format='show')
       except BaseException as e:
@@ -4684,32 +4756,27 @@ class _Update(BigqueryCmd):
       formatted_identifier = _FormatDataTransferIdentifiers(client, identifier)
       reference = TransferConfigReference(
           transferConfigName=formatted_identifier)
-    elif self.connection:
+    elif self.connection or self.connection_credential:
       reference = client.GetConnectionReference(
           identifier=identifier, default_location=FLAGS.location)
       if self.connection_type == 'AWS' and self.iam_role_id:
         self.properties = bigquery_client.MakeIamRoleIdPropertiesJson(
             self.iam_role_id)
-      if self.properties or self.display_name or self.description:
+      if self.connection_type == 'Azure' and self.tenant_id:
+        self.properties = bigquery_client.MakeTenantIdPropertiesJson(
+            self.tenant_id)
+      if self.properties or self.display_name or self.description \
+          or self.connection_credential:
         updated_connection = client.UpdateConnection(
             reference=reference,
             display_name=self.display_name,
             description=self.description,
             connection_type=self.connection_type,
-            properties=self.properties)
+            properties=self.properties,
+            connection_credential=self.connection_credential)
         bigquery_client.MaybePrintManualInstructionsForConnection(
             updated_connection)
-      if self.connection_credential:
-        client.UpdateConnectionCredential(reference, self.connection_type,
-                                          self.connection_credential)
-    elif self.connection_credential:
-      reference = client.GetConnectionReference(identifier=identifier,
-                                                default_location=FLAGS.location)
-      connection = client.GetConnection(reference)
-      connection_type = BigqueryClient.GetConnectionType(connection)
-      if connection_type:
-        client.UpdateConnectionCredential(reference, connection_type,
-                                          self.connection_credential)
+
     else:
       reference = client.GetReference(identifier)
       _Typecheck(reference, (DatasetReference, TableReference),
@@ -4856,6 +4923,7 @@ class _Update(BigqueryCmd):
             params=self.params,
             auth_info=auth_info,
             service_account_name=service_account_name,
+            notification_pubsub_topic=self.notification_pubsub_topic,
             schedule_args=schedule_args)
         print("Transfer configuration '%s' successfully updated." %
               (reference,))
@@ -5681,10 +5749,10 @@ class _Wait(BigqueryCmd):  # pylint: disable=missing-docstring
 
 
 class _IamPolicyCmd(BigqueryCmd):
-  """Common super class for _SetIamPolicy and _GetIamPolicy.
+  """Common superclass for commands that interact with BQ's IAM meta API.
 
-  Both commands use the same flags and identifier decoding logic, which they
-  inherit from this class.
+  Provides common flags, identifier decoding logic, and GetIamPolicy and
+  SetIamPolicy logic.
   """
 
   def __init__(self, name, fv, verb):
@@ -5693,7 +5761,8 @@ class _IamPolicyCmd(BigqueryCmd):
     Args:
       name: the command name string to bind to this handler class.
       fv: the FlagValues flag-registry object.
-      verb: the verb string ("Set" or "Get") to print in various descriptions.
+      verb: the verb string (e.g. 'Set', 'Get', 'Add binding to', ...) to print
+        in various descriptions.
     """
     super(_IamPolicyCmd, self).__init__(name, fv)
 
@@ -5713,7 +5782,8 @@ class _IamPolicyCmd(BigqueryCmd):
         '%s IAM policy for table described by this identifier.' % verb,
         short_name='t',
         flag_values=fv)
-    self._ProcessCommandRc(fv)
+    # Subclasses should call self._ProcessCommandRc(fv) after calling this
+    # superclass initializer and adding their own flags.
 
   def GetReferenceFromIdentifier(self, client, identifier):
     # pylint: disable=g-doc-exception
@@ -5734,12 +5804,50 @@ class _IamPolicyCmd(BigqueryCmd):
           'Invalid identifier "%s" for %s.' % (identifier, self._command_name))
     return reference
 
+  def GetPolicyForReference(self, client, reference):
+    """Get the IAM policy for a table or dataset.
+
+    Args:
+      reference: A DatasetReference or TableReference.
+
+    Returns:
+      The policy object, composed of dictionaries, lists, and primitive types.
+
+    Raises:
+      RuntimeError: reference isn't an expected type.
+    """
+    if isinstance(reference, TableReference):
+      return client.GetTableIAMPolicy(reference)
+    elif isinstance(reference, DatasetReference):
+      return client.GetDatasetIAMPolicy(reference)
+    raise RuntimeError(
+        'Unexpected reference type: {r_type}'.format(r_type=type(reference)))
+
+  def SetPolicyForReference(self, client, reference, policy):
+    """Set the IAM policy for a table or dataset.
+
+    Args:
+      reference: A DatasetReference or TableReference.
+      policy: The policy object, composed of dictionaries, lists, and primitive
+        types.
+
+    Raises:
+      RuntimeError: reference isn't an expected type.
+    """
+    if isinstance(reference, TableReference):
+      return client.SetTableIAMPolicy(reference, policy)
+    elif isinstance(reference, DatasetReference):
+      return client.SetDatasetIAMPolicy(reference, policy)
+    raise RuntimeError(
+        'Unexpected reference type: {r_type}'.format(r_type=type(reference)))
+
 
 class _GetIamPolicy(_IamPolicyCmd):  # pylint: disable=missing-docstring
   usage = """get-iam-policy [(-d|-t)] <identifier>"""
 
   def __init__(self, name, fv):
     super(_GetIamPolicy, self).__init__(name, fv, 'Get')
+    self._ProcessCommandRc(fv)
 
   def RunWithArgs(self, identifier):
     """Get the IAM policy for a resource.
@@ -5747,28 +5855,22 @@ class _GetIamPolicy(_IamPolicyCmd):  # pylint: disable=missing-docstring
     Gets the IAM policy for a dataset or table resource, and prints it to
     stdout. The policy is in JSON format.
 
-    Examples:
-      bq get-iam-policy ds
-      bq get-iam-policy proj:ds
-      bq get-iam-policy ds.table
-      bq get-iam-policy --project_id=proj -t ds.table
+    Usage:
+    get-iam-policy <identifier>
 
-    Note: As of September, 2019 this command is an ALPHA feature. It is only
-    enabled for customer's projects that are on the feature's ALPHA list until
-    it is released as a public generally-available feature. This command may
-    change before the public release. Users who need to get access controls for
-    BigQuery resources in projects that are not enabled for this ALPHA may still
-    use the 'gcloud projects get-iam-policy' and 'bq show' commands to get
-    access controls on projects and datasets, respectively.
+    Examples:
+      bq get-iam-policy ds.table1
+      bq get-iam-policy --project_id=proj -t ds.table1
+      bq get-iam-policy proj:ds.table1
+
+    Arguments:
+      identifier: The identifier of the resource. Presently only table and view
+    resources are fully supported. (Last updated: 2020-08-03)
     """
     client = Client.Get()
     reference = self.GetReferenceFromIdentifier(client, identifier)
-    result = None
-    if isinstance(reference, TableReference):
-      result = client.GetTableIAMPolicy(reference)
-    elif isinstance(reference, DatasetReference):
-      result = client.GetDatasetIAMPolicy(reference)
-    _PrintFormattedJsonObject(result, default_format='prettyjson')
+    result_policy = self.GetPolicyForReference(client, reference)
+    _PrintFormattedJsonObject(result_policy, default_format='prettyjson')
 
 
 class _SetIamPolicy(_IamPolicyCmd):  # pylint: disable=missing-docstring
@@ -5776,6 +5878,7 @@ class _SetIamPolicy(_IamPolicyCmd):  # pylint: disable=missing-docstring
 
   def __init__(self, name, fv):
     super(_SetIamPolicy, self).__init__(name, fv, 'Set')
+    self._ProcessCommandRc(fv)
 
   def RunWithArgs(self, identifier, filename):
     """Set the IAM policy for a resource.
@@ -5791,34 +5894,288 @@ class _SetIamPolicy(_IamPolicyCmd):  # pylint: disable=missing-docstring
     Usage:
     set-iam-policy <identifier> <filename>
 
-    The <identifier> can be an identifier for a table or dataset.
-
-    The <filename> is the name of a file containing the policy in JSON format.
-
     Examples:
-      bq set-iam-policy ds /tmp/policy.json
-      pq set-iam-policy proj:ds /tmp/policy.json
-      bq set-iam-policy ds.table /tmp/policy.json
-      bq set-iam-policy --project_id=proj -t ds.table /tmp/policy.json
+      bq set-iam-policy ds.table1 /tmp/policy.json
+      bq set-iam-policy --project_id=proj -t ds.table1 /tmp/policy.json
+      bq set-iam-policy proj:ds.table1 /tmp/policy.json
 
-    Note: As of September, 2019 this command is an ALPHA feature. It is only
-    enabled for customer's projects that are on the feature's ALPHA list until
-    it is released as a public generally-available feature. This command may
-    change before the public release. Users who need to set access controls for
-    BigQuery resources in projects that are not enabled for this ALPHA may still
-    use the 'gcloud projects set-iam-policy' and 'bq update' commands to set
-    access controls on projects and datasets, respectively.
+    Arguments:
+      identifier: The identifier of the resource. Presently only table and view
+    resources are fully supported. (Last updated: 2020-08-03)
+      filename: The name of a file containing the policy in JSON format.
     """
     client = Client.Get()
     reference = self.GetReferenceFromIdentifier(client, identifier)
     with open(filename, 'r') as file_obj:
       policy = json.load(file_obj)
-      result = None
-      if isinstance(reference, TableReference):
-        result = client.SetTableIAMPolicy(reference, policy)
-      elif isinstance(reference, DatasetReference):
-        result = client.SetDatasetIAMPolicy(reference, policy)
-      _PrintFormattedJsonObject(result, default_format='prettyjson')
+      result_policy = self.SetPolicyForReference(client, reference, policy)
+      _PrintFormattedJsonObject(result_policy, default_format='prettyjson')
+
+
+class _IamPolicyBindingCmd(_IamPolicyCmd):  # pylint: disable=missing-docstring
+  """Common superclass for _AddIamPolicyBinding and _RemoveIamPolicyBinding.
+
+  Provides the flags that are common to both commands, and also inherits
+  flags and logic from the _IamPolicyCmd class.
+  """
+
+  def __init__(self, name, fv, verb):
+    super(_IamPolicyBindingCmd, self).__init__(name, fv, verb)
+    flags.DEFINE_string(
+        'member',
+        None,
+        ('The member part of the IAM policy binding. Acceptable values include '
+         '"user:<email>", "group:<email>", "serviceAccount:<email>", '
+         '"allAuthenticatedUsers" and "allUsers".'
+         '\n'
+         '\n"allUsers" is a special value that represents every user. '
+         '"allAuthenticatedUsers" is a special value that represents every '
+         'user that is authenticated with a Google account or a service account.'
+         '\n'
+         '\nExamples:'
+         '\n  "user:myaccount@gmail.com"'
+         '\n  "group:mygroup@example-company.com"'
+         '\n  "serviceAccount:myserviceaccount@sub.example-company.com"'
+         '\n  "domain:sub.example-company.com"'
+         '\n  "allUsers"'
+         '\n  "allAuthenticatedUsers"'),
+        flag_values=fv)
+    flags.DEFINE_string(
+        'role',
+        None,
+        'The role part of the IAM policy binding.'
+        '\n'
+        '\nExamples:'
+        '\n'
+        '\nA predefined (built-in) BigQuery role:'
+        '\n  "roles/bigquery.dataViewer"'
+        '\n'
+        '\nA custom role defined in a project:'
+        '\n  "projects/my-project/roles/MyCustomRole"'
+        '\n'
+        '\nA custom role defined in an organization:'
+        '\n  "organizations/111111111111/roles/MyCustomRole"',
+        flag_values=fv)
+    flags.mark_flag_as_required('member', flag_values=fv)
+    flags.mark_flag_as_required('role', flag_values=fv)
+    # Subclasses should call self._ProcessCommandRc(fv) after calling this
+    # superclass initializer and adding their own flags.
+
+
+class _AddIamPolicyBinding(_IamPolicyBindingCmd):  # pylint: disable=missing-docstring
+  usage = ('add-iam-policy-binding --member=<member> --role=<role> [(-d|-t)] '
+           '<identifier>')
+
+  def __init__(self, name, fv):
+    super(_AddIamPolicyBinding, self).__init__(name, fv, verb='Add binding to')
+    self._ProcessCommandRc(fv)
+
+  def RunWithArgs(self, identifier):
+    r"""Add a binding to a BigQuery resource's policy in IAM.
+
+    Usage:
+      add-iam-policy-binding --member=<member> --role=<role> <identifier>
+
+    One binding consists of a member and a role, which are specified with
+    (required) flags.
+
+    Examples:
+
+      bq add-iam-policy-binding \
+        --member='user:myaccount@gmail.com' \
+        --role='roles/bigquery.dataViewer' \
+        table1
+
+      bq add-iam-policy-binding \
+        --member='serviceAccount:my.service.account@my-domain.com' \
+        --role='roles/bigquery.dataEditor' \
+        project1:dataset1.table1
+
+      bq add-iam-policy-binding \
+       --member='allAuthenticatedUsers' \
+       --role='roles/bigquery.dataViewer' \
+       --project_id=proj -t ds.table1
+
+    Arguments:
+      identifier: The identifier of the resource. Presently only table and view
+    resources are fully supported. (Last updated: 2020-08-03)
+    """
+    client = Client.Get()
+    reference = self.GetReferenceFromIdentifier(client, identifier)
+    policy = self.GetPolicyForReference(client, reference)
+    if 'etag' not in [key.lower() for key in policy]:
+      raise ValueError(
+          "Policy doesn't have an 'etag' field. This is unexpected. The etag "
+          "is required to prevent unexpected results from concurrent edits.")
+    self.AddBindingToPolicy(policy, self.member, self.role)
+    result_policy = self.SetPolicyForReference(client, reference, policy)
+    print(("Successfully added member '{member}' to role '{role}' in IAM "
+           "policy for {resource_type} '{identifier}':\n").format(
+               member=self.member,
+               role=self.role,
+               resource_type=reference.typename,  # e.g. 'table' or 'dataset'
+               identifier=reference))
+    _PrintFormattedJsonObject(result_policy, default_format='prettyjson')
+
+  @staticmethod
+  def AddBindingToPolicy(policy, member, role):
+    """Add a binding to an IAM policy.
+
+    Args:
+      policy: The policy object, composed of dictionaries, lists, and primitive
+        types. This object will be modified, and also returned for convenience.
+      member: The string to insert into the 'members' array of the binding.
+      role: The role string of the binding to remove.
+
+    Returns:
+      The same object referenced by the policy arg, after adding the binding.
+    """
+    # Check for version 1 (implicit if not specified), because this code can't
+    # handle policies with conditions correctly.
+    if policy.get('version', 1) > 1:
+      raise ValueError(
+          ('Only policy versions up to 1 are supported. version: {version}'
+          ).format(version=policy.get('version', 'None')))
+
+    bindings = policy.setdefault('bindings', [])
+    if not isinstance(bindings, list):
+      raise ValueError(
+          ("Policy field 'bindings' does not have an array-type value. "
+           "'bindings': {value}").format(value=repr(bindings)))
+
+    # Insert the member into the binding section if a binding section for the
+    # role already exists and the member is not already present. Otherwise, add
+    # a new binding section with the role and member. This is more polite than
+    # IAM currently requires, currently (you can put redundant bindings and
+    # members, and IAM seems to just merge and deduplicate).
+    for binding in bindings:
+      if not isinstance(binding, dict):
+        raise ValueError(
+            ("At least one element of the policy's 'bindings' array is not "
+             "an object type. element: {value}").format(value=repr(binding)))
+      if binding.get('role') == role:
+        break
+    else:
+      binding = {'role': role}
+      bindings.append(binding)
+    members = binding.setdefault('members', [])
+    if not isinstance(members, list):
+      raise ValueError(
+          ("Policy binding field 'members' does not have an array-type "
+           "value. 'members': {value}").format(value=repr(members)))
+    if member not in members:
+      members.append(member)
+    return policy
+
+
+class _RemoveIamPolicyBinding(_IamPolicyBindingCmd):  # pylint: disable=missing-docstring
+  usage = ('remove-iam-policy-binding --member=<member> --role=<role> '
+           '[(-d|-t)] <identifier>')
+
+  def __init__(self, name, fv):
+    super(_RemoveIamPolicyBinding, self).__init__(
+        name, fv, verb='Remove binding from')
+    self._ProcessCommandRc(fv)
+
+  def RunWithArgs(self, identifier):
+    r"""Remove a binding from a BigQuery resource's policy in IAM.
+
+    Usage:
+      remove-iam-policy-binding --member=<member> --role=<role> <identifier>
+
+    One binding consists of a member and a role, which are specified with
+    (required) flags.
+
+    Examples:
+
+      bq remove-iam-policy-binding \
+        --member='user:myaccount@gmail.com' \
+        --role='roles/bigquery.dataViewer' \
+        table1
+
+      bq remove-iam-policy-binding \
+        --member='serviceAccount:my.service.account@my-domain.com' \
+        --role='roles/bigquery.dataEditor' \
+        project1:dataset1.table1
+
+      bq remove-iam-policy-binding \
+       --member='allAuthenticatedUsers' \
+       --role='roles/bigquery.dataViewer' \
+       --project_id=proj -t ds.table1
+
+    Arguments:
+      identifier: The identifier of the resource. Presently only table and view
+    resources are fully supported. (Last updated: 2020-08-03)
+    """
+    client = Client.Get()
+    reference = self.GetReferenceFromIdentifier(client, identifier)
+    policy = self.GetPolicyForReference(client, reference)
+    if 'etag' not in [key.lower() for key in policy]:
+      raise ValueError(
+          "Policy doesn't have an 'etag' field. This is unexpected. The etag "
+          "is required to prevent unexpected results from concurrent edits.")
+    self.RemoveBindingFromPolicy(policy, self.member, self.role)
+    result_policy = self.SetPolicyForReference(client, reference, policy)
+    print(("Successfully removed member '{member}' from role '{role}' in IAM "
+           "policy for {resource_type} '{identifier}':\n").format(
+               member=self.member,
+               role=self.role,
+               resource_type=reference.typename,  # e.g. 'table' or 'dataset'
+               identifier=reference))
+    _PrintFormattedJsonObject(result_policy, default_format='prettyjson')
+
+  @staticmethod
+  def RemoveBindingFromPolicy(policy, member, role):
+    """Remove a binding from an IAM policy.
+
+    Will remove the member from the binding, and remove the entire binding if
+    its members array is empty.
+
+    Args:
+      policy: The policy object, composed of dictionaries, lists, and primitive
+        types. This object will be modified, and also returned for convenience.
+      member: The string to remove from the 'members' array of the binding.
+      role: The role string of the binding to remove.
+
+    Returns:
+      The same object referenced by the policy arg, after adding the binding.
+    """
+    # Check for version 1 (implicit if not specified), because this code can't
+    # handle policies with conditions correctly.
+    if policy.get('version', 1) > 1:
+      raise ValueError(
+          ('Only policy versions up to 1 are supported. version: {version}'
+          ).format(version=policy.get('version', 'None')))
+
+    bindings = policy.get('bindings', [])
+    if not isinstance(bindings, list):
+      raise ValueError(
+          ("Policy field 'bindings' does not have an array-type value. "
+           "'bindings': {value}").format(value=repr(bindings)))
+
+    for binding in bindings:
+      if not isinstance(binding, dict):
+        raise ValueError(
+            ("At least one element of the policy's 'bindings' array is not "
+             "an object type. element: {value}").format(value=repr(binding)))
+      if binding.get('role') == role:
+        members = binding.get('members', [])
+        if not isinstance(members, list):
+          raise ValueError(
+              ("Policy binding field 'members' does not have an array-type "
+               "value. 'members': {value}").format(value=repr(members)))
+        for j, member_j in enumerate(members):
+          if member_j == member:
+            del members[j]
+            # Remove empty bindings. Currently IAM would accept an empty binding
+            # and prune it, but maybe in the future it won't, so do this
+            # defensively.
+            bindings = [b for b in bindings if b.get('members', [])]
+            policy['bindings'] = bindings
+            return policy
+    raise app.UsageError(
+        "No binding found for member '{member}' in role '{role}'".format(
+            member=member, role=role))
 
 
 # pylint: disable=g-bad-name
@@ -6178,6 +6535,15 @@ class _Version(BigqueryCmd):
 
 
 def _ParseUdfResources(udf_resources):
+  """Parses UDF resources from an array of resource URIs.
+
+     Arguments:
+       udf_resources: Array of udf resource URIs.
+
+     Returns:
+       Array of UDF resources parsed into the format expected by
+       the BigQuery API client.
+  """
 
   if udf_resources is None:
     return None
@@ -6205,6 +6571,16 @@ def _ParseUdfResources(udf_resources):
 
 
 def _ParseParameters(parameters):
+  """Parses query parameters from an array of name:type:value.
+
+  Arguments:
+    parameters: An iterable of string-form query parameters: name:type:value.
+        Name may be omitted to indicate a positional parameter: :type:value.
+        Type may be omitted to indicate a string: name::value, or ::value.
+
+  Returns:
+    A list of query parameters in the form for the BigQuery API client.
+  """
   if not parameters:
     return None
   results = []
@@ -6342,6 +6718,7 @@ def main(unused_argv):
 
     bq_commands = {
         # Keep the commands alphabetical.
+        'add-iam-policy-binding': _AddIamPolicyBinding,
         'cancel': _Cancel,
         'cp': _Copy,
         'extract': _Extract,
@@ -6355,6 +6732,7 @@ def main(unused_argv):
         'mkdef': _MakeExternalTableDefinition,
         'partition': _Partition,
         'query': _Query,
+        'remove-iam-policy-binding': _RemoveIamPolicyBinding,
         'rm': _Delete,
         'set-iam-policy': _SetIamPolicy,
         'shell': _Repl,

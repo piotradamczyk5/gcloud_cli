@@ -1,12 +1,12 @@
 NAME
     gcloud alpha compute instances ops-agents policies create - create a Google
-        Cloud Operations Suite Agents (Ops Agents) policy
+        Cloud's operations suite agents (Ops Agents) policy
 
 SYNOPSIS
     gcloud alpha compute instances ops-agents policies create POLICY_ID
-        --agent-rules=[type=TYPE,version=VERSION,package-state=PACKAGE-STATE,
-          enable-autoupgrade=ENABLE-AUTOUPGRADE;...]
-        --os-types=[short-name=SHORT-NAME,version=VERSION;...]
+        --agent-rules=type=TYPE,version=VERSION,package-state=PACKAGE-STATE,
+          enable-autoupgrade=ENABLE-AUTOUPGRADE;[...]
+        --os-types=short-name=SHORT-NAME,version=VERSION;[...]
         [--description=DESCRIPTION]
         [--group-labels=[LABEL_NAME=LABEL_VALUE,
           LABEL_NAME=LABEL_VALUE,...;...]]
@@ -15,14 +15,14 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute instances ops-agents policies create creates a
-    policy that facilitates agent management across Google Cloud Compute
-    instances based on user specified instance filters. This policy installs,
-    specifies versioning, enables autoupgrade, and removes Ops Agents.
+    policy that facilitates agent management across Compute Engine instances
+    based on user specified instance filters. This policy installs, specifies
+    versioning, enables autoupgrade, and removes Ops Agents.
 
     The command returns the content of the created policy or an error
     indicating why the creation fails. The created policy takes effect
-    asynchronously. It can take 10 ~ 15 minutes for the VMs to enforce the
-    newly created policy.
+    asynchronously. It can take 10-15 minutes for the VMs to enforce the newly
+    created policy.
 
 POSITIONAL ARGUMENTS
      POLICY_ID
@@ -35,8 +35,8 @@ POSITIONAL ARGUMENTS
         from other generic policies and lower the chance of naming conflicts.
 
 REQUIRED FLAGS
-     --agent-rules=[type=TYPE,version=VERSION,package-state=PACKAGE-STATE,enable-autoupgrade=ENABLE-AUTOUPGRADE;...]
-        A list of agent rules to be enforced by the policy.
+     --agent-rules=type=TYPE,version=VERSION,package-state=PACKAGE-STATE,enable-autoupgrade=ENABLE-AUTOUPGRADE;[...]
+        A non-empty list of agent rules to be enforced by the policy.
 
         This flag must be quoted. Items in the list are separated by ";". Each
         item in the list is a <key, value> map that represents a logging or
@@ -165,8 +165,9 @@ REQUIRED FLAGS
             specific patch version in the format of
             version=MAJOR_VERSION.MINOR_VERSION.PATCH_VERSION.
 
-     --os-types=[short-name=SHORT-NAME,version=VERSION;...]
-        A list of OS types to filter instances that the policy applies to.
+     --os-types=short-name=SHORT-NAME,version=VERSION;[...]
+        A non-empty list of OS types to filter instances that the policy
+        applies to.
 
         For Alpha, exactly one OS type needs to be specified. The support for
         multiple OS types will be added later for more flexibility. Each OS
@@ -278,7 +279,7 @@ GCLOUD WIDE FLAGS
 EXAMPLES
     To create a policy named ops-agents-test-policy that targets a single
     CentOS 7 VM instance named zones/us-central1-a/instances/test-instance for
-    testing or development, and installs both Logging and Monitoring Agents on
+    testing or development and installs both Logging and Monitoring Agents on
     that VM instance, run:
 
         $ gcloud alpha compute instances ops-agents policies create \
@@ -290,7 +291,7 @@ EXAMPLES
 
     To create a policy named ops-agents-prod-policy that targets all CentOS 7
     VMs in zone us-central1-a with either env=prod,product=myapp or
-    env=staging,product=myapp labels, and makes sure the logging agent and
+    env=staging,product=myapp labels and makes sure the logging agent and
     metrics agent versions are pinned to specific major versions for staging
     and production, run:
 
@@ -306,5 +307,5 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist.
+    access allowlist.
 

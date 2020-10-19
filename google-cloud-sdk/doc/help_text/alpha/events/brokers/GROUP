@@ -87,6 +87,15 @@ COMMANDS
      create
         (ALPHA) Create a broker to initialize a namespace for eventing.
 
+     delete
+        (ALPHA) Delete a broker.
+
+     describe
+        (ALPHA) Get details about a given broker.
+
+     list
+        (ALPHA) List brokers.
+
 EXAMPLES
     To create a broker, run:
 
@@ -97,5 +106,7 @@ NOTES
     disappear without notice. This command is currently in ALPHA and may change
     without notice. If this command fails with API permission errors despite
     specifying the right project, you may be trying to access an API with an
-    invitation-only early access whitelist.
+    invitation-only early access allowlist. This variant is also available:
+
+        $ gcloud beta events brokers
 

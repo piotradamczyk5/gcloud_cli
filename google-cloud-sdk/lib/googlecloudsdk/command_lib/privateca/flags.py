@@ -192,9 +192,8 @@ def AddBucketFlag(parser):
   base.Argument(
       '--bucket',
       help='The name of an existing storage bucket to use for storing the CA '
-      'certificate and CRLs. If omitted, a new bucket with an '
-      'auto-generated name will be created in the same project and '
-      'location as the CA.',
+      'certificate and CRLs. If omitted, a new bucket will be created and '
+      'managed by the service on your behalf.',
       required=False).AddToParser(parser)
 
 
@@ -495,20 +494,6 @@ def ValidateIpSanFlag(san):
   return san
 
 
-def AddLocationFlag(parser, resource_name, flag_name='--location'):
-  """Add location flag to parser.
-
-  Args:
-    parser: The argparse parser to add the flag to.
-    resource_name: The name of resource that the location refers to e.g.
-      'certificate authority'
-    flag_name: The name of the flag.
-  """
-  base.Argument(
-      flag_name,
-      help='Location of the {}.'.format(resource_name)).AddToParser(parser)
-
-
 _REVOCATION_MAPPING = {
     'REVOCATION_REASON_UNSPECIFIED': 'unspecified',
     'KEY_COMPROMISE': 'key-compromise',
@@ -528,6 +513,36 @@ _REVOCATION_REASON_MAPPER = arg_utils.ChoiceEnumMapper(
     message_enum=privateca_base.GetMessagesModule().RevokeCertificateRequest
     .ReasonValueValuesEnum,
     custom_mappings=_REVOCATION_MAPPING)
+
+_TIER_MAPPING = {
+    'ENTERPRISE': 'enterprise',
+    'DEVOPS': 'devops',
+}
+
+_TIER_MAPPER = arg_utils.ChoiceEnumMapper(
+    arg_name='--tier',
+    default='enterprise',
+    help_str='The tier for the Certificate Authority.',
+    message_enum=privateca_base.GetMessagesModule().CertificateAuthority
+    .TierValueValuesEnum,
+    custom_mappings=_TIER_MAPPING)
+
+_KEY_ALGORITHM_MAPPING = {
+    'RSA_PSS_2048_SHA256': 'rsa-pss-2048-sha256',
+    'RSA_PSS_3072_SHA256': 'rsa-pss-3078-sha256',
+    'RSA_PSS_4096_SHA256': 'rsa-pss-4096-sha256',
+    'EC_P256_SHA256': 'ec-p256-sha256',
+    'EC_P384_SHA384': 'ec-p384-sha384',
+}
+
+_KEY_ALGORITHM_MAPPER = arg_utils.ChoiceEnumMapper(
+    arg_name='--key-algorithm',
+    default='rsa-pss-4096-sha256',
+    help_str='The crypto algorithm to use for creating a managed KMS key for '
+    'the Certificate Authority.',
+    message_enum=privateca_base.GetMessagesModule().KeyVersionSpec
+    .AlgorithmValueValuesEnum,
+    custom_mappings=_KEY_ALGORITHM_MAPPING)
 
 
 def AddRevocationReasonFlag(parser):
@@ -554,3 +569,27 @@ def ParseRevocationChoiceToEnum(choice):
 def ParseValidityFlag(args):
   """Parses the validity from args."""
   return times.FormatDurationForJson(times.ParseDuration(args.validity))
+
+
+def AddTierFlag(parser):
+  _TIER_MAPPER.choice_arg.AddToParser(parser)
+
+
+def ParseTierFlag(args):
+  return _TIER_MAPPER.GetEnumForChoice(args.tier)
+
+
+def AddKeyAlgorithmFlag(parser_group):
+  _KEY_ALGORITHM_MAPPER.choice_arg.AddToParser(parser_group)
+
+
+def ParseKeySpec(args):
+  """Parses a specified KMS key version or algorithm to get a KeyVersionSpec."""
+  messages = privateca_base.GetMessagesModule()
+  if args.IsSpecified('kms_key_version'):
+    kms_key_version_ref = args.CONCEPTS.kms_key_version.Parse()
+    return messages.KeyVersionSpec(
+        cloudKmsKeyVersion=kms_key_version_ref.RelativeName())
+
+  return messages.KeyVersionSpec(
+      algorithm=_KEY_ALGORITHM_MAPPER.GetEnumForChoice(args.key_algorithm))

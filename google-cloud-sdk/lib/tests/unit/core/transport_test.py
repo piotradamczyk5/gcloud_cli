@@ -72,9 +72,6 @@ class RequestWrapper(transport.RequestWrapper):
   def DecodeResponse(self, response, response_encoding):
     return response
 
-  def AttachCredentials(self, http_client, orig_request):
-    pass
-
 
 class HttpClient(object):
 
@@ -83,21 +80,6 @@ class HttpClient(object):
 
 
 class RequestWrapperTest(sdk_test_base.SdkBase, parameterized.TestCase):
-
-  def testAttachCredentials(self):
-    http_client = HttpClient()
-    orig_request = self.StartObjectPatch(
-        http_client, 'request', return_value={
-            'status': httplib.OK,
-        })
-    request_wrapper = RequestWrapper()
-    self.StartObjectPatch(request_wrapper, 'AttachCredentials')
-
-    request_wrapper.WrapRequest(http_client, [])
-    http_client.request('uri', 'method')
-
-    request_wrapper.AttachCredentials.assert_called_once_with(
-        http_client, orig_request)
 
   def testExceptionHandling(self):
     http_client = HttpClient()
@@ -405,6 +387,13 @@ total round trip time (request+response): 2.000 secs
     run(
         'http://metadata.google.internal/computeMetadata/v1/instance/'
         'service-accounts/something@developer.gserviceaccount.com/token', {})
+    self.AssertErrNotContains('response content')
+    self.ClearErr()
+
+    run(
+        'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/'
+        'something@developer.iam.gserviceaccount.com:generateAccessToken?alt='
+        'json', {})
     self.AssertErrNotContains('response content')
     self.ClearErr()
 

@@ -28,6 +28,9 @@ GROUPS
      operations
         (ALPHA) Manage Operation for various services.
 
+     peered-dns-domains
+        (ALPHA) Peered DNS domains for various private service connections.
+
      quota
         (ALPHA) Manage service consumer quota.
 
@@ -63,7 +66,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud services
         $ gcloud beta services

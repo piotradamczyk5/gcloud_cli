@@ -76,6 +76,8 @@ class Binding(_messages.Message):
   r"""Associates `members` with a `role`.
 
   Fields:
+    bindingId: A client-specified ID for this binding. Expected to be globally
+      unique to support the internal bindings-by-ID API.
     condition: The condition that is associated with this binding.  If the
       condition evaluates to `true`, then this binding applies to the current
       request.  If the condition evaluates to `false`, then this binding does
@@ -119,9 +121,10 @@ class Binding(_messages.Message):
       `roles/editor`, or `roles/owner`.
   """
 
-  condition = _messages.MessageField('Expr', 1)
-  members = _messages.StringField(2, repeated=True)
-  role = _messages.StringField(3)
+  bindingId = _messages.StringField(1)
+  condition = _messages.MessageField('Expr', 2)
+  members = _messages.StringField(3, repeated=True)
+  role = _messages.StringField(4)
 
 
 class Condition(_messages.Message):
@@ -399,6 +402,9 @@ class DeploymentmanagerDeploymentsListRequest(_messages.Message):
       `nextPageToken` returned by a previous list request to get the next page
       of results.
     project: The project ID for this request.
+    returnPartialSuccess: Opt-in for partial success behavior which provides
+      partial results in case of failure. The default value is false and the
+      logic is the same as today.
   """
 
   filter = _messages.StringField(1)
@@ -406,6 +412,7 @@ class DeploymentmanagerDeploymentsListRequest(_messages.Message):
   orderBy = _messages.StringField(3)
   pageToken = _messages.StringField(4)
   project = _messages.StringField(5, required=True)
+  returnPartialSuccess = _messages.BooleanField(6)
 
 
 class DeploymentmanagerDeploymentsPatchRequest(_messages.Message):
@@ -618,6 +625,9 @@ class DeploymentmanagerManifestsListRequest(_messages.Message):
       `nextPageToken` returned by a previous list request to get the next page
       of results.
     project: The project ID for this request.
+    returnPartialSuccess: Opt-in for partial success behavior which provides
+      partial results in case of failure. The default value is false and the
+      logic is the same as today.
   """
 
   deployment = _messages.StringField(1, required=True)
@@ -626,6 +636,7 @@ class DeploymentmanagerManifestsListRequest(_messages.Message):
   orderBy = _messages.StringField(4)
   pageToken = _messages.StringField(5)
   project = _messages.StringField(6, required=True)
+  returnPartialSuccess = _messages.BooleanField(7)
 
 
 class DeploymentmanagerOperationsGetRequest(_messages.Message):
@@ -678,6 +689,9 @@ class DeploymentmanagerOperationsListRequest(_messages.Message):
       `nextPageToken` returned by a previous list request to get the next page
       of results.
     project: The project ID for this request.
+    returnPartialSuccess: Opt-in for partial success behavior which provides
+      partial results in case of failure. The default value is false and the
+      logic is the same as today.
   """
 
   filter = _messages.StringField(1)
@@ -685,6 +699,7 @@ class DeploymentmanagerOperationsListRequest(_messages.Message):
   orderBy = _messages.StringField(3)
   pageToken = _messages.StringField(4)
   project = _messages.StringField(5, required=True)
+  returnPartialSuccess = _messages.BooleanField(6)
 
 
 class DeploymentmanagerResourcesGetRequest(_messages.Message):
@@ -740,6 +755,9 @@ class DeploymentmanagerResourcesListRequest(_messages.Message):
       `nextPageToken` returned by a previous list request to get the next page
       of results.
     project: The project ID for this request.
+    returnPartialSuccess: Opt-in for partial success behavior which provides
+      partial results in case of failure. The default value is false and the
+      logic is the same as today.
   """
 
   deployment = _messages.StringField(1, required=True)
@@ -748,6 +766,7 @@ class DeploymentmanagerResourcesListRequest(_messages.Message):
   orderBy = _messages.StringField(4)
   pageToken = _messages.StringField(5)
   project = _messages.StringField(6, required=True)
+  returnPartialSuccess = _messages.BooleanField(7)
 
 
 class DeploymentmanagerTypesListRequest(_messages.Message):
@@ -788,6 +807,9 @@ class DeploymentmanagerTypesListRequest(_messages.Message):
       `nextPageToken` returned by a previous list request to get the next page
       of results.
     project: The project ID for this request.
+    returnPartialSuccess: Opt-in for partial success behavior which provides
+      partial results in case of failure. The default value is false and the
+      logic is the same as today.
   """
 
   filter = _messages.StringField(1)
@@ -795,6 +817,7 @@ class DeploymentmanagerTypesListRequest(_messages.Message):
   orderBy = _messages.StringField(3)
   pageToken = _messages.StringField(4)
   project = _messages.StringField(5, required=True)
+  returnPartialSuccess = _messages.BooleanField(6)
 
 
 class DeploymentsCancelPreviewRequest(_messages.Message):

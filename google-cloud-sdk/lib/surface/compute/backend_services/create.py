@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 from googlecloudsdk.api_lib.compute import base_classes
 from googlecloudsdk.calliope import base
 from googlecloudsdk.calliope import exceptions
+from googlecloudsdk.command_lib.compute import cdn_flags_utils as cdn_flags
 from googlecloudsdk.command_lib.compute import flags as compute_flags
 from googlecloudsdk.command_lib.compute import signed_url_flags
 from googlecloudsdk.command_lib.compute.backend_services import backend_services_utils
@@ -84,7 +85,8 @@ class CreateHelper(object):
   @classmethod
   def Args(cls, parser, support_l7_internal_load_balancer, support_failover,
            support_logging, support_multinic, support_client_only,
-           support_grpc_protocol):
+           support_grpc_protocol, support_all_protocol, support_subsetting,
+           support_flexible_cache_step_one):
     """Add flags to create a backend service to the parser."""
 
     parser.display_info.AddFormat(flags.DEFAULT_LIST_FORMAT)
@@ -103,7 +105,10 @@ class CreateHelper(object):
     flags.AddTimeout(parser)
     flags.AddPortName(parser)
     flags.AddProtocol(
-        parser, default=None, support_grpc_protocol=support_grpc_protocol)
+        parser,
+        default=None,
+        support_grpc_protocol=support_grpc_protocol,
+        support_all_protocol=support_all_protocol)
     flags.AddEnableCdn(parser)
     flags.AddSessionAffinity(parser, support_client_only=support_client_only)
     flags.AddAffinityCookieTtl(parser)
@@ -119,6 +124,9 @@ class CreateHelper(object):
     parser.display_info.AddCacheUpdater(flags.BackendServicesCompleter)
     signed_url_flags.AddSignedUrlCacheMaxAge(parser, required=False)
 
+    if support_subsetting:
+      flags.AddSubsettingPolicy(parser)
+
     if support_failover:
       flags.AddConnectionDrainOnFailover(parser, default=None)
       flags.AddDropTrafficIfUnhealthy(parser, default=None)
@@ -131,12 +139,18 @@ class CreateHelper(object):
     if support_multinic:
       flags.AddNetwork(parser)
 
+    if support_flexible_cache_step_one:
+      cdn_flags.AddFlexibleCacheStepOne(parser, 'backend service')
+
   def __init__(self, support_l7_internal_load_balancer, support_failover,
-               support_logging, support_multinic):
+               support_logging, support_multinic, support_subsetting,
+               support_flexible_cache_step_one):
     self._support_l7_internal_load_balancer = support_l7_internal_load_balancer
     self._support_failover = support_failover
     self._support_logging = support_logging
     self._support_multinic = support_multinic
+    self._support_subsetting = support_subsetting
+    self._support_flexible_cache_step_one = support_flexible_cache_step_one
 
   def _CreateGlobalRequests(self, holder, args, backend_services_ref):
     """Returns a global backend service create request."""
@@ -160,7 +174,7 @@ class CreateHelper(object):
           client.messages.ConnectionDraining(
               drainingTimeoutSec=args.connection_draining_timeout))
 
-    if args.enable_cdn:
+    if args.enable_cdn is not None:
       backend_service.enableCDN = args.enable_cdn
 
     backend_services_utils.ApplyCdnPolicyArgs(
@@ -168,7 +182,8 @@ class CreateHelper(object):
         args,
         backend_service,
         is_update=False,
-        apply_signed_url_cache_max_age=True)
+        apply_signed_url_cache_max_age=True,
+        support_flexible_cache_step_one=self._support_flexible_cache_step_one)
 
     if args.session_affinity is not None:
       backend_service.sessionAffinity = (
@@ -178,6 +193,12 @@ class CreateHelper(object):
       backend_service.affinityCookieTtlSec = args.affinity_cookie_ttl
     if args.custom_request_header is not None:
       backend_service.customRequestHeaders = args.custom_request_header
+    if self._support_flexible_cache_step_one:
+      if args.custom_response_header is not None:
+        backend_service.customResponseHeaders = args.custom_response_header
+      if (backend_service.cdnPolicy is not None and
+          backend_service.cdnPolicy.cacheMode and args.enable_cdn is not False):  # pylint: disable=g-bool-id-comparison
+        backend_service.enableCDN = True
 
     self._ApplyIapArgs(client.messages, args.iap, backend_service)
 
@@ -225,6 +246,8 @@ class CreateHelper(object):
     backend_services_utils.ApplyFailoverPolicyArgs(client.messages, args,
                                                    backend_service,
                                                    self._support_failover)
+    if self._support_subsetting:
+      backend_services_utils.ApplySubsettingArgs(client, args, backend_service)
 
     if args.session_affinity is not None:
       backend_service.sessionAffinity = (
@@ -324,6 +347,9 @@ class CreateGA(base.CreateCommand):
   _support_multinic = True
   _support_client_only = False
   _support_grpc_protocol = True
+  _support_all_protocol = False
+  _support_subsetting = False
+  _support_flexible_cache_step_one = False
 
   @classmethod
   def Args(cls, parser):
@@ -335,7 +361,10 @@ class CreateGA(base.CreateCommand):
         support_logging=cls._support_logging,
         support_multinic=cls._support_multinic,
         support_client_only=cls._support_client_only,
-        support_grpc_protocol=cls._support_grpc_protocol)
+        support_grpc_protocol=cls._support_grpc_protocol,
+        support_all_protocol=cls._support_all_protocol,
+        support_subsetting=cls._support_subsetting,
+        support_flexible_cache_step_one=cls._support_flexible_cache_step_one)
 
   def Run(self, args):
     """Issues request necessary to create Backend Service."""
@@ -346,7 +375,9 @@ class CreateGA(base.CreateCommand):
         ._support_l7_internal_load_balancer,
         support_failover=self._support_failover,
         support_logging=self._support_logging,
-        support_multinic=self._support_multinic).Run(args, holder)
+        support_multinic=self._support_multinic,
+        support_flexible_cache_step_one=self._support_flexible_cache_step_one,
+        support_subsetting=self._support_subsetting).Run(args, holder)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.BETA)
@@ -369,7 +400,10 @@ class CreateBeta(CreateGA):
   """
   _support_multinic = True
   _support_client_only = False
+  _support_flexible_cache_step_one = True
   _support_grpc_protocol = True
+  _support_all_protocol = False
+  _support_subsetting = False
 
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
@@ -392,3 +426,6 @@ class CreateAlpha(CreateBeta):
   """
   _support_client_only = True
   _support_grpc_protocol = True
+  _support_all_protocol = True
+  _support_subsetting = True
+  _support_flexible_cache_step_one = True

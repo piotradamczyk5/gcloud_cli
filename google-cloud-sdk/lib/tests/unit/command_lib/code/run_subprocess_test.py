@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import json
 import os.path
 import subprocess
 
@@ -143,3 +144,38 @@ class GetOutputJsonTest(test_case.TestCase):
           ['bash', '-c', 'echo should not see this in test log >&2'],
           timeout_sec=10,
           show_stderr=False)
+
+
+class StreamOutputJsonTest(test_case.TestCase):
+
+  def testJsonObjects(self):
+    objs = [{'one': 'two', 'three': 4}, {'five': {'six': 'seven'}}]
+    text = ''.join(json.dumps(obj) + '\n' for obj in objs)
+
+    with cross_platform_temp_file.NamedTempFile(text) as multi_line_file:
+      cmd = ['cat', multi_line_file.name]
+      self.assertSequenceEqual(
+          tuple(run_subprocess.StreamOutputJson(cmd, event_timeout_sec=10)),
+          objs)
+
+  def testTimeout(self):
+    with self.assertRaises(utils.TimeoutError):
+      tuple(
+          run_subprocess.StreamOutputJson(
+              cmd=['bash', '-c', 'sleep 2; echo {}'], event_timeout_sec=0.1))
+
+  def testNoTimeoutIfProgressEventsComeFastEnough(self):
+    tuple(
+        run_subprocess.StreamOutputJson(
+            cmd=[
+                'bash', '-c',
+                'sleep .1; echo {}; sleep .1; echo {}; sleep .1; echo {}'
+            ],
+            event_timeout_sec=0.2))
+    # (Assert no exception.)
+
+  def testExitNonZero(self):
+    with self.assertRaises(subprocess.CalledProcessError):
+      tuple(
+          run_subprocess.StreamOutputJson(['bash', '-c', 'exit 1'],
+                                          event_timeout_sec=1))

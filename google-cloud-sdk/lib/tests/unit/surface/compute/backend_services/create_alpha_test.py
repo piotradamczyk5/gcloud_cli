@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO(b/140557440) Break up file to prevent linter deadline.
-
 """Tests for the backend services alpha create command."""
 
 from __future__ import absolute_import
@@ -1164,6 +1162,71 @@ class RegionalTest(test_base.BaseTest):
                  protocol=(messages.BackendService.ProtocolValueValuesEnum.TCP),
                  connectionDraining=messages.ConnectionDraining(
                      drainingTimeoutSec=120),
+                 timeoutSec=30,
+             ),
+             project='my-project',
+             region='alaska',
+         ))
+    ],)
+
+  def testInternalWithAllProtocol(self):
+    messages = self.messages
+
+    self.Run("""compute backend-services create backend-service-1
+                --load-balancing-scheme internal
+                --region alaska --health-checks my-health-check-1
+                --global-health-checks
+                --network default
+                --protocol ALL""")
+
+    self.CheckRequests([
+        (self.compute.regionBackendServices, 'Insert',
+         messages.ComputeRegionBackendServicesInsertRequest(
+             backendService=messages.BackendService(
+                 backends=[],
+                 healthChecks=[
+                     (self.compute_uri + '/projects/'
+                      'my-project/global/healthChecks/my-health-check-1'),
+                 ],
+                 name='backend-service-1',
+                 loadBalancingScheme=(
+                     messages.BackendService.LoadBalancingSchemeValueValuesEnum
+                     .INTERNAL),
+                 network=self.compute_uri +
+                 '/projects/my-project/global/networks/default',
+                 protocol=(messages.BackendService.ProtocolValueValuesEnum.ALL),
+                 timeoutSec=30,
+             ),
+             project='my-project',
+             region='alaska',
+         ))
+    ],)
+
+  def testSubsettingPolicy(self):
+    messages = self.messages
+
+    self.Run("""compute backend-services create backend-service-1
+                --region alaska --health-checks my-health-check-1
+                --global-health-checks
+                --subsetting-policy CONSISTENT_HASH_SUBSETTING""")
+
+    self.CheckRequests([
+        (self.compute.regionBackendServices, 'Insert',
+         messages.ComputeRegionBackendServicesInsertRequest(
+             backendService=messages.BackendService(
+                 backends=[],
+                 healthChecks=[
+                     (self.compute_uri + '/projects/'
+                      'my-project/global/healthChecks/my-health-check-1'),
+                 ],
+                 name='backend-service-1',
+                 loadBalancingScheme=(
+                     messages.BackendService.LoadBalancingSchemeValueValuesEnum
+                     .EXTERNAL),
+                 protocol=(messages.BackendService.ProtocolValueValuesEnum.TCP),
+                 subsetting=messages.Subsetting(
+                     policy=messages.Subsetting.PolicyValueValuesEnum
+                     .CONSISTENT_HASH_SUBSETTING),
                  timeoutSec=30,
              ),
              project='my-project',

@@ -52,6 +52,7 @@ class CloudbuildV1(base_api.BaseApiClient):
     self.projects_github = self.ProjectsGithubService(self)
     self.projects_githubEnterpriseConfigs = self.ProjectsGithubEnterpriseConfigsService(self)
     self.projects_installations = self.ProjectsInstallationsService(self)
+    self.projects_locations_builds = self.ProjectsLocationsBuildsService(self)
     self.projects_locations_operations = self.ProjectsLocationsOperationsService(self)
     self.projects_locations = self.ProjectsLocationsService(self)
     self.projects_triggers = self.ProjectsTriggersService(self)
@@ -69,10 +70,7 @@ class CloudbuildV1(base_api.BaseApiClient):
           }
 
     def List(self, request, global_params=None):
-      r"""For given installation id, list project-installation mappings across all.
-GCB projects visible to the caller.
-
-This API is experimental.
+      r"""For given installation id, list project-installation mappings across all GCB projects visible to the caller. This API is experimental.
 
       Args:
         request: (CloudbuildGithubInstallationsInstallationsListRequest) input message
@@ -108,10 +106,7 @@ This API is experimental.
           }
 
     def List(self, request, global_params=None):
-      r"""For given installation id, list project-installation mappings across all.
-GCB projects visible to the caller.
-
-This API is experimental.
+      r"""For given installation id, list project-installation mappings across all GCB projects visible to the caller. This API is experimental.
 
       Args:
         request: (CloudbuildGithubInstallationsProjectsListRequest) input message
@@ -167,10 +162,7 @@ This API is experimental.
           }
 
     def List(self, request, global_params=None):
-      r"""For given installation id, list project-installation mappings across all.
-GCB projects visible to the caller.
-
-This API is experimental.
+      r"""For given installation id, list project-installation mappings across all GCB projects visible to the caller. This API is experimental.
 
       Args:
         request: (CloudbuildInstallationsInstallationsListRequest) input message
@@ -216,10 +208,7 @@ This API is experimental.
           }
 
     def GetRegistration(self, request, global_params=None):
-      r"""Get a URL that a customer should use to initiate an OAuth flow on an.
-external source provider.
-
-This API is experimental.
+      r"""Get a URL that a customer should use to initiate an OAuth flow on an external source provider. This API is experimental.
 
       Args:
         request: (CloudbuildOauthGetRegistrationRequest) input message
@@ -245,14 +234,7 @@ This API is experimental.
     )
 
     def ProcessOAuthCallback(self, request, global_params=None):
-      r"""ProcessOAuthCallback fulfills the last leg of the OAuth dance with a.
-source provider.
-For GitHub this is as defined by
-https://developer.github.com/apps/building-oauth-apps/authorizing-oauth-apps/#2-users-are-redirected-back-to-your-site-by-github
-Users will not be able to call this in any meaningful way since they don't
-have access to the OAuth code used in the exchange.
-For now, this rpc only supports GitHubEnterprise, but will eventually
-replace GenerateGitHubAccessToken
+      r"""ProcessOAuthCallback fulfills the last leg of the OAuth dance with a source provider. For GitHub this is as defined by https://developer.github.com/apps/building-oauth-apps/authorizing-oauth-apps/#2-users-are-redirected-back-to-your-site-by-github Users will not be able to call this in any meaningful way since they don't have access to the OAuth code used in the exchange. For now, this rpc only supports GitHubEnterprise, but will eventually replace GenerateGitHubAccessToken.
 
       Args:
         request: (CloudbuildOauthProcessOAuthCallbackRequest) input message
@@ -288,16 +270,7 @@ replace GenerateGitHubAccessToken
           }
 
     def Cancel(self, request, global_params=None):
-      r"""Starts asynchronous cancellation on a long-running operation.  The server.
-makes a best effort to cancel the operation, but success is not
-guaranteed.  If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.  Clients can use
-Operations.GetOperation or
-other methods to check whether the cancellation succeeded or whether the
-operation completed despite cancellation. On successful cancellation,
-the operation is not deleted; instead, it becomes an operation with
-an Operation.error value with a google.rpc.Status.code of 1,
-corresponding to `Code.CANCELLED`.
+      r"""Starts asynchronous cancellation on a long-running operation. The server makes a best effort to cancel the operation, but success is not guaranteed. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`. Clients can use Operations.GetOperation or other methods to check whether the cancellation succeeded or whether the operation completed despite cancellation. On successful cancellation, the operation is not deleted; instead, it becomes an operation with an Operation.error value with a google.rpc.Status.code of 1, corresponding to `Code.CANCELLED`.
 
       Args:
         request: (CloudbuildOperationsCancelRequest) input message
@@ -324,9 +297,7 @@ corresponding to `Code.CANCELLED`.
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the latest state of a long-running operation.  Clients can use this.
-method to poll the operation result at intervals as recommended by the API
-service.
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
 
       Args:
         request: (CloudbuildOperationsGetRequest) input message
@@ -363,12 +334,7 @@ service.
           }
 
     def Approve(self, request, global_params=None):
-      r"""Approves or rejects a pending build.
-
-If approved, the returned LRO will be analogous to the LRO returned from
-a CreateBuild call.
-
-If rejected, the returned LRO will be immediately done.
+      r"""Approves or rejects a pending build. If approved, the returned LRO will be analogous to the LRO returned from a CreateBuild call. If rejected, the returned LRO will be immediately done.
 
       Args:
         request: (CloudbuildProjectsBuildsApproveRequest) input message
@@ -421,11 +387,7 @@ If rejected, the returned LRO will be immediately done.
     )
 
     def Create(self, request, global_params=None):
-      r"""Starts a build with the specified configuration.
-
-This method returns a long-running `Operation`, which includes the build
-ID. Pass the build ID to `GetBuild` to determine the build status (such as
-`SUCCESS` or `FAILURE`).
+      r"""Starts a build with the specified configuration. This method returns a long-running `Operation`, which includes the build ID. Pass the build ID to `GetBuild` to determine the build status (such as `SUCCESS` or `FAILURE`).
 
       Args:
         request: (CloudbuildProjectsBuildsCreateRequest) input message
@@ -442,7 +404,7 @@ ID. Pass the build ID to `GetBuild` to determine the build status (such as
         method_id='cloudbuild.projects.builds.create',
         ordered_params=['projectId'],
         path_params=['projectId'],
-        query_params=[],
+        query_params=['parent'],
         relative_path='v1/projects/{projectId}/builds',
         request_field='build',
         request_type_name='CloudbuildProjectsBuildsCreateRequest',
@@ -451,10 +413,7 @@ ID. Pass the build ID to `GetBuild` to determine the build status (such as
     )
 
     def Get(self, request, global_params=None):
-      r"""Returns information about a previously requested build.
-
-The `Build` that is returned includes its status (such as `SUCCESS`,
-`FAILURE`, or `WORKING`), and timing information.
+      r"""Returns information about a previously requested build. The `Build` that is returned includes its status (such as `SUCCESS`, `FAILURE`, or `WORKING`), and timing information.
 
       Args:
         request: (CloudbuildProjectsBuildsGetRequest) input message
@@ -471,7 +430,7 @@ The `Build` that is returned includes its status (such as `SUCCESS`,
         method_id='cloudbuild.projects.builds.get',
         ordered_params=['projectId', 'id'],
         path_params=['id', 'projectId'],
-        query_params=[],
+        query_params=['name'],
         relative_path='v1/projects/{projectId}/builds/{id}',
         request_field='',
         request_type_name='CloudbuildProjectsBuildsGetRequest',
@@ -480,10 +439,7 @@ The `Build` that is returned includes its status (such as `SUCCESS`,
     )
 
     def List(self, request, global_params=None):
-      r"""Lists previously requested builds.
-
-Previously requested builds may still be in-progress, or may have finished
-successfully or unsuccessfully.
+      r"""Lists previously requested builds. Previously requested builds may still be in-progress, or may have finished successfully or unsuccessfully.
 
       Args:
         request: (CloudbuildProjectsBuildsListRequest) input message
@@ -500,7 +456,7 @@ successfully or unsuccessfully.
         method_id='cloudbuild.projects.builds.list',
         ordered_params=['projectId'],
         path_params=['projectId'],
-        query_params=['filter', 'pageSize', 'pageToken'],
+        query_params=['filter', 'pageSize', 'pageToken', 'parent'],
         relative_path='v1/projects/{projectId}/builds',
         request_field='',
         request_type_name='CloudbuildProjectsBuildsListRequest',
@@ -509,36 +465,10 @@ successfully or unsuccessfully.
     )
 
     def Retry(self, request, global_params=None):
-      r"""Creates a new build based on the specified build.
-
-This method creates a new build using the original build request, which may
-or may not result in an identical build.
-
-For triggered builds:
-
-* Triggered builds resolve to a precise revision; therefore a retry of a
-triggered build will result in a build that uses the same revision.
-
-For non-triggered builds that specify `RepoSource`:
-
-* If the original build built from the tip of a branch, the retried build
-will build from the tip of that branch, which may not be the same revision
-as the original build.
-* If the original build specified a commit sha or revision ID, the retried
-build will use the identical source.
-
-For builds that specify `StorageSource`:
-
-* If the original build pulled source from Google Cloud Storage without
-specifying the generation of the object, the new build will use the current
-object, which may be different from the original build source.
-* If the original build pulled source from Cloud Storage and specified the
-generation of the object, the new build will attempt to use the same
-object, which may or may not be available depending on the bucket's
-lifecycle management settings.
+      r"""Creates a new build based on the specified build. This method creates a new build using the original build request, which may or may not result in an identical build. For triggered builds: * Triggered builds resolve to a precise revision; therefore a retry of a triggered build will result in a build that uses the same revision. For non-triggered builds that specify `RepoSource`: * If the original build built from the tip of a branch, the retried build will build from the tip of that branch, which may not be the same revision as the original build. * If the original build specified a commit sha or revision ID, the retried build will use the identical source. For builds that specify `StorageSource`: * If the original build pulled source from Google Cloud Storage without specifying the generation of the object, the new build will use the current object, which may be different from the original build source. * If the original build pulled source from Cloud Storage and specified the generation of the object, the new build will attempt to use the same object, which may or may not be available depending on the bucket's lifecycle management settings.
 
       Args:
-        request: (CloudbuildProjectsBuildsRetryRequest) input message
+        request: (RetryBuildRequest) input message
         global_params: (StandardQueryParameters, default: None) global arguments
       Returns:
         (Operation) The response message.
@@ -554,8 +484,8 @@ lifecycle management settings.
         path_params=['id', 'projectId'],
         query_params=[],
         relative_path='v1/projects/{projectId}/builds/{id}:retry',
-        request_field='retryBuildRequest',
-        request_type_name='CloudbuildProjectsBuildsRetryRequest',
+        request_field='<request>',
+        request_type_name='RetryBuildRequest',
         response_type_name='Operation',
         supports_download=False,
     )
@@ -571,9 +501,7 @@ lifecycle management settings.
           }
 
     def Create(self, request, global_params=None):
-      r"""Create an association between a GCP project and a GitHub installation.
-
-This API is experimental.
+      r"""Create an association between a GCP project and a GitHub installation. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubInstallationsCreateRequest) input message
@@ -599,9 +527,7 @@ This API is experimental.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Delete an association between a GCP project and a GitHub installation.
-
-This API is experimental.
+      r"""Delete an association between a GCP project and a GitHub installation. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubInstallationsDeleteRequest) input message
@@ -627,9 +553,7 @@ This API is experimental.
     )
 
     def List(self, request, global_params=None):
-      r"""List all Installations for a given project id.
-
-This API is experimental.
+      r"""List all Installations for a given project id. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubInstallationsListRequest) input message
@@ -655,9 +579,7 @@ This API is experimental.
     )
 
     def Patch(self, request, global_params=None):
-      r"""Update settings for a GCP project to GitHub installation mapping.
-
-This API is experimental.
+      r"""Update settings for a GCP project to GitHub installation mapping. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubInstallationsPatchRequest) input message
@@ -703,9 +625,7 @@ This API is experimental.
           }
 
     def Create(self, request, global_params=None):
-      r"""Create an association between a GCP project and a GitHub Enterprise server.
-
-This API is experimental.
+      r"""Create an association between a GCP project and a GitHub Enterprise server. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubEnterpriseConfigsCreateRequest) input message
@@ -732,9 +652,7 @@ This API is experimental.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Delete an association between a GCP project and a GitHub Enterprise server.
-
-This API is experimental.
+      r"""Delete an association between a GCP project and a GitHub Enterprise server. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubEnterpriseConfigsDeleteRequest) input message
@@ -761,9 +679,7 @@ This API is experimental.
     )
 
     def Get(self, request, global_params=None):
-      r"""Retrieve a GitHubEnterpriseConfig.
-
-This API is experimental.
+      r"""Retrieve a GitHubEnterpriseConfig. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubEnterpriseConfigsGetRequest) input message
@@ -789,10 +705,35 @@ This API is experimental.
         supports_download=False,
     )
 
-    def List(self, request, global_params=None):
-      r"""List all GitHubEnterpriseConfigs for a given project.
+    def GetApp(self, request, global_params=None):
+      r"""Get the GitHub App associated with a GitHub Enterprise Config. Uses the GitHub API: https://developer.github.com/enterprise/2.21/v3/apps/#get-the-authenticated-app This API is experimental.
 
-This API is experimental.
+      Args:
+        request: (CloudbuildProjectsGithubEnterpriseConfigsGetAppRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (GitHubEnterpriseApp) The response message.
+      """
+      config = self.GetMethodConfig('GetApp')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    GetApp.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/githubEnterpriseConfigs/{githubEnterpriseConfigsId}/app',
+        http_method='GET',
+        method_id='cloudbuild.projects.githubEnterpriseConfigs.getApp',
+        ordered_params=['enterpriseConfigResource'],
+        path_params=['enterpriseConfigResource'],
+        query_params=[],
+        relative_path='v1/{+enterpriseConfigResource}/app',
+        request_field='',
+        request_type_name='CloudbuildProjectsGithubEnterpriseConfigsGetAppRequest',
+        response_type_name='GitHubEnterpriseApp',
+        supports_download=False,
+    )
+
+    def List(self, request, global_params=None):
+      r"""List all GitHubEnterpriseConfigs for a given project. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubEnterpriseConfigsListRequest) input message
@@ -819,9 +760,7 @@ This API is experimental.
     )
 
     def Patch(self, request, global_params=None):
-      r"""Update an association between a GCP project and a GitHub Enterprise server.
-
-This API is experimental.
+      r"""Update an association between a GCP project and a GitHub Enterprise server. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsGithubEnterpriseConfigsPatchRequest) input message
@@ -858,9 +797,7 @@ This API is experimental.
           }
 
     def Create(self, request, global_params=None):
-      r"""Create an association between a GCP project and a GitHub installation.
-
-This API is experimental.
+      r"""Create an association between a GCP project and a GitHub installation. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsInstallationsCreateRequest) input message
@@ -886,9 +823,7 @@ This API is experimental.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Delete an association between a GCP project and a GitHub installation.
-
-This API is experimental.
+      r"""Delete an association between a GCP project and a GitHub installation. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsInstallationsDeleteRequest) input message
@@ -914,9 +849,7 @@ This API is experimental.
     )
 
     def List(self, request, global_params=None):
-      r"""List all Installations for a given project id.
-
-This API is experimental.
+      r"""List all Installations for a given project id. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsInstallationsListRequest) input message
@@ -942,9 +875,7 @@ This API is experimental.
     )
 
     def Patch(self, request, global_params=None):
-      r"""Update settings for a GCP project to GitHub installation mapping.
-
-This API is experimental.
+      r"""Update settings for a GCP project to GitHub installation mapping. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsInstallationsPatchRequest) input message
@@ -969,6 +900,151 @@ This API is experimental.
         supports_download=False,
     )
 
+  class ProjectsLocationsBuildsService(base_api.BaseApiService):
+    """Service class for the projects_locations_builds resource."""
+
+    _NAME = 'projects_locations_builds'
+
+    def __init__(self, client):
+      super(CloudbuildV1.ProjectsLocationsBuildsService, self).__init__(client)
+      self._upload_configs = {
+          }
+
+    def Cancel(self, request, global_params=None):
+      r"""Cancels a build in progress.
+
+      Args:
+        request: (CancelBuildRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Build) The response message.
+      """
+      config = self.GetMethodConfig('Cancel')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    Cancel.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/locations/{locationsId}/builds/{buildsId}:cancel',
+        http_method='POST',
+        method_id='cloudbuild.projects.locations.builds.cancel',
+        ordered_params=['name'],
+        path_params=['name'],
+        query_params=[],
+        relative_path='v1/{+name}:cancel',
+        request_field='<request>',
+        request_type_name='CancelBuildRequest',
+        response_type_name='Build',
+        supports_download=False,
+    )
+
+    def Create(self, request, global_params=None):
+      r"""Starts a build with the specified configuration. This method returns a long-running `Operation`, which includes the build ID. Pass the build ID to `GetBuild` to determine the build status (such as `SUCCESS` or `FAILURE`).
+
+      Args:
+        request: (CloudbuildProjectsLocationsBuildsCreateRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Operation) The response message.
+      """
+      config = self.GetMethodConfig('Create')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    Create.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/locations/{locationsId}/builds',
+        http_method='POST',
+        method_id='cloudbuild.projects.locations.builds.create',
+        ordered_params=['parent'],
+        path_params=['parent'],
+        query_params=[],
+        relative_path='v1/{+parent}/builds',
+        request_field='createBuildRequest',
+        request_type_name='CloudbuildProjectsLocationsBuildsCreateRequest',
+        response_type_name='Operation',
+        supports_download=False,
+    )
+
+    def Get(self, request, global_params=None):
+      r"""Returns information about a previously requested build. The `Build` that is returned includes its status (such as `SUCCESS`, `FAILURE`, or `WORKING`), and timing information.
+
+      Args:
+        request: (CloudbuildProjectsLocationsBuildsGetRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Build) The response message.
+      """
+      config = self.GetMethodConfig('Get')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    Get.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/locations/{locationsId}/builds/{buildsId}',
+        http_method='GET',
+        method_id='cloudbuild.projects.locations.builds.get',
+        ordered_params=['name'],
+        path_params=['name'],
+        query_params=['id', 'projectId'],
+        relative_path='v1/{+name}',
+        request_field='',
+        request_type_name='CloudbuildProjectsLocationsBuildsGetRequest',
+        response_type_name='Build',
+        supports_download=False,
+    )
+
+    def List(self, request, global_params=None):
+      r"""Lists previously requested builds. Previously requested builds may still be in-progress, or may have finished successfully or unsuccessfully.
+
+      Args:
+        request: (CloudbuildProjectsLocationsBuildsListRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (ListBuildsResponse) The response message.
+      """
+      config = self.GetMethodConfig('List')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    List.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/locations/{locationsId}/builds',
+        http_method='GET',
+        method_id='cloudbuild.projects.locations.builds.list',
+        ordered_params=['parent'],
+        path_params=['parent'],
+        query_params=['filter', 'pageSize', 'pageToken', 'projectId'],
+        relative_path='v1/{+parent}/builds',
+        request_field='',
+        request_type_name='CloudbuildProjectsLocationsBuildsListRequest',
+        response_type_name='ListBuildsResponse',
+        supports_download=False,
+    )
+
+    def Retry(self, request, global_params=None):
+      r"""Creates a new build based on the specified build. This method creates a new build using the original build request, which may or may not result in an identical build. For triggered builds: * Triggered builds resolve to a precise revision; therefore a retry of a triggered build will result in a build that uses the same revision. For non-triggered builds that specify `RepoSource`: * If the original build built from the tip of a branch, the retried build will build from the tip of that branch, which may not be the same revision as the original build. * If the original build specified a commit sha or revision ID, the retried build will use the identical source. For builds that specify `StorageSource`: * If the original build pulled source from Google Cloud Storage without specifying the generation of the object, the new build will use the current object, which may be different from the original build source. * If the original build pulled source from Cloud Storage and specified the generation of the object, the new build will attempt to use the same object, which may or may not be available depending on the bucket's lifecycle management settings.
+
+      Args:
+        request: (RetryBuildRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (Operation) The response message.
+      """
+      config = self.GetMethodConfig('Retry')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    Retry.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1/projects/{projectsId}/locations/{locationsId}/builds/{buildsId}:retry',
+        http_method='POST',
+        method_id='cloudbuild.projects.locations.builds.retry',
+        ordered_params=['name'],
+        path_params=['name'],
+        query_params=[],
+        relative_path='v1/{+name}:retry',
+        request_field='<request>',
+        request_type_name='RetryBuildRequest',
+        response_type_name='Operation',
+        supports_download=False,
+    )
+
   class ProjectsLocationsOperationsService(base_api.BaseApiService):
     """Service class for the projects_locations_operations resource."""
 
@@ -980,16 +1056,7 @@ This API is experimental.
           }
 
     def Cancel(self, request, global_params=None):
-      r"""Starts asynchronous cancellation on a long-running operation.  The server.
-makes a best effort to cancel the operation, but success is not
-guaranteed.  If the server doesn't support this method, it returns
-`google.rpc.Code.UNIMPLEMENTED`.  Clients can use
-Operations.GetOperation or
-other methods to check whether the cancellation succeeded or whether the
-operation completed despite cancellation. On successful cancellation,
-the operation is not deleted; instead, it becomes an operation with
-an Operation.error value with a google.rpc.Status.code of 1,
-corresponding to `Code.CANCELLED`.
+      r"""Starts asynchronous cancellation on a long-running operation. The server makes a best effort to cancel the operation, but success is not guaranteed. If the server doesn't support this method, it returns `google.rpc.Code.UNIMPLEMENTED`. Clients can use Operations.GetOperation or other methods to check whether the cancellation succeeded or whether the operation completed despite cancellation. On successful cancellation, the operation is not deleted; instead, it becomes an operation with an Operation.error value with a google.rpc.Status.code of 1, corresponding to `Code.CANCELLED`.
 
       Args:
         request: (CloudbuildProjectsLocationsOperationsCancelRequest) input message
@@ -1016,9 +1083,7 @@ corresponding to `Code.CANCELLED`.
     )
 
     def Get(self, request, global_params=None):
-      r"""Gets the latest state of a long-running operation.  Clients can use this.
-method to poll the operation result at intervals as recommended by the API
-service.
+      r"""Gets the latest state of a long-running operation. Clients can use this method to poll the operation result at intervals as recommended by the API service.
 
       Args:
         request: (CloudbuildProjectsLocationsOperationsGetRequest) input message
@@ -1065,9 +1130,7 @@ service.
           }
 
     def Create(self, request, global_params=None):
-      r"""Creates a new `BuildTrigger`.
-
-This API is experimental.
+      r"""Creates a new `BuildTrigger`. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsTriggersCreateRequest) input message
@@ -1093,9 +1156,7 @@ This API is experimental.
     )
 
     def Delete(self, request, global_params=None):
-      r"""Deletes a `BuildTrigger` by its project ID and trigger ID.
-
-This API is experimental.
+      r"""Deletes a `BuildTrigger` by its project ID and trigger ID. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsTriggersDeleteRequest) input message
@@ -1121,9 +1182,7 @@ This API is experimental.
     )
 
     def Get(self, request, global_params=None):
-      r"""Returns information about a `BuildTrigger`.
-
-This API is experimental.
+      r"""Returns information about a `BuildTrigger`. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsTriggersGetRequest) input message
@@ -1149,9 +1208,7 @@ This API is experimental.
     )
 
     def List(self, request, global_params=None):
-      r"""Lists existing `BuildTrigger`s.
-
-This API is experimental.
+      r"""Lists existing `BuildTrigger`s. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsTriggersListRequest) input message
@@ -1177,9 +1234,7 @@ This API is experimental.
     )
 
     def Patch(self, request, global_params=None):
-      r"""Updates a `BuildTrigger` by its project ID and trigger ID.
-
-This API is experimental.
+      r"""Updates a `BuildTrigger` by its project ID and trigger ID. This API is experimental.
 
       Args:
         request: (CloudbuildProjectsTriggersPatchRequest) input message

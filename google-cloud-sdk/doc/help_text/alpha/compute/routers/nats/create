@@ -1,6 +1,6 @@
 NAME
-    gcloud alpha compute routers nats create - add a NAT to a Google Compute
-        Engine router
+    gcloud alpha compute routers nats create - add a NAT to a Compute Engine
+        router
 
 SYNOPSIS
     gcloud alpha compute routers nats create NAME --router=ROUTER
@@ -8,7 +8,8 @@ SYNOPSIS
           | --nat-external-ip-pool=IP_ADDRESS,[IP_ADDRESS,...])
         (--nat-all-subnet-ip-ranges
           | --nat-custom-subnet-ip-ranges=SUBNETWORK[:RANGE_NAME],[...]
-          | --nat-primary-subnet-ip-ranges) [--async] [--enable-logging]
+          | --nat-primary-subnet-ip-ranges) [--async]
+        [--enable-endpoint-independent-mapping] [--enable-logging]
         [--icmp-idle-timeout=ICMP_IDLE_TIMEOUT] [--log-filter=LOG_FILTER]
         [--min-ports-per-vm=MIN_PORTS_PER_VM] [--region=REGION]
         [--tcp-established-idle-timeout=TCP_ESTABLISHED_IDLE_TIMEOUT]
@@ -17,7 +18,7 @@ SYNOPSIS
 
 DESCRIPTION
     (ALPHA) gcloud alpha compute routers nats create is used to create a NAT on
-    a Google Compute Engine router.
+    a Compute Engine router.
 
 POSITIONAL ARGUMENTS
      NAME
@@ -56,6 +57,16 @@ OPTIONAL FLAGS
      --async
         Return immediately, without waiting for the operation in progress to
         complete.
+
+     --enable-endpoint-independent-mapping
+        Enable endpoint-independent mapping for the NAT (as defined in RFC
+        5128).
+
+        If not specified, NATs have endpoint-independent mapping enabled by
+        default.
+
+        Use --no-enable-endpoint-independent-mapping to disable
+        endpoint-independent mapping.
 
      --enable-logging
         Enable logging for the NAT. Logs will be exported to Stackdriver. NAT
@@ -155,7 +166,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute routers nats create
         $ gcloud beta compute routers nats create

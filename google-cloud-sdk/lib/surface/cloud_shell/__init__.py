@@ -23,8 +23,8 @@ import textwrap
 from googlecloudsdk.calliope import base
 
 
-@base.ReleaseTracks(base.ReleaseTrack.ALPHA)
-class Shell(base.Group):
+@base.ReleaseTracks(base.ReleaseTrack.ALPHA, base.ReleaseTrack.BETA)
+class CloudShell(base.Group):
   """Manage Google Cloud Shell."""
 
   category = base.MANAGEMENT_TOOLS_CATEGORY
@@ -32,8 +32,7 @@ class Shell(base.Group):
   detailed_help = {
       'DESCRIPTION':
           """\
-          The gcloud shell command group lets you interact with and connect to
-          your Google Cloud Shell environment.
+          Interact with and connect to your Cloud Shell environment.
 
           More information on Cloud Shell can be found at
           https://cloud.google.com/shell/docs/.

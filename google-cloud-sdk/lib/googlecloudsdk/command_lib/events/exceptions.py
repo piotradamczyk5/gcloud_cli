@@ -55,8 +55,24 @@ class MultipleEventTypesFound(exceptions.Error):
   """When multiple event types match but only 1 was expected."""
 
 
+class BrokerNotFound(exceptions.Error):
+  """When a specified broker is not found."""
+
+
 class TriggerNotFound(exceptions.Error):
   """When a specified trigger is not found."""
+
+
+class SecretNotFound(exceptions.Error):
+  """When a specified secret is not found."""
+
+
+class BrokerAlreadyExists(exceptions.Error):
+  """When on creation broker already exists."""
+
+
+class BrokerCreationError(exceptions.Error):
+  """When broker creation fails."""
 
 
 class TriggerCreationError(exceptions.Error):
@@ -73,3 +89,7 @@ class SourceCreationError(exceptions.Error):
 
 class ServiceAccountMissingRequiredPermissions(exceptions.Error):
   """When a service account does not have the necessary permissions."""
+
+
+class EventingInstallError(exceptions.Error):
+  """When eventing fails to be installed."""

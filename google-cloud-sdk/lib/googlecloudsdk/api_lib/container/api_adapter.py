@@ -78,11 +78,6 @@ DEFAULTS_WITHOUT_AUTOPROVISIONING_MSG = """\
 Must enable node autoprovisioning to specify defaults for node autoprovisioning.
 """
 
-MIN_CPU_PLATFORM_NOT_IMPLEMENTED_IN_GA = """\
-Min CPU platform not implemented in GA. Please remove 'minCpuPlatform' from
-auto-provisioning config file
-"""
-
 BOTH_AUTOPROVISIONING_UPGRADE_SETTINGS_ERROR_MSG = """\
 Must specify both 'maxSurgeUpgrade' and 'maxUnavailableUpgrade' in \
 'upgradeSettings' in --autoprovisioning-config-file to set upgrade settings.
@@ -91,6 +86,12 @@ Must specify both 'maxSurgeUpgrade' and 'maxUnavailableUpgrade' in \
 BOTH_AUTOPROVISIONING_MANAGEMENT_SETTINGS_ERROR_MSG = """\
 Must specify both 'autoUpgrade' and 'autoRepair' in 'management' in \
 --autoprovisioning-config-file to set management settings.
+"""
+
+BOTH_AUTOPROVISIONING_SHIELDED_INSTANCE_SETTINGS_ERROR_MSG = """\
+Must specify both 'enableSecureBoot' and 'enableIntegrityMonitoring' \
+in 'shieldedInstanceConfig' in --autoprovisioning-config-file to set \
+management settings.
 """
 
 LIMITS_WITHOUT_AUTOPROVISIONING_FLAG_MSG = """\
@@ -227,8 +228,6 @@ Cannot specify --tpu-ipv4-cidr with --enable-tpu-service-networking."""
 
 MAX_NODES_PER_POOL = 1000
 
-MAX_CONCURRENT_NODE_COUNT = 20
-
 MAX_AUTHORIZED_NETWORKS_CIDRS_PRIVATE = 100
 MAX_AUTHORIZED_NETWORKS_CIDRS_PUBLIC = 50
 
@@ -254,18 +253,24 @@ ENABLE_AUTO_UPGRADE = 'autoUpgrade'
 ENABLE_AUTO_REPAIR = 'autoRepair'
 SCOPES = 'scopes'
 AUTOPROVISIONING_LOCATIONS = 'autoprovisioningLocations'
+BOOT_DISK_KMS_KEY = 'bootDiskKmsKey'
+DISK_SIZE_GB = 'diskSizeGb'
+DISK_TYPE = 'diskType'
+SHIELDED_INSTANCE_CONFIG = 'shieldedInstanceConfig'
+ENABLE_SECURE_BOOT = 'enableSecureBoot'
+ENABLE_INTEGRITY_MONITORING = 'enableIntegrityMonitoring'
 DEFAULT_ADDONS = [INGRESS, HPA]
 ADDONS_OPTIONS = DEFAULT_ADDONS + [
     DASHBOARD,
     NETWORK_POLICY,
     CLOUDRUN,
     NODELOCALDNS,
+    CONFIGCONNECTOR,
 ]
 BETA_ADDONS_OPTIONS = ADDONS_OPTIONS + [
     ISTIO,
     APPLICATIONMANAGER,
     GCEPDCSIDRIVER,
-    CONFIGCONNECTOR,
 ]
 ALPHA_ADDONS_OPTIONS = BETA_ADDONS_OPTIONS + [CLOUDBUILD]
 
@@ -481,6 +486,7 @@ class CreateClusterOptions(object):
       enable_resource_consumption_metering=None,
       workload_pool=None,
       identity_provider=None,
+      enable_gke_oidc=None,
       enable_shielded_nodes=None,
       linux_sysctls=None,
       disable_default_snat=None,
@@ -523,6 +529,9 @@ class CreateClusterOptions(object):
       cluster_dns=None,
       cluster_dns_scope=None,
       cluster_dns_domain=None,
+      kubernetes_objects_changes_target=None,
+      kubernetes_objects_snapshots_target=None,
+      enable_gcfs=None,
   ):
     self.node_machine_type = node_machine_type
     self.node_source_image = node_source_image
@@ -609,6 +618,7 @@ class CreateClusterOptions(object):
     self.enable_resource_consumption_metering = enable_resource_consumption_metering
     self.workload_pool = workload_pool
     self.identity_provider = identity_provider
+    self.enable_gke_oidc = enable_gke_oidc
     self.enable_shielded_nodes = enable_shielded_nodes
     self.linux_sysctls = linux_sysctls
     self.disable_default_snat = disable_default_snat
@@ -651,6 +661,9 @@ class CreateClusterOptions(object):
     self.cluster_dns = cluster_dns
     self.cluster_dns_scope = cluster_dns_scope
     self.cluster_dns_domain = cluster_dns_domain
+    self.kubernetes_objects_changes_target = kubernetes_objects_changes_target
+    self.kubernetes_objects_snapshots_target = kubernetes_objects_snapshots_target
+    self.enable_gcfs = enable_gcfs
 
 
 class UpdateClusterOptions(object):
@@ -682,7 +695,6 @@ class UpdateClusterOptions(object):
                master_authorized_networks=None,
                enable_pod_security_policy=None,
                enable_binauthz=None,
-               concurrent_node_count=None,
                enable_vertical_pod_autoscaling=None,
                enable_intra_node_visibility=None,
                security_profile=None,
@@ -692,6 +704,7 @@ class UpdateClusterOptions(object):
                workload_pool=None,
                identity_provider=None,
                disable_workload_identity=None,
+               enable_gke_oidc=None,
                enable_shielded_nodes=None,
                disable_default_snat=None,
                resource_usage_bigquery_dataset=None,
@@ -723,7 +736,9 @@ class UpdateClusterOptions(object):
                enable_tpu_service_networking=None,
                enable_gvnic=None,
                notification_config=None,
-               private_ipv6_google_access_type=None):
+               private_ipv6_google_access_type=None,
+               kubernetes_objects_changes_target=None,
+               kubernetes_objects_snapshots_target=None):
     self.version = version
     self.update_master = bool(update_master)
     self.update_nodes = bool(update_nodes)
@@ -749,7 +764,6 @@ class UpdateClusterOptions(object):
     self.master_authorized_networks = master_authorized_networks
     self.enable_pod_security_policy = enable_pod_security_policy
     self.enable_binauthz = enable_binauthz
-    self.concurrent_node_count = concurrent_node_count
     self.enable_vertical_pod_autoscaling = enable_vertical_pod_autoscaling
     self.security_profile = security_profile
     self.security_profile_runtime_rules = security_profile_runtime_rules
@@ -759,6 +773,7 @@ class UpdateClusterOptions(object):
     self.workload_pool = workload_pool
     self.identity_provider = identity_provider
     self.disable_workload_identity = disable_workload_identity
+    self.enable_gke_oidc = enable_gke_oidc
     self.enable_shielded_nodes = enable_shielded_nodes
     self.disable_default_snat = disable_default_snat
     self.resource_usage_bigquery_dataset = resource_usage_bigquery_dataset
@@ -792,6 +807,8 @@ class UpdateClusterOptions(object):
     self.enable_gvnic = enable_gvnic
     self.notification_config = notification_config
     self.private_ipv6_google_access_type = private_ipv6_google_access_type
+    self.kubernetes_objects_changes_target = kubernetes_objects_changes_target
+    self.kubernetes_objects_snapshots_target = kubernetes_objects_snapshots_target
 
 
 class SetMasterAuthOptions(object):
@@ -856,7 +873,9 @@ class CreateNodePoolOptions(object):
                shielded_integrity_monitoring=None,
                system_config_from_file=None,
                reservation_affinity=None,
-               reservation=None):
+               reservation=None,
+               node_group=None,
+               enable_gcfs=None):
     self.machine_type = machine_type
     self.disk_size_gb = disk_size_gb
     self.scopes = scopes
@@ -897,6 +916,8 @@ class CreateNodePoolOptions(object):
     self.system_config_from_file = system_config_from_file
     self.reservation_affinity = reservation_affinity
     self.reservation = reservation
+    self.node_group = node_group
+    self.enable_gcfs = enable_gcfs
 
 
 class UpdateNodePoolOptions(object):
@@ -1017,10 +1038,11 @@ class APIAdapter(object):
       raise exceptions.HttpException(error, util.HTTP_ERROR_FORMAT)
 
   def CheckClusterOtherZones(self, cluster_ref, api_error):
-    """Searches for similar cluster in other zones and reports via error.
+    """Searches for similar clusters in other locations and reports via error.
 
     Args:
-      cluster_ref: cluster Resource to look for others with the same id.
+      cluster_ref: cluster Resource to look for others with the same ID in
+        different locations.
       api_error: current error from original request.
 
     Raises:
@@ -1042,6 +1064,12 @@ class APIAdapter(object):
       raise exceptions.HttpException(error, util.HTTP_ERROR_FORMAT)
     for cluster in clusters:
       if cluster.name == cluster_ref.clusterId:
+        # Fall back to generic not found error if we *did* have the zone right.
+        # Don't allow the case of a same-name cluster in a different zone to
+        # be hinted (confusing!).
+        if cluster.zone == cluster_ref.zone:
+          raise api_error
+
         # User likely got zone wrong.
         raise util.Error(
             WRONG_ZONE_ERROR_MSG.format(
@@ -1329,7 +1357,6 @@ class APIAdapter(object):
     if options.enable_confidential_nodes:
       cluster.confidentialNodes = self.messages.ConfidentialNodes(
           enabled=options.enable_confidential_nodes)
-
     return cluster
 
   def ParseNodeConfig(self, options):
@@ -1370,6 +1397,10 @@ class APIAdapter(object):
 
     if options.min_cpu_platform is not None:
       node_config.minCpuPlatform = options.min_cpu_platform
+
+    if options.enable_gcfs:
+      gcfs_config = self.messages.GcfsConfig(enabled=options.enable_gcfs)
+      node_config.gcfsConfig = gcfs_config
 
     self._AddWorkloadMetadataToNodeConfig(node_config, options, self.messages)
     _AddLinuxNodeConfigToNodeConfig(node_config, options, self.messages)
@@ -1507,6 +1538,10 @@ class APIAdapter(object):
         policy.tpuIpv4CidrBlock = options.tpu_ipv4_cidr
       cluster.clusterIpv4Cidr = None
       cluster.ipAllocationPolicy = policy
+    elif options.enable_ip_alias is not None:
+      cluster.ipAllocationPolicy = self.messages.IPAllocationPolicy(
+          useRoutes=True)
+
     return cluster
 
   def ParseAllowRouteOverlapOptions(self, options, cluster):
@@ -1672,12 +1707,24 @@ class APIAdapter(object):
           raise util.Error(CLOUDRUN_STACKDRIVER_KUBERNETES_DISABLED_ERROR_MSG)
         if INGRESS not in options.addons:
           raise util.Error(CLOUDRUN_INGRESS_KUBERNETES_DISABLED_ERROR_MSG)
+        load_balancer_type = _GetCloudRunLoadBalancerType(
+            options, self.messages)
         cluster.addonsConfig.cloudRunConfig = self.messages.CloudRunConfig(
-            disabled=False)
+            disabled=False, loadBalancerType=load_balancer_type)
 
     if options.workload_pool:
       cluster.workloadIdentityConfig = self.messages.WorkloadIdentityConfig(
           workloadPool=options.workload_pool)
+
+    if options.enable_master_global_access is not None:
+      if not options.enable_private_nodes:
+        raise util.Error(
+            PREREQUISITE_OPTION_ERROR_MSG.format(
+                prerequisite='enable-private-nodes',
+                opt='enable-master-global-access'))
+      cluster.privateClusterConfig.masterGlobalAccessConfig = \
+          self.messages.PrivateClusterMasterGlobalAccessConfig(
+              enabled=options.enable_master_global_access)
 
     req = self.messages.CreateClusterRequest(
         parent=ProjectLocation(cluster_ref.projectId, cluster_ref.zone),
@@ -1722,8 +1769,17 @@ class APIAdapter(object):
         enable_autorepair = management_settings.get(ENABLE_AUTO_REPAIR)
       autoprovisioning_locations = \
           config.get(AUTOPROVISIONING_LOCATIONS)
-      if config.get(MIN_CPU_PLATFORM):
-        raise util.Error(MIN_CPU_PLATFORM_NOT_IMPLEMENTED_IN_GA)
+      min_cpu_platform = config.get(MIN_CPU_PLATFORM)
+      boot_disk_kms_key = config.get(BOOT_DISK_KMS_KEY)
+      disk_type = config.get(DISK_TYPE)
+      disk_size_gb = config.get(DISK_SIZE_GB)
+      shielded_instance_config = config.get(SHIELDED_INSTANCE_CONFIG)
+      enable_secure_boot = None
+      enable_integrity_monitoring = None
+      if shielded_instance_config:
+        enable_secure_boot = shielded_instance_config.get(ENABLE_SECURE_BOOT)
+        enable_integrity_monitoring = \
+            shielded_instance_config.get(ENABLE_INTEGRITY_MONITORING)
     else:
       resource_limits = self.ResourceLimitsFromFlags(options)
       service_account = options.autoprovisioning_service_account
@@ -1733,6 +1789,12 @@ class APIAdapter(object):
       enable_autoupgrade = options.enable_autoprovisioning_autoupgrade
       enable_autorepair = options.enable_autoprovisioning_autorepair
       autoprovisioning_locations = options.autoprovisioning_locations
+      min_cpu_platform = options.autoprovisioning_min_cpu_platform
+      boot_disk_kms_key = None
+      disk_type = None
+      disk_size_gb = None
+      enable_secure_boot = None
+      enable_integrity_monitoring = None
 
     if options.enable_autoprovisioning is not None:
       autoscaling.enableNodeAutoprovisioning = options.enable_autoprovisioning
@@ -1751,11 +1813,24 @@ class APIAdapter(object):
         management = (
             self.messages.NodeManagement(
                 autoUpgrade=enable_autoupgrade, autoRepair=enable_autorepair))
+      shielded_instance_config = None
+      if (enable_secure_boot is not None or
+          enable_integrity_monitoring is not None):
+        shielded_instance_config = self.messages.ShieldedInstanceConfig()
+        shielded_instance_config.enableSecureBoot = enable_secure_boot
+        shielded_instance_config.enableIntegrityMonitoring = \
+            enable_integrity_monitoring
       autoscaling.autoprovisioningNodePoolDefaults = self.messages \
         .AutoprovisioningNodePoolDefaults(serviceAccount=service_account,
                                           oauthScopes=scopes,
                                           upgradeSettings=upgrade_settings,
-                                          management=management)
+                                          management=management,
+                                          minCpuPlatform=min_cpu_platform,
+                                          bootDiskKmsKey=boot_disk_kms_key,
+                                          diskSizeGb=disk_size_gb,
+                                          diskType=disk_type,
+                                          shieldedInstanceConfig=
+                                          shielded_instance_config)
       if autoprovisioning_locations:
         autoscaling.autoprovisioningLocations = \
             sorted(autoprovisioning_locations)
@@ -1794,6 +1869,12 @@ class APIAdapter(object):
             if auto_repair_found != auto_upgrade_found:
               raise util.Error(
                   BOTH_AUTOPROVISIONING_MANAGEMENT_SETTINGS_ERROR_MSG)
+          if defaults.shieldedInstanceConfig:
+            secure_boot_found = defaults.shieldedInstanceConfig.enableSecureBoot is not None
+            integrity_monitoring_found = defaults.shieldedInstanceConfig.enableIntegrityMonitoring is not None
+            if secure_boot_found != integrity_monitoring_found:
+              raise util.Error(
+                  BOTH_AUTOPROVISIONING_SHIELDED_INSTANCE_SETTINGS_ERROR_MSG)
     elif autoscaling.resourceLimits:
       raise util.Error(LIMITS_WITHOUT_AUTOPROVISIONING_MSG)
     elif autoscaling.autoprovisioningNodePoolDefaults and \
@@ -2043,10 +2124,12 @@ class APIAdapter(object):
 
     if options.disable_addons is not None:
       if options.disable_addons.get(CLOUDRUN) is not None:
+        load_balancer_type = _GetCloudRunLoadBalancerType(
+            options, self.messages)
         update.desiredAddonsConfig.cloudRunConfig = (
             self.messages.CloudRunConfig(
-                disabled=options.disable_addons.get(CLOUDRUN)))
-
+                disabled=options.disable_addons.get(CLOUDRUN),
+                loadBalancerType=load_balancer_type))
 
     op = self.client.projects_locations_clusters.Update(
         self.messages.UpdateClusterRequest(
@@ -2391,6 +2474,13 @@ class APIAdapter(object):
 
     if options.min_cpu_platform is not None:
       node_config.minCpuPlatform = options.min_cpu_platform
+
+    if options.node_group is not None:
+      node_config.nodeGroup = options.node_group
+
+    if options.enable_gcfs:
+      gcfs_config = self.messages.GcfsConfig(enabled=options.enable_gcfs)
+      node_config.gcfsConfig = gcfs_config
 
     self._AddWorkloadMetadataToNodeConfig(node_config, options, self.messages)
     _AddLinuxNodeConfigToNodeConfig(node_config, options, self.messages)
@@ -2953,8 +3043,10 @@ class V1Beta1Adapter(V1Adapter):
           raise util.Error(CLOUDRUN_STACKDRIVER_KUBERNETES_DISABLED_ERROR_MSG)
         if INGRESS not in options.addons:
           raise util.Error(CLOUDRUN_INGRESS_KUBERNETES_DISABLED_ERROR_MSG)
+        load_balancer_type = _GetCloudRunLoadBalancerType(
+            options, self.messages)
         cluster.addonsConfig.cloudRunConfig = self.messages.CloudRunConfig(
-            disabled=False)
+            disabled=False, loadBalancerType=load_balancer_type)
       # CloudBuild is disabled by default.
       if CLOUDBUILD in options.addons:
         if not options.enable_stackdriver_kubernetes:
@@ -2982,6 +3074,9 @@ class V1Beta1Adapter(V1Adapter):
           workloadPool=options.workload_pool)
       if options.identity_provider:
         cluster.workloadIdentityConfig.identityProvider = options.identity_provider
+    if options.enable_gke_oidc:
+      cluster.gkeOidcConfig = self.messages.GkeOidcConfig(
+          enabled=options.enable_gke_oidc)
     if options.enable_master_global_access is not None:
       if not options.enable_private_nodes:
         raise util.Error(
@@ -3004,13 +3099,6 @@ class V1Beta1Adapter(V1Adapter):
       cluster.clusterTelemetry.type = self.messages.ClusterTelemetry.TypeValueValuesEnum.DISABLED
     else:
       cluster.clusterTelemetry = None
-
-    if not options.enable_ip_alias and options.enable_ip_alias is not None:
-      if cluster.ipAllocationPolicy is None:
-        cluster.ipAllocationPolicy = self.messages.IPAllocationPolicy(
-            useRoutes=True)
-      else:
-        cluster.ipAllocationPolicy.useRoutes = True
 
     if options.datapath_provider is not None:
       if cluster.networkConfig is None:
@@ -3041,6 +3129,9 @@ class V1Beta1Adapter(V1Adapter):
 
     cluster.master = _GetMasterForClusterCreate(options, self.messages)
 
+    cluster.kubernetesObjectsExportConfig = _GetKubernetesObjectsExportConfigForClusterCreate(
+        options, self.messages)
+
     req = self.messages.CreateClusterRequest(
         parent=ProjectLocation(cluster_ref.projectId, cluster_ref.zone),
         cluster=cluster)
@@ -3062,6 +3153,11 @@ class V1Beta1Adapter(V1Adapter):
       update = self.messages.ClusterUpdate(
           desiredWorkloadIdentityConfig=self.messages.WorkloadIdentityConfig(
               workloadPool=''))
+
+    if options.enable_gke_oidc is not None:
+      update = self.messages.ClusterUpdate(
+          desiredGkeOidcConfig=self.messages.GkeOidcConfig(
+              enabled=options.enable_gke_oidc))
 
     if options.notification_config is not None:
       update = self.messages.ClusterUpdate(
@@ -3093,6 +3189,12 @@ class V1Beta1Adapter(V1Adapter):
     if master is not None:
       update = self.messages.ClusterUpdate(desiredMaster=master)
 
+    kubernetes_objects_export_config = _GetKubernetesObjectsExportConfigForClusterUpdate(
+        options, self.messages)
+    if kubernetes_objects_export_config is not None:
+      update = self.messages.ClusterUpdate(
+          desiredKubernetesObjectsExportConfig=kubernetes_objects_export_config)
+
     if not update:
       # if reached here, it's possible:
       # - someone added update flags but not handled
@@ -3115,9 +3217,12 @@ class V1Beta1Adapter(V1Adapter):
         update.desiredAddonsConfig.istioConfig = self.messages.IstioConfig(
             disabled=options.disable_addons.get(ISTIO), auth=istio_auth)
       if options.disable_addons.get(CLOUDRUN) is not None:
+        load_balancer_type = _GetCloudRunLoadBalancerType(
+            options, self.messages)
         update.desiredAddonsConfig.cloudRunConfig = (
             self.messages.CloudRunConfig(
-                disabled=options.disable_addons.get(CLOUDRUN)))
+                disabled=options.disable_addons.get(CLOUDRUN),
+                loadBalancerType=load_balancer_type))
       if options.disable_addons.get(APPLICATIONMANAGER) is not None:
         update.desiredAddonsConfig.kalmConfig = (
             self.messages.KalmConfig(
@@ -3179,6 +3284,16 @@ class V1Beta1Adapter(V1Adapter):
       autoprovisioning_locations = \
         config.get(AUTOPROVISIONING_LOCATIONS)
       min_cpu_platform = config.get(MIN_CPU_PLATFORM)
+      boot_disk_kms_key = config.get(BOOT_DISK_KMS_KEY)
+      disk_type = config.get(DISK_TYPE)
+      disk_size_gb = config.get(DISK_SIZE_GB)
+      shielded_instance_config = config.get(SHIELDED_INSTANCE_CONFIG)
+      enable_secure_boot = None
+      enable_integrity_monitoring = None
+      if shielded_instance_config:
+        enable_secure_boot = shielded_instance_config.get(ENABLE_SECURE_BOOT)
+        enable_integrity_monitoring = \
+            shielded_instance_config.get(ENABLE_INTEGRITY_MONITORING)
     else:
       resource_limits = self.ResourceLimitsFromFlags(options)
       service_account = options.autoprovisioning_service_account
@@ -3189,6 +3304,11 @@ class V1Beta1Adapter(V1Adapter):
       enable_autoupgrade = options.enable_autoprovisioning_autoupgrade
       enable_autorepair = options.enable_autoprovisioning_autorepair
       min_cpu_platform = options.autoprovisioning_min_cpu_platform
+      boot_disk_kms_key = None
+      disk_type = None
+      disk_size_gb = None
+      enable_secure_boot = None
+      enable_integrity_monitoring = None
 
     if options.enable_autoprovisioning is not None:
       autoscaling.enableNodeAutoprovisioning = options.enable_autoprovisioning
@@ -3205,12 +3325,24 @@ class V1Beta1Adapter(V1Adapter):
         management = (
             self.messages.NodeManagement(
                 autoUpgrade=enable_autoupgrade, autoRepair=enable_autorepair))
+      shielded_instance_config = None
+      if enable_secure_boot is not None or \
+          enable_integrity_monitoring is not None:
+        shielded_instance_config = self.messages.ShieldedInstanceConfig()
+        shielded_instance_config.enableSecureBoot = enable_secure_boot
+        shielded_instance_config.enableIntegrityMonitoring = \
+            enable_integrity_monitoring
       autoscaling.autoprovisioningNodePoolDefaults = self.messages \
         .AutoprovisioningNodePoolDefaults(serviceAccount=service_account,
                                           oauthScopes=scopes,
                                           upgradeSettings=upgrade_settings,
                                           management=management,
-                                          minCpuPlatform=min_cpu_platform)
+                                          minCpuPlatform=min_cpu_platform,
+                                          bootDiskKmsKey=boot_disk_kms_key,
+                                          diskSizeGb=disk_size_gb,
+                                          diskType=disk_type,
+                                          shieldedInstanceConfig=
+                                          shielded_instance_config)
       if autoprovisioning_locations:
         autoscaling.autoprovisioningLocations = \
           sorted(autoprovisioning_locations)
@@ -3275,6 +3407,12 @@ class V1Beta1Adapter(V1Adapter):
             if auto_repair_found != auto_upgrade_found:
               raise util.Error(
                   BOTH_AUTOPROVISIONING_MANAGEMENT_SETTINGS_ERROR_MSG)
+          if defaults.shieldedInstanceConfig:
+            secure_boot_found = defaults.shieldedInstanceConfig.enableSecureBoot is not None
+            integrity_monitoring_found = defaults.shieldedInstanceConfig.enableIntegrityMonitoring is not None
+            if secure_boot_found != integrity_monitoring_found:
+              raise util.Error(
+                  BOTH_AUTOPROVISIONING_SHIELDED_INSTANCE_SETTINGS_ERROR_MSG)
     elif autoscaling.resourceLimits:
       raise util.Error(LIMITS_WITHOUT_AUTOPROVISIONING_MSG)
     elif autoscaling.autoprovisioningNodePoolDefaults and \
@@ -3367,6 +3505,9 @@ class V1Alpha1Adapter(V1Beta1Adapter):
           workloadPool=options.workload_pool)
       if options.identity_provider:
         cluster.workloadIdentityConfig.identityProvider = options.identity_provider
+    if options.enable_gke_oidc:
+      cluster.gkeOidcConfig = self.messages.GkeOidcConfig(
+          enabled=options.enable_gke_oidc)
     if options.security_profile is not None:
       cluster.securityProfile = self.messages.SecurityProfile(
           name=options.security_profile)
@@ -3427,13 +3568,6 @@ class V1Alpha1Adapter(V1Beta1Adapter):
       cluster.networkConfig.datapathProvider = \
             self.messages.NetworkConfig.DatapathProviderValueValuesEnum.ADVANCED_DATAPATH
 
-    if not options.enable_ip_alias and options.enable_ip_alias is not None:
-      if cluster.ipAllocationPolicy is None:
-        cluster.ipAllocationPolicy = self.messages.IPAllocationPolicy(
-            useRoutes=True)
-      else:
-        cluster.ipAllocationPolicy.useRoutes = True
-
     if options.private_ipv6_google_access_type is not None:
       if cluster.networkConfig is None:
         cluster.networkConfig = self.messages.NetworkConfig()
@@ -3442,6 +3576,9 @@ class V1Alpha1Adapter(V1Beta1Adapter):
           hidden=True).GetEnumForChoice(options.private_ipv6_google_access_type)
 
     cluster.master = _GetMasterForClusterCreate(options, self.messages)
+
+    cluster.kubernetesObjectsExportConfig = _GetKubernetesObjectsExportConfigForClusterCreate(
+        options, self.messages)
 
     req = self.messages.CreateClusterRequest(
         parent=ProjectLocation(cluster_ref.projectId, cluster_ref.zone),
@@ -3464,6 +3601,11 @@ class V1Alpha1Adapter(V1Beta1Adapter):
       update = self.messages.ClusterUpdate(
           desiredWorkloadIdentityConfig=self.messages.WorkloadIdentityConfig(
               workloadPool=''))
+
+    if options.enable_gke_oidc is not None:
+      update = self.messages.ClusterUpdate(
+          desiredGkeOidcConfig=self.messages.GkeOidcConfig(
+              enabled=options.enable_gke_oidc))
 
     if options.enable_cost_management is not None:
       update = self.messages.ClusterUpdate(
@@ -3511,6 +3653,12 @@ class V1Alpha1Adapter(V1Beta1Adapter):
     if master is not None:
       update = self.messages.ClusterUpdate(desiredMaster=master)
 
+    kubernetes_objects_export_config = _GetKubernetesObjectsExportConfigForClusterUpdate(
+        options, self.messages)
+    if kubernetes_objects_export_config is not None:
+      update = self.messages.ClusterUpdate(
+          desiredKubernetesObjectsExportConfig=kubernetes_objects_export_config)
+
     if not update:
       # if reached here, it's possible:
       # - someone added update flags but not handled
@@ -3551,8 +3699,6 @@ class V1Alpha1Adapter(V1Beta1Adapter):
         update.desiredAddonsConfig.gcePersistentDiskCsiDriverConfig = (
             self.messages.GcePersistentDiskCsiDriverConfig(
                 enabled=not options.disable_addons.get(GCEPDCSIDRIVER)))
-    if options.update_nodes and options.concurrent_node_count:
-      update.concurrentNodeCount = options.concurrent_node_count
 
     op = self.client.projects_locations_clusters.Update(
         self.messages.UpdateClusterRequest(
@@ -3567,8 +3713,6 @@ class V1Alpha1Adapter(V1Beta1Adapter):
       self._AddLocalSSDVolumeConfigsToNodeConfig(pool.config, options)
     if options.enable_autoprovisioning is not None:
       pool.autoscaling.autoprovisioned = options.enable_autoprovisioning
-    if options.node_group is not None:
-      pool.config.nodeGroup = options.node_group
     req = self.messages.CreateNodePoolRequest(
         nodePool=pool,
         parent=ProjectLocationCluster(node_pool_ref.projectId,
@@ -3619,6 +3763,16 @@ class V1Alpha1Adapter(V1Beta1Adapter):
       autoprovisioning_locations = \
           config.get(AUTOPROVISIONING_LOCATIONS)
       min_cpu_platform = config.get(MIN_CPU_PLATFORM)
+      boot_disk_kms_key = config.get(BOOT_DISK_KMS_KEY)
+      disk_type = config.get(DISK_TYPE)
+      disk_size_gb = config.get(DISK_SIZE_GB)
+      shielded_instance_config = config.get(SHIELDED_INSTANCE_CONFIG)
+      enable_secure_boot = None
+      enable_integrity_monitoring = None
+      if shielded_instance_config:
+        enable_secure_boot = shielded_instance_config.get(ENABLE_SECURE_BOOT)
+        enable_integrity_monitoring = \
+            shielded_instance_config.get(ENABLE_INTEGRITY_MONITORING)
     else:
       resource_limits = self.ResourceLimitsFromFlags(options)
       service_account = options.autoprovisioning_service_account
@@ -3629,6 +3783,11 @@ class V1Alpha1Adapter(V1Beta1Adapter):
       enable_autoupgrade = options.enable_autoprovisioning_autoupgrade
       enable_autorepair = options.enable_autoprovisioning_autorepair
       min_cpu_platform = options.autoprovisioning_min_cpu_platform
+      boot_disk_kms_key = None
+      disk_type = None
+      disk_size_gb = None
+      enable_secure_boot = None
+      enable_integrity_monitoring = None
 
     if options.enable_autoprovisioning is not None:
       autoscaling.enableNodeAutoprovisioning = options.enable_autoprovisioning
@@ -3647,12 +3806,24 @@ class V1Alpha1Adapter(V1Beta1Adapter):
         management = self.messages \
           .NodeManagement(autoUpgrade=enable_autoupgrade,
                           autoRepair=enable_autorepair)
+      shielded_instance_config = None
+      if enable_secure_boot is not None or \
+          enable_integrity_monitoring is not None:
+        shielded_instance_config = self.messages.ShieldedInstanceConfig()
+        shielded_instance_config.enableSecureBoot = enable_secure_boot
+        shielded_instance_config.enableIntegrityMonitoring = \
+            enable_integrity_monitoring
       autoscaling.autoprovisioningNodePoolDefaults = self.messages \
         .AutoprovisioningNodePoolDefaults(serviceAccount=service_account,
                                           oauthScopes=scopes,
                                           upgradeSettings=upgrade_settings,
                                           management=management,
-                                          minCpuPlatform=min_cpu_platform)
+                                          minCpuPlatform=min_cpu_platform,
+                                          bootDiskKmsKey=boot_disk_kms_key,
+                                          diskSizeGb=disk_size_gb,
+                                          diskType=disk_type,
+                                          shieldedInstanceConfig=
+                                          shielded_instance_config)
 
       if autoprovisioning_locations:
         autoscaling.autoprovisioningLocations = \
@@ -3744,7 +3915,7 @@ def _GetCloudRunLoadBalancerType(options, messages):
       if input_load_balancer_type == 'INTERNAL':
         return messages.CloudRunConfig.LoadBalancerTypeValueValuesEnum.LOAD_BALANCER_TYPE_INTERNAL
       return messages.CloudRunConfig.LoadBalancerTypeValueValuesEnum.LOAD_BALANCER_TYPE_EXTERNAL
-  return messages.CloudRunConfig.LoadBalancerTypeValueValuesEnum.LOAD_BALANCER_TYPE_UNSPECIFIED
+  return None
 
 
 def _AddMetadataToNodeConfig(node_config, options):
@@ -3972,6 +4143,35 @@ def _GetMasterForClusterUpdate(options, messages):
             .LogEnabledComponentsValueListEntryValuesEnum.COMPONENT_UNSPECIFIED
         ])
     return messages.Master(signalsConfig=config)
+
+
+def _GetKubernetesObjectsExportConfigForClusterCreate(options, messages):
+  """Gets the KubernetesObjectsExportConfig from create options."""
+  if options.kubernetes_objects_changes_target is not None or options.kubernetes_objects_snapshots_target is not None:
+    config = messages.KubernetesObjectsExportConfig()
+    if options.kubernetes_objects_changes_target is not None:
+      config.kubernetesObjectsChangesTarget = options.kubernetes_objects_changes_target
+    if options.kubernetes_objects_snapshots_target is not None:
+      config.kubernetesObjectsSnapshotsTarget = options.kubernetes_objects_snapshots_target
+    return config
+
+
+def _GetKubernetesObjectsExportConfigForClusterUpdate(options, messages):
+  """Gets the KubernetesObjectsExportConfig from update options."""
+  if options.kubernetes_objects_changes_target is not None or options.kubernetes_objects_snapshots_target is not None:
+    changes_target = None
+    snapshots_target = None
+    if options.kubernetes_objects_changes_target is not None:
+      changes_target = options.kubernetes_objects_changes_target
+      if changes_target == 'NONE':
+        changes_target = ''
+    if options.kubernetes_objects_snapshots_target is not None:
+      snapshots_target = options.kubernetes_objects_snapshots_target
+      if snapshots_target == 'NONE':
+        snapshots_target = ''
+    return messages.KubernetesObjectsExportConfig(
+        kubernetesObjectsSnapshotsTarget=snapshots_target,
+        kubernetesObjectsChangesTarget=changes_target)
 
 
 def ProjectLocation(project, location):

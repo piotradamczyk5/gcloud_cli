@@ -1,6 +1,6 @@
 NAME
-    gcloud alpha compute vpn-gateways create - create a new Google Compute
-        Engine Highly Available VPN gateway
+    gcloud alpha compute vpn-gateways create - create a new Compute Engine
+        Highly Available VPN gateway
 
 SYNOPSIS
     gcloud alpha compute vpn-gateways create NAME --network=NETWORK
@@ -66,7 +66,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute vpn-gateways create
         $ gcloud beta compute vpn-gateways create

@@ -268,6 +268,10 @@
         "condition": {
           "description": "The condition that is associated with this binding. If the condition evaluates to `true`, then this binding applies to the current request. If the condition evaluates to `false`, then this binding does not apply to the current request. However, a different role binding might grant the same role to one or more of the members in this binding. To learn which resources support conditions in their IAM policies, see the [IAM documentation](https:\/\/cloud.google.com\/iam\/help\/conditions\/resource-policies).",
           "$ref": "Expr"
+        },
+        "bindingId": {
+          "description": "A client-specified ID for this binding. Expected to be globally unique to support the internal bindings-by-ID API.",
+          "type": "string"
         }
       }
     },
@@ -529,11 +533,6 @@
       "properties": {
         "scheduledRunOption": {
           "description": "Required. The scheduled run option of the crawler.",
-          "enumDescriptions": [
-            "Unspecified scheduled run option.",
-            "Daily scheduled run option.",
-            "Weekly scheduled run option."
-          ],
           "type": "string",
           "enumDescriptions": [
             "Unspecified scheduled run option.",
@@ -583,11 +582,6 @@
           "type": "string"
         },
         "runOption": {
-          "enumDescriptions": [
-            "Unspecified run option.",
-            "Ad-hoc run option.",
-            "Scheduled run option."
-          ],
           "type": "string",
           "enumDescriptions": [
             "Unspecified run option.",
@@ -602,13 +596,6 @@
         },
         "state": {
           "description": "Output only. The state of the crawler run.",
-          "enumDescriptions": [
-            "Unspecified crawler run state.",
-            "This crawler run is waiting on resources to be ready.",
-            "This crawler run is running.",
-            "This crawler run failed.",
-            "This crawler run succeeded."
-          ],
           "type": "string",
           "enumDescriptions": [
             "Unspecified crawler run state.",

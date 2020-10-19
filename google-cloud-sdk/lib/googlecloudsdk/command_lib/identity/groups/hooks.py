@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*- #
-# Copyright 2019 Google LLC. All Rights Reserved.
+# Copyright 2020 Google LLC. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,13 @@ from __future__ import unicode_literals
 import collections
 
 from apitools.base.py import encoding
+from apitools.base.py import exceptions as apitools_exceptions
 
 from googlecloudsdk.api_lib.cloudresourcemanager import organizations
 from googlecloudsdk.api_lib.identity import cloudidentity_client as ci_client
 from googlecloudsdk.calliope import base
 from googlecloudsdk.calliope import exceptions
+import six
 
 
 # request hooks
@@ -83,7 +85,12 @@ def SetLabels(unused_ref, args, request):
   """
 
   if args.IsSpecified('labels'):
-    request.group.labels = ReformatLabels(args, args.labels)
+    if hasattr(request.group, 'labels'):
+      request.group.labels = ReformatLabels(args, args.labels)
+    else:
+      version = GetApiVersion(args)
+      messages = ci_client.GetMessages(version)
+      request.group = messages.Group(labels=ReformatLabels(args, args.labels))
 
   return request
 
@@ -102,7 +109,7 @@ def SetResourceName(unused_ref, args, request):
 
   if args.IsSpecified('email'):
     version = GetApiVersion(args)
-    request.name = ConvertEmailToResourceName(version, args.email, 'email')
+    request.name = ConvertEmailToResourceName(version, args.email, '--email')
 
   return request
 
@@ -147,7 +154,15 @@ def SetGroupUpdateMask(unused_ref, args, request):
   if (args.IsSpecified('description') or args.IsSpecified('clear_description')):
     update_mask.append('description')
 
-  # TODO(b/139939605): Add PosixGroups check once it is added.
+  if hasattr(args, 'labels'):
+    if args.IsSpecified('labels'):
+      update_mask.append('labels')
+
+  if hasattr(args, 'add_posix_group'):
+    if (args.IsSpecified('add_posix_group') or
+        args.IsSpecified('remove_posix_groups') or
+        args.IsSpecified('clear_posix_groups')):
+      update_mask.append('posix_groups')
 
   if not update_mask:
     raise exceptions.InvalidArgumentException(
@@ -218,6 +233,40 @@ def UpdateDescription(unused_ref, args, request):
   return request
 
 
+def UpdatePosixGroups(unused_ref, args, request):
+  """Update posix groups.
+
+  When adding posix groups, the posix groups in the request will be combined
+  with the current posix groups. When removing groups, the current list of
+  posix groups is retrieved and if any value in args.remove_posix_groups
+  matches either a name or gid in a current posix group, it will be removed
+  from the list and the remaining posix groups will be added to the update
+  request.
+
+  Args:
+    unused_ref: unused.
+    args: The argparse namespace.
+    request: The request to modify.
+
+  Returns:
+    The updated request.
+  """
+  version = GetApiVersion(args)
+  group = ci_client.GetGroup(version, request.name)
+  if args.IsSpecified('add_posix_group'):
+    request.group.posixGroups = request.group.posixGroups + group.posixGroups
+  elif args.IsSpecified('remove_posix_groups'):
+    if request.group is None:
+      request.group = group
+    for pg in list(group.posixGroups):
+      if (six.text_type(pg.gid) in args.remove_posix_groups
+          or pg.name in args.remove_posix_groups):
+        group.posixGroups.remove(pg)
+    request.group.posixGroups = group.posixGroups
+
+  return request
+
+
 # processor hooks
 def SetDynamicUserQuery(unused_ref, args, request):
   """Add DynamicGroupUserQuery to DynamicGroupQueries object list.
@@ -235,8 +284,6 @@ def SetDynamicUserQuery(unused_ref, args, request):
 
   if args.IsSpecified('dynamic_user_query'):
     dg_user_query = args.dynamic_user_query
-
-    # TODO(b/147011481): Remove hard coded version info if necessary.
     version = GetApiVersion(args)
     messages = ci_client.GetMessages(version)
     resource_type = messages.DynamicGroupQuery.ResourceTypeValueValuesEnum
@@ -324,16 +371,15 @@ def ConvertEmailToResourceName(version, email, arg_name):
     Group Id (e.g. groups/11zu0gzc3tkdgn2)
 
   """
-
-  lookup_group_name_resp = ci_client.LookupGroupName(version, email)
-
-  if 'name' in lookup_group_name_resp:
-    return lookup_group_name_resp['name']
-
-  # If there is no group exists (or deleted) for the given group email,
-  # print out an error message.
-  error_msg = 'There is no such a group associated with the specified argument:' + email
-  raise exceptions.InvalidArgumentException(arg_name, error_msg)
+  try:
+    return ci_client.LookupGroupName(version, email).name
+  except (apitools_exceptions.HttpForbiddenError,
+          apitools_exceptions.HttpNotFoundError):
+    # If there is no group exists (or deleted) for the given group email,
+    # print out an error message.
+    error_msg = ('There is no such a group associated with the specified '
+                 'argument:' + email)
+    raise exceptions.InvalidArgumentException(arg_name, error_msg)
 
 
 def FilterLabels(labels):
@@ -356,6 +402,11 @@ def FilterLabels(labels):
   Raises:
     InvalidArgumentException: If invalid labels string is input.
   """
+
+  if not labels:
+    raise exceptions.InvalidArgumentException(
+        'labels',
+        'labels can not be an empty string')
 
   # Convert a comma separated string to a list of strings.
   label_list = labels.split(',')
@@ -389,7 +440,7 @@ def GetApiVersion(args):
     args: The argparse namespace.
 
   Returns:
-    Release track (e.g. ALPHA or BETA)
+    Release track.
 
   Raises:
     UnsupportedReleaseTrackError: If invalid release track is input.
@@ -401,6 +452,8 @@ def GetApiVersion(args):
     return 'v1alpha1'
   elif release_track == base.ReleaseTrack.BETA:
     return 'v1beta1'
+  elif release_track == base.ReleaseTrack.GA:
+    return 'v1'
   else:
     raise UnsupportedReleaseTrackError(release_track)
 

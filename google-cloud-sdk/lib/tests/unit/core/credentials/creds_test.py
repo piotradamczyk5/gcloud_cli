@@ -25,8 +25,10 @@ import os
 
 from googlecloudsdk.core import config
 from googlecloudsdk.core import http
+from googlecloudsdk.core import properties
 from googlecloudsdk.core.credentials import creds
 from tests.lib import cli_test_base
+from tests.lib import parameterized
 from tests.lib import sdk_test_base
 from tests.lib import test_case
 from tests.lib.core.credentials import credentials_test_base
@@ -34,11 +36,9 @@ from tests.lib.core.credentials import credentials_test_base
 import httplib2
 import mock
 from oauth2client import client
-from oauth2client import crypt
 from six.moves import http_client as httplib
 import sqlite3
 from google.auth import crypt as google_auth_crypt
-from google.auth import jwt
 from google.oauth2 import service_account as google_auth_service_account
 
 
@@ -112,17 +112,6 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         httplib2.Http,
         'request',
         return_value=_MakeFakeOauth2clientCredsRefreshResponse())
-
-    # Mocks the signer of oauth2client credentials.
-    signer = self.StartPatch('oauth2client.crypt.Signer', autospec=True)
-    self.StartObjectPatch(crypt, 'OpenSSLSigner', new=signer)
-    self.StartObjectPatch(
-        crypt, 'make_signed_jwt', return_value=b'fake_assertion')
-
-    # Mocks the signer of google-auth credentials.
-    self.StartObjectPatch(google_auth_crypt.RSASigner,
-                          'from_service_account_info')
-    self.StartObjectPatch(jwt, 'encode', return_value=b'fake_assertion')
 
   def TestStoreOperations(self, creds_stored, expected_loaded_type,
                           expected_loaded_type_google_auth,
@@ -225,7 +214,7 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         'client_id': 'client_id',
         'client_secret': 'client_secret',
         'refresh_token': 'fake-token',
-        'token_uri': 'https://oauth2.googleapis.com/token',
+        'token_uri': 'token_uri',
         'rapt_token': 'rapt_token5',
     }
     refresh_google_auth = False
@@ -253,7 +242,7 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         '_private_key_pkcs8_pem':
             '-----BEGIN PRIVATE KEY-----\nasdf\n-----END PRIVATE KEY-----\n',
         'token_uri':
-            'https://www.googleapis.com/oauth2/v4/token'
+            'https://oauth2.googleapis.com/token'
     }
     expected_loaded_dict_google_auth = {
         'token':
@@ -288,7 +277,7 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         'service_account_email': 'p12owner@developer.gserviceaccount.com',
         '_private_key_pkcs12': b'BASE64ENCODED',
         '_private_key_password': 'key-password',
-        'token_uri': 'https://www.googleapis.com/oauth2/v4/token'
+        'token_uri': 'https://oauth2.googleapis.com/token'
     }
     expected_loaded_dict_google_auth = expected_loaded_dict.copy()
     refresh_google_auth = False
@@ -317,7 +306,7 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         'client_id': 'client_id',
         'client_secret': 'client_secret',
         'refresh_token': 'fake-token',
-        'token_uri': 'https://oauth2.googleapis.com/token',
+        'token_uri': 'token_uri',
         'rapt_token': 'rapt_token5',
     }
     refresh_google_auth = True
@@ -401,7 +390,7 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         '_private_key_pkcs8_pem':
             '-----BEGIN PRIVATE KEY-----\nasdf\n-----END PRIVATE KEY-----\n',
         'token_uri':
-            'https://www.googleapis.com/oauth2/v4/token'
+            'https://oauth2.googleapis.com/token'
     }
     expected_loaded_dict_google_auth = {
         'token':
@@ -436,7 +425,7 @@ class StoreOperationsTests(sdk_test_base.SdkBase,
         'service_account_email': 'p12owner@developer.gserviceaccount.com',
         '_private_key_pkcs12': b'BASE64ENCODED',
         '_private_key_password': 'key-password',
-        'token_uri': 'https://www.googleapis.com/oauth2/v4/token'
+        'token_uri': 'https://oauth2.googleapis.com/token'
     }
     expected_loaded_dict_google_auth = expected_loaded_dict.copy()
     refresh_google_auth = True
@@ -590,10 +579,6 @@ class StoreCreationConcurrencyTests(sdk_test_base.SdkBase):
 class Sqlite3Tests(sdk_test_base.WithLogCapture,
                    credentials_test_base.CredentialsTestBase):
 
-  def SetUp(self):
-    signer = self.StartPatch('oauth2client.crypt.Signer', autospec=True)
-    self.StartObjectPatch(crypt, 'OpenSSLSigner', new=signer)
-
   def testNoWarnMessage(self):
     creds.GetCredentialStore()
     self.AssertErrEquals('')
@@ -686,9 +671,6 @@ class ADCTestsOauth2client(cli_test_base.CliTestBase,
                                       'application_default_credentials.json')
     self.StartObjectPatch(
         config, 'ADCFilePath', return_value=self.adc_file_path)
-    # Mocks the signer of service account credentials.
-    signer = self.StartPatch('oauth2client.crypt.Signer', autospec=True)
-    self.StartObjectPatch(crypt, 'OpenSSLSigner', new=signer)
 
     self.user_creds = creds.FromJson(self.USER_CREDENTIALS_JSON)
     self.service_creds = creds.FromJson(self.SERVICE_ACCOUNT_CREDENTIALS_JSON)
@@ -777,51 +759,18 @@ class ADCTestsGoogleAuth(cli_test_base.CliTestBase,
     self.AssertErrContains('Cannot find a project')
 
 
-class CredentialsConversionTests(sdk_test_base.SdkBase,
-                                 credentials_test_base.CredentialsTestBase):
+class UtilsTests(sdk_test_base.SdkBase, parameterized.TestCase):
 
-  def SetUp(self):
-    self.fake_cred = client.OAuth2Credentials(
-        'access-token',
-        'client_id',
-        'client_secret',
-        'fake-token',
-        datetime.datetime(2017, 1, 8, 0, 0, 0),
-        'token_uri',
-        'user_agent',
-        scopes=config.CLOUDSDK_SCOPES)
-    self.json_file = self.Touch(
-        self.root_path,
-        contents="""\
-{
-    "private_key_id": "key-id",
-    "private_key": "-----BEGIN PRIVATE KEY-----\\nasdf\\n-----END PRIVATE KEY-----\\n",
-    "client_email": "bar@developer.gserviceaccount.com",
-    "client_id": "bar.apps.googleusercontent.com",
-    "type": "service_account",
-    "token_uri": "https://oauth2.googleapis.com/token"
-  }""")
-    self.adc_file = self.Touch(
-        self.root_path,
-        contents="""\
-{
-  "client_id": "foo.apps.googleusercontent.com",
-  "client_secret": "file-secret",
-  "refresh_token": "file-token",
-  "type": "authorized_user"
-}""")
-    self.rsa_mock = self.StartObjectPatch(google_auth_crypt.RSASigner,
-                                          'from_service_account_info')
-    self.StartPatch('oauth2client.crypt.Signer', autospec=True)
-    response = httplib2.Response({'status': httplib.OK})
-    content = b'{"id_token": "id-token"}'
-    self.StartObjectPatch(
-        httplib2.Http,
-        'request',
-        autospec=True,
-        return_value=(response, content))
-    self.StartObjectPatch(client.OAuth2Credentials, 'refresh')
-    self.StartObjectPatch(crypt, 'make_signed_jwt')
+  @parameterized.parameters((True, {}, 'fake_token_host'), (True, {
+      'token_uri': 'another_token_host'
+  }, 'fake_token_host'), (False, {}, properties.VALUES.auth.DEFAULT_TOKEN_HOST),
+                            (False, {
+                                'token_uri': 'another_token_host'
+                            }, 'another_token_host'))
+  def testGetEffectiveTokenUri(self, explicitly_set, cred_json, expected_value):
+    if explicitly_set:
+      properties.VALUES.auth.token_host.Set('fake_token_host')
+    self.assertEqual(expected_value, creds.GetEffectiveTokenUri(cred_json))
 
 
 if __name__ == '__main__':

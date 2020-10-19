@@ -32,8 +32,6 @@ from googlecloudsdk.core.util import encoding
 import httplib2
 import six
 
-from google.auth import credentials as google_auth_creds
-
 
 def Http(timeout='unset', response_encoding=None, ca_certs=None):
   """Get an httplib2.Http client that is properly configured for use by gcloud.
@@ -44,7 +42,8 @@ def Http(timeout='unset', response_encoding=None, ca_certs=None):
   Args:
     timeout: double, The timeout in seconds to pass to httplib2.  This is the
         socket level timeout.  If timeout is None, timeout is infinite.  If
-        default argument 'unset' is given, a sensible default is selected.
+        default argument 'unset' is given, a sensible default is selected using
+        transport.GetDefaultTimeout().
     response_encoding: str, the encoding to use to decode the response.
     ca_certs: str, absolute filename of a ca_certs file that overrides the
         default. The gcloud config property for ca_certs, in turn, overrides
@@ -173,15 +172,6 @@ class Response(transport.Response):
     return cls(resp.get('status'), headers, content)
 
 
-class _GoogleAuthApitoolsCredentials():
-
-  def __init__(self, credentials):
-    self.credentials = credentials
-
-  def refresh(self, http_client):  # pylint: disable=invalid-name
-    self.credentials.refresh(GoogleAuthRequest(http_client))
-
-
 class RequestWrapper(transport.RequestWrapper):
   """Class for wrapping httplib.Httplib2 requests."""
 
@@ -192,21 +182,6 @@ class RequestWrapper(transport.RequestWrapper):
     response, content = response
     content = content.decode(response_encoding)
     return response, content
-
-  def AttachCredentials(self, http_client, orig_request):
-    # apitools needs this attribute to do credential refreshes during batch API
-    # requests.
-    if hasattr(orig_request, 'credentials'):
-      creds = orig_request.credentials
-    elif hasattr(http_client, 'credentials'):
-      # Unable to use core/credentials/creds:IsGoogleAuthCredentials due to
-      # dependency cycle.
-      if isinstance(http_client.credentials, google_auth_creds.Credentials):
-        creds = _GoogleAuthApitoolsCredentials(http_client.credentials)
-      else:
-        creds = http_client.credentials
-    if creds:
-      setattr(http_client.request, 'credentials', creds)
 
 
 class RequestParam(enum.Enum):

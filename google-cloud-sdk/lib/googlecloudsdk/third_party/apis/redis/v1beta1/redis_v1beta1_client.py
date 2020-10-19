@@ -136,7 +136,7 @@ class RedisV1beta1(base_api.BaseApiClient):
     )
 
     def Failover(self, request, global_params=None):
-      r"""Initiates a failover of the master node to current replica node for a specific STANDARD tier Cloud Memorystore for Redis instance.
+      r"""Initiates a failover of the primary node to current replica node for a specific STANDARD tier Cloud Memorystore for Redis instance.
 
       Args:
         request: (RedisProjectsLocationsInstancesFailoverRequest) input message
@@ -186,6 +186,33 @@ class RedisV1beta1(base_api.BaseApiClient):
         request_field='',
         request_type_name='RedisProjectsLocationsInstancesGetRequest',
         response_type_name='Instance',
+        supports_download=False,
+    )
+
+    def GetAuthString(self, request, global_params=None):
+      r"""Gets the AUTH string for a Redis instance. If AUTH is not enabled for the instance the response will be empty. This information is not included in the details returned to GetInstance.
+
+      Args:
+        request: (RedisProjectsLocationsInstancesGetAuthStringRequest) input message
+        global_params: (StandardQueryParameters, default: None) global arguments
+      Returns:
+        (InstanceAuthString) The response message.
+      """
+      config = self.GetMethodConfig('GetAuthString')
+      return self._RunMethod(
+          config, request, global_params=global_params)
+
+    GetAuthString.method_config = lambda: base_api.ApiMethodInfo(
+        flat_path='v1beta1/projects/{projectsId}/locations/{locationsId}/instances/{instancesId}/authString',
+        http_method='GET',
+        method_id='redis.projects.locations.instances.getAuthString',
+        ordered_params=['name'],
+        path_params=['name'],
+        query_params=[],
+        relative_path='v1beta1/{+name}/authString',
+        request_field='',
+        request_type_name='RedisProjectsLocationsInstancesGetAuthStringRequest',
+        response_type_name='InstanceAuthString',
         supports_download=False,
     )
 

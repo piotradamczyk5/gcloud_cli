@@ -1,4 +1,4 @@
-title: Serverless deploy to gke cluster with knative addon.
+title: Serverless deploy to a GKE cluster with the knative addon.
 release_tracks: [ALPHA, BETA, GA]
 summary:
 # This summary is generated automatically on update and should not be edited.
@@ -14,14 +14,15 @@ summary:
     - message: Deploying new service...
     - status: SUCCESS
   - stderr: |
-      Service [$$service-name$$] revision [$$service-revision-name$$] has been deployed and is serving 100 percent of traffic at http://$$service-name$$.default.example.com
+      Service [$$service-name$$] revision [$$service-revision-name$$] has been deployed and is serving 100 percent of traffic.
+      Service URL: http://$$service-name$$.default.example.com
 - execute:
   - command: run services describe $$service-name$$ --format="value(metadata.name)"
   - stdout: |
       $$service-name$$
 - execute:
   - command: run services update $$service-name$$ --memory 512Mi --concurrency 3 --update-env-vars
-      FOO=bar --connectivity internal
+      FOO=bar $$ingress-traffic-allowed-flag$$ internal
   - staged_progress_tracker:
     - message: Deploying...
     - status: SUCCESS
@@ -34,6 +35,12 @@ actions:
 - define_reference:
     reference: api-version
     value: v1
+- define_reference:
+    reference: ingress-traffic-allowed-flag
+    track_values:
+      GA: --connectivity
+      BETA: --connectivity
+      ALPHA: --ingress
 - set_property:
     # container/use_client_certificate: true
     # auth/disable_ssl_validation: true
@@ -407,7 +414,8 @@ actions:
           body:
             json: {}
     - expect_stderr: |
-        Service [$$service-name$$] revision [$$service-revision-name$$] has been deployed and is serving 100 percent of traffic at http://$$service-name$$.default.example.com
+        Service [$$service-name$$] revision [$$service-revision-name$$] has been deployed and is serving 100 percent of traffic.
+        Service URL: http://$$service-name$$.default.example.com
     - expect_exit:
         code: 0
 
@@ -591,7 +599,7 @@ actions:
 
 - execute_command:
     command: run services update $$service-name$$ --memory 512Mi --concurrency 3 --update-env-vars
-      FOO=bar --connectivity internal --service-account default
+      FOO=bar $$ingress-traffic-allowed-flag$$ internal --service-account default
     events:
     - api_call:
         expect_request:
@@ -1108,7 +1116,7 @@ actions:
                 revisionName: $$service-revision-name-2$$
               url: http://$$service-name$$.default.svc.cluster.local
     - expect_stderr:
-        matches: .*has\sbeen\sdeployed\sand\sis\sserving\s100\spercent\sof\straffic\sat.*
+        matches: .*has\sbeen\sdeployed\sand\sis\sserving\s100\spercent\sof\straffic\..*\s+Service URL:.*
     - expect_exit:
         code: 0
 - execute_command:

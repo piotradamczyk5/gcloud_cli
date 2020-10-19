@@ -193,6 +193,27 @@ class CancelOperationRequest(_messages.Message):
   r"""The request message for Operations.CancelOperation."""
 
 
+class CloudSQLInstanceInfo(_messages.Message):
+  r"""For display only. Metadata associated with a Cloud SQL instance.
+
+  Fields:
+    displayName: Name of a Cloud SQL instance.
+    externalIp: External IP address of Cloud SQL instance.
+    internalIp: Internal IP address of Cloud SQL instance.
+    networkUri: URI of a Cloud SQL instance network or empty string if
+      instance does not have one.
+    region: Region in which the Cloud SQL instance is running.
+    uri: URI of a Cloud SQL instance.
+  """
+
+  displayName = _messages.StringField(1)
+  externalIp = _messages.StringField(2)
+  internalIp = _messages.StringField(3)
+  networkUri = _messages.StringField(4)
+  region = _messages.StringField(5)
+  uri = _messages.StringField(6)
+
+
 class ConnectivityTest(_messages.Message):
   r"""A Connectivity Test for a network reachability analysis.
 
@@ -218,6 +239,10 @@ class ConnectivityTest(_messages.Message):
     labels: Resource labels to represent user-provided metadata.
     name: Required. Unique name of the resource using the form:
       `projects/{project_id}/locations/global/connectivityTests/{test}`
+    probingDetails: Output only. The probing details of this test from the
+      latest run, present for applicable tests only. The details are updated
+      when creating a new test, updating an existing test, or triggering a
+      one-time rerun of an existing test.
     protocol: IP Protocol of the test. When not provided, "TCP" is assumed.
     reachabilityDetails: Output only. The reachability details of this test
       from the latest run. The details are updated when creating a new test,
@@ -273,11 +298,12 @@ class ConnectivityTest(_messages.Message):
   displayName = _messages.StringField(4)
   labels = _messages.MessageField('LabelsValue', 5)
   name = _messages.StringField(6)
-  protocol = _messages.StringField(7)
-  reachabilityDetails = _messages.MessageField('ReachabilityDetails', 8)
-  relatedProjects = _messages.StringField(9, repeated=True)
-  source = _messages.MessageField('Endpoint', 10)
-  updateTime = _messages.StringField(11)
+  probingDetails = _messages.MessageField('ProbingDetails', 7)
+  protocol = _messages.StringField(8)
+  reachabilityDetails = _messages.MessageField('ReachabilityDetails', 9)
+  relatedProjects = _messages.StringField(10, repeated=True)
+  source = _messages.MessageField('Endpoint', 11)
+  updateTime = _messages.StringField(12)
 
 
 class DeliverInfo(_messages.Message):
@@ -299,11 +325,15 @@ class DeliverInfo(_messages.Message):
       INSTANCE: Target is a Compute Engine instance.
       INTERNET: Target is the Internet.
       GOOGLE_API: Target is a Google API.
+      GKE_MASTER: Target is a Google Kubernetes Engine cluster master.
+      CLOUD_SQL_INSTANCE: Target is a Cloud SQL instance.
     """
     TARGET_UNSPECIFIED = 0
     INSTANCE = 1
     INTERNET = 2
     GOOGLE_API = 3
+    GKE_MASTER = 4
+    CLOUD_SQL_INSTANCE = 5
 
   resourceUri = _messages.StringField(1)
   target = _messages.EnumField('TargetValueValuesEnum', 2)
@@ -346,8 +376,9 @@ class DropInfo(_messages.Message):
       NO_EXTERNAL_ADDRESS: Instance with only internal IP tries to access
         external hosts, but Cloud NAT is not enabled in the subnet, unless
         special configurations on a VM allows this connection. See [Special
-        Configurations for VM instances](/vpc/docs/special-configurations) for
-        details.
+        Configurations for VM
+        instances](https://cloud.google.com/vpc/docs/special-configurations)
+        for details.
       UNKNOWN_INTERNAL_ADDRESS: Destination internal address cannot be
         resolved to a known target.
       FORWARDING_RULE_MISMATCH: Forwarding rule's protocol and ports do not
@@ -357,17 +388,27 @@ class DropInfo(_messages.Message):
       FIREWALL_BLOCKING_LOAD_BALANCER_BACKEND_HEALTH_CHECK: Firewalls block
         the health check probes to the backends and cause the backends to be
         unavailable for traffic from the load balancer. See [Health check
-        firewall rules](/load-balancing/docs/ health-checks#firewall_rules)
-        for more details.
+        firewall rules](https://cloud.google.com/load-balancing/docs/health-
+        checks#firewall_rules) for more details.
       INSTANCE_NOT_RUNNING: Packet is sent from or to a Compute Engine
         instance that is not in a running state.
       TRAFFIC_TYPE_BLOCKED: The type of traffic is blocked and the user cannot
         configure a firewall rule to enable it. See [Always blocked
-        traffic](/vpc/docs/firewalls# blockedtraffic) for more details.
-      GKE_MASTER_UNAUTHORIZED_ACCESS: Access to GKE master's endpoint is not
-        authorized. See [Access to the cluster endpoints](/kubernetes-
-        engine/docs/how-to/ private-clusters#access_to_the_cluster_endpoints)
+        traffic](https://cloud.google.com/vpc/docs/firewalls#blockedtraffic)
         for more details.
+      GKE_MASTER_UNAUTHORIZED_ACCESS: Access to Google Kubernetes Engine
+        cluster master's endpoint is not authorized. See [Access to the
+        cluster endpoints](https://cloud.google.com/kubernetes-
+        engine/docs/how-to/private-clusters#access_to_the_cluster_endpoints)
+        for more details.
+      CLOUD_SQL_INSTANCE_UNAUTHORIZED_ACCESS: Access to the Cloud SQL instance
+        endpoint is not authorized. See [Authorizing with authorized
+        networks](https://cloud.google.com/sql/docs/mysql/authorize-networks)
+        for more details.
+      DROPPED_INSIDE_GKE_SERVICE: Packet was dropped inside Google Kubernetes
+        Engine Service.
+      DROPPED_INSIDE_CLOUD_SQL_SERVICE: Packet was dropped inside Cloud SQL
+        Service.
     """
     CAUSE_UNSPECIFIED = 0
     UNKNOWN_EXTERNAL_ADDRESS = 1
@@ -386,6 +427,9 @@ class DropInfo(_messages.Message):
     INSTANCE_NOT_RUNNING = 14
     TRAFFIC_TYPE_BLOCKED = 15
     GKE_MASTER_UNAUTHORIZED_ACCESS = 16
+    CLOUD_SQL_INSTANCE_UNAUTHORIZED_ACCESS = 17
+    DROPPED_INSIDE_GKE_SERVICE = 18
+    DROPPED_INSIDE_CLOUD_SQL_SERVICE = 19
 
   cause = _messages.EnumField('CauseValueValuesEnum', 1)
   resourceUri = _messages.StringField(2)
@@ -410,11 +454,16 @@ class Endpoint(_messages.Message):
       can be inferred from the source.
 
   Fields:
+    cloudSqlInstance: A [Cloud SQL](https://cloud.google.com/sql) instance
+      URI.
+    gkeMasterCluster: A cluster URI for [Google Kubernetes Engine
+      master](https://cloud.google.com/kubernetes-
+      engine/docs/concepts/cluster-architecture).
     instance: A Compute Engine instance URI.
     ipAddress: The IP address of the endpoint, which can be an external or
       internal IP. An IPv6 address is only allowed when the test's destination
-      is a [global load balancer VIP](/load-balancing/docs/load-balancing-
-      overview).
+      is a [global load balancer VIP](https://cloud.google.com/load-
+      balancing/docs/load-balancing-overview).
     network: A Compute Engine network URI.
     networkType: Type of the network where the endpoint is located. Applicable
       only to source endpoint, as destination network type can be inferred
@@ -448,12 +497,14 @@ class Endpoint(_messages.Message):
     GCP_NETWORK = 1
     NON_GCP_NETWORK = 2
 
-  instance = _messages.StringField(1)
-  ipAddress = _messages.StringField(2)
-  network = _messages.StringField(3)
-  networkType = _messages.EnumField('NetworkTypeValueValuesEnum', 4)
-  port = _messages.IntegerField(5, variant=_messages.Variant.INT32)
-  projectId = _messages.StringField(6)
+  cloudSqlInstance = _messages.StringField(1)
+  gkeMasterCluster = _messages.StringField(2)
+  instance = _messages.StringField(3)
+  ipAddress = _messages.StringField(4)
+  network = _messages.StringField(5)
+  networkType = _messages.EnumField('NetworkTypeValueValuesEnum', 6)
+  port = _messages.IntegerField(7, variant=_messages.Variant.INT32)
+  projectId = _messages.StringField(8)
 
 
 class EndpointInfo(_messages.Message):
@@ -565,6 +616,7 @@ class ForwardInfo(_messages.Message):
         master.
       IMPORTED_CUSTOM_ROUTE_NEXT_HOP: Forwarded to the next hop of a custom
         route imported from a peering VPC.
+      CLOUD_SQL_INSTANCE: Forwarded to a Cloud SQL Instance.
     """
     TARGET_UNSPECIFIED = 0
     PEERING_VPC = 1
@@ -572,6 +624,7 @@ class ForwardInfo(_messages.Message):
     INTERCONNECT = 3
     GKE_MASTER = 4
     IMPORTED_CUSTOM_ROUTE_NEXT_HOP = 5
+    CLOUD_SQL_INSTANCE = 6
 
   resourceUri = _messages.StringField(1)
   target = _messages.EnumField('TargetValueValuesEnum', 2)
@@ -600,6 +653,25 @@ class ForwardingRuleInfo(_messages.Message):
   target = _messages.StringField(5)
   uri = _messages.StringField(6)
   vip = _messages.StringField(7)
+
+
+class GKEMasterInfo(_messages.Message):
+  r"""For display only. Metadata associated with a Google Kubernetes Engine
+  cluster master.
+
+  Fields:
+    clusterNetworkUri: URI of a Google Kubernetes Engine cluster network.
+    clusterUri: URI of a Google Kubernetes Engine cluster.
+    externalIp: External IP address of a Google Kubernetes Engine cluster
+      master.
+    internalIp: Internal IP address of a Google Kubernetes Engine cluster
+      master.
+  """
+
+  clusterNetworkUri = _messages.StringField(1)
+  clusterUri = _messages.StringField(2)
+  externalIp = _messages.StringField(3)
+  internalIp = _messages.StringField(4)
 
 
 class InstanceInfo(_messages.Message):
@@ -1303,6 +1375,70 @@ class Policy(_messages.Message):
   version = _messages.IntegerField(4, variant=_messages.Variant.INT32)
 
 
+class ProbingDetails(_messages.Message):
+  r"""The details of probing from the latest run.
+
+  Enums:
+    AbortCauseValueValuesEnum: Causes that the probing was aborted.
+    ResultValueValuesEnum: The overall reachability result of the test.
+
+  Fields:
+    abortCause: Causes that the probing was aborted.
+    endpointInfo: Derived from the test input. The actual source and
+      destination endpoint where the probing was run.
+    error: The details of an internal failure or a cancellation of
+      reachability analysis.
+    result: The overall reachability result of the test.
+    sentProbeCount: Number of probes sent.
+    successfulProbeCount: Number of probes that reached destination.
+    verifyTime: The time the reachability state was verified.
+  """
+
+  class AbortCauseValueValuesEnum(_messages.Enum):
+    r"""Causes that the probing was aborted.
+
+    Values:
+      PROBING_ABORT_CAUSE_UNSPECIFIED: Abort reason unspecified.
+      PERMISSION_DENIED: Aborted because the user lacks the permission to
+        access all or part of the network configurations required to run the
+        test.
+      NO_SOURCE_LOCATION: Aborted because no valid source endpoint is derived
+        from the input test request.
+    """
+    PROBING_ABORT_CAUSE_UNSPECIFIED = 0
+    PERMISSION_DENIED = 1
+    NO_SOURCE_LOCATION = 2
+
+  class ResultValueValuesEnum(_messages.Enum):
+    r"""The overall reachability result of the test.
+
+    Values:
+      PROBING_RESULT_UNSPECIFIED: Result is not specified.
+      REACHABLE: 95% or more packets originating from source reached
+        destination.
+      UNREACHABLE: No packet originating from source reached destination.
+      REACHABILITY_INCONSISTENT: Less than 95% packets originating from source
+        reached destination.
+      UNDETERMINED: The reachability could not be determined. Possible reasons
+        are: * Analysis is aborted due to permission error. User does not have
+        read permission to the projects listed in the test. * Analysis is
+        aborted due to internal errors.
+    """
+    PROBING_RESULT_UNSPECIFIED = 0
+    REACHABLE = 1
+    UNREACHABLE = 2
+    REACHABILITY_INCONSISTENT = 3
+    UNDETERMINED = 4
+
+  abortCause = _messages.EnumField('AbortCauseValueValuesEnum', 1)
+  endpointInfo = _messages.MessageField('EndpointInfo', 2)
+  error = _messages.MessageField('Status', 3)
+  result = _messages.EnumField('ResultValueValuesEnum', 4)
+  sentProbeCount = _messages.IntegerField(5, variant=_messages.Variant.INT32)
+  successfulProbeCount = _messages.IntegerField(6, variant=_messages.Variant.INT32)
+  verifyTime = _messages.StringField(7)
+
+
 class ReachabilityDetails(_messages.Message):
   r"""The details of reachability state from the latest run.
 
@@ -1584,6 +1720,7 @@ class Step(_messages.Message):
   Fields:
     abort: Display info of the final state "abort" and reason.
     causesDrop: This is a step that leads to the final state Drop.
+    cloudSqlInstance: Display info of a Cloud SQL instance.
     deliver: Display info of the final state "deliver" and reason.
     description: A description of the step. Usually this is a summary of the
       state.
@@ -1594,6 +1731,7 @@ class Step(_messages.Message):
     firewall: Display info of a Compute Engine firewall rule.
     forward: Display info of the final state "forward" and reason.
     forwardingRule: Display info of a Compute Engine forwarding rule.
+    gkeMaster: Display info of a Google Kubernetes Engine cluster master.
     instance: Display info of a Compute Engine instance.
     loadBalancer: Display info of the load balancers.
     network: Display info of a GCP network.
@@ -1619,6 +1757,12 @@ class Step(_messages.Message):
         or on-premises network with internal source IP. If the source is a VPC
         network visible to the user, a NetworkInfo will be populated with
         details of the network.
+      START_FROM_GKE_MASTER: Initial state: packet originating from a Google
+        Kubernetes Engine cluster master. A GKEMasterInfo will be populated
+        with starting instance info.
+      START_FROM_CLOUD_SQL_INSTANCE: Initial state: packet originating from a
+        Cloud SQL instance. A CloudSQLInstanceInfo will be populated with
+        starting instance info.
       APPLY_INGRESS_FIREWALL_RULE: Config checking state: verify ingress
         firewall rule.
       APPLY_EGRESS_FIREWALL_RULE: Config checking state: verify egress
@@ -1651,41 +1795,45 @@ class Step(_messages.Message):
     START_FROM_INSTANCE = 1
     START_FROM_INTERNET = 2
     START_FROM_PRIVATE_NETWORK = 3
-    APPLY_INGRESS_FIREWALL_RULE = 4
-    APPLY_EGRESS_FIREWALL_RULE = 5
-    APPLY_ROUTE = 6
-    APPLY_FORWARDING_RULE = 7
-    SPOOFING_APPROVED = 8
-    ARRIVE_AT_INSTANCE = 9
-    ARRIVE_AT_INTERNAL_LOAD_BALANCER = 10
-    ARRIVE_AT_EXTERNAL_LOAD_BALANCER = 11
-    ARRIVE_AT_VPN_GATEWAY = 12
-    ARRIVE_AT_VPN_TUNNEL = 13
-    NAT = 14
-    PROXY_CONNECTION = 15
-    DELIVER = 16
-    DROP = 17
-    FORWARD = 18
-    ABORT = 19
-    VIEWER_PERMISSION_MISSING = 20
+    START_FROM_GKE_MASTER = 4
+    START_FROM_CLOUD_SQL_INSTANCE = 5
+    APPLY_INGRESS_FIREWALL_RULE = 6
+    APPLY_EGRESS_FIREWALL_RULE = 7
+    APPLY_ROUTE = 8
+    APPLY_FORWARDING_RULE = 9
+    SPOOFING_APPROVED = 10
+    ARRIVE_AT_INSTANCE = 11
+    ARRIVE_AT_INTERNAL_LOAD_BALANCER = 12
+    ARRIVE_AT_EXTERNAL_LOAD_BALANCER = 13
+    ARRIVE_AT_VPN_GATEWAY = 14
+    ARRIVE_AT_VPN_TUNNEL = 15
+    NAT = 16
+    PROXY_CONNECTION = 17
+    DELIVER = 18
+    DROP = 19
+    FORWARD = 20
+    ABORT = 21
+    VIEWER_PERMISSION_MISSING = 22
 
   abort = _messages.MessageField('AbortInfo', 1)
   causesDrop = _messages.BooleanField(2)
-  deliver = _messages.MessageField('DeliverInfo', 3)
-  description = _messages.StringField(4)
-  drop = _messages.MessageField('DropInfo', 5)
-  endpoint = _messages.MessageField('EndpointInfo', 6)
-  firewall = _messages.MessageField('FirewallInfo', 7)
-  forward = _messages.MessageField('ForwardInfo', 8)
-  forwardingRule = _messages.MessageField('ForwardingRuleInfo', 9)
-  instance = _messages.MessageField('InstanceInfo', 10)
-  loadBalancer = _messages.MessageField('LoadBalancerInfo', 11)
-  network = _messages.MessageField('NetworkInfo', 12)
-  projectId = _messages.StringField(13)
-  route = _messages.MessageField('RouteInfo', 14)
-  state = _messages.EnumField('StateValueValuesEnum', 15)
-  vpnGateway = _messages.MessageField('VpnGatewayInfo', 16)
-  vpnTunnel = _messages.MessageField('VpnTunnelInfo', 17)
+  cloudSqlInstance = _messages.MessageField('CloudSQLInstanceInfo', 3)
+  deliver = _messages.MessageField('DeliverInfo', 4)
+  description = _messages.StringField(5)
+  drop = _messages.MessageField('DropInfo', 6)
+  endpoint = _messages.MessageField('EndpointInfo', 7)
+  firewall = _messages.MessageField('FirewallInfo', 8)
+  forward = _messages.MessageField('ForwardInfo', 9)
+  forwardingRule = _messages.MessageField('ForwardingRuleInfo', 10)
+  gkeMaster = _messages.MessageField('GKEMasterInfo', 11)
+  instance = _messages.MessageField('InstanceInfo', 12)
+  loadBalancer = _messages.MessageField('LoadBalancerInfo', 13)
+  network = _messages.MessageField('NetworkInfo', 14)
+  projectId = _messages.StringField(15)
+  route = _messages.MessageField('RouteInfo', 16)
+  state = _messages.EnumField('StateValueValuesEnum', 17)
+  vpnGateway = _messages.MessageField('VpnGatewayInfo', 18)
+  vpnTunnel = _messages.MessageField('VpnTunnelInfo', 19)
 
 
 class TestIamPermissionsRequest(_messages.Message):

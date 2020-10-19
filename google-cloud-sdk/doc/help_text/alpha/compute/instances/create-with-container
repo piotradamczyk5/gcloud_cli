@@ -1,6 +1,6 @@
 NAME
-    gcloud alpha compute instances create-with-container - creates Google
-        Compute engine virtual machine instances running container images
+    gcloud alpha compute instances create-with-container - creates Compute
+        Engine virtual machine instances running container images
 
 SYNOPSIS
     gcloud alpha compute instances create-with-container INSTANCE_NAMES
@@ -24,7 +24,8 @@ SYNOPSIS
         [--create-disk=[PROPERTY=VALUE,...]] [--description=DESCRIPTION]
         [--disk=[auto-delete=AUTO-DELETE],[boot=BOOT],
           [device-name=DEVICE-NAME],[mode=MODE],[name=NAME],[scope=SCOPE]]
-        [--labels=[KEY=VALUE,...]] [--local-nvdimm=[size=SIZE]]
+        [--[no-]enable-nested-virtualization] [--labels=[KEY=VALUE,...]]
+        [--local-nvdimm=[size=SIZE]]
         [--local-ssd=[device-name=DEVICE-NAME],
           [interface=INTERFACE],[size=SIZE]] [--machine-type=MACHINE_TYPE]
         [--metadata=KEY=VALUE,[KEY=VALUE,...]]
@@ -49,7 +50,7 @@ SYNOPSIS
         [GCLOUD_WIDE_FLAG ...]
 
 DESCRIPTION
-    (ALPHA) gcloud alpha compute instances create-with-container creates Google
+    (ALPHA) gcloud alpha compute instances create-with-container creates
     Compute Engine virtual machines that runs a Docker image. For example:
 
         $ gcloud alpha compute instances create-with-container instance-1 \
@@ -348,6 +349,11 @@ FLAGS
             zonal disk in the same zone as the instance (default). If regional,
             the disk is interpreted as a regional disk in the same region as
             the instance. The default value for this is zonal.
+
+     --[no-]enable-nested-virtualization
+        If set to true, enables nested virtualization for the instance. Use
+        --enable-nested-virtualization to enable and
+        --no-enable-nested-virtualization to disable.
 
      --labels=[KEY=VALUE,...]
         List of label KEY=VALUE pairs to add.
@@ -807,7 +813,7 @@ NOTES
     This command is currently in ALPHA and may change without notice. If this
     command fails with API permission errors despite specifying the right
     project, you may be trying to access an API with an invitation-only early
-    access whitelist. These variants are also available:
+    access allowlist. These variants are also available:
 
         $ gcloud compute instances create-with-container
         $ gcloud beta compute instances create-with-container

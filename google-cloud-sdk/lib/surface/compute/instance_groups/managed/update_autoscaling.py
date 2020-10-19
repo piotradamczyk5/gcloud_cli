@@ -31,6 +31,7 @@ def _CommonArgs(parser):
   instance_groups_flags.MULTISCOPE_INSTANCE_GROUP_MANAGER_ARG.AddArgument(
       parser)
   mig_utils.GetModeFlag().AddToParser(parser)
+  mig_utils.AddScaleInControlFlag(parser, include_clear=True)
 
 
 class NoMatchingAutoscalerFoundError(exceptions.Error):
@@ -41,8 +42,9 @@ class NoMatchingAutoscalerFoundError(exceptions.Error):
 class UpdateAutoscaling(base.Command):
   """Update autoscaling parameters of a managed instance group."""
 
-  scale_in = False
   predictive = False
+  scheduled = False
+  min_max = False
 
   @staticmethod
   def Args(parser):
@@ -72,12 +74,11 @@ class UpdateAutoscaling(base.Command):
       mode = mig_utils.ParseModeString(args.mode, client.messages)
       new_autoscaler.autoscalingPolicy.mode = mode
 
-    if self.scale_in:
-      if args.IsSpecified('clear_scale_in_control'):
-        new_autoscaler.autoscalingPolicy.scaleInControl = None
-      else:
-        new_autoscaler.autoscalingPolicy.scaleInControl = \
-          mig_utils.BuildScaleIn(args, client.messages)
+    if args.IsSpecified('clear_scale_in_control'):
+      new_autoscaler.autoscalingPolicy.scaleInControl = None
+    else:
+      new_autoscaler.autoscalingPolicy.scaleInControl = \
+        mig_utils.BuildScaleIn(args, client.messages)
 
     if self.predictive and args.IsSpecified(
         'cpu_utilization_predictive_method'):
@@ -87,12 +88,23 @@ class UpdateAutoscaling(base.Command):
       new_autoscaler.autoscalingPolicy.cpuUtilization.predictiveMethod = arg_utils.ChoiceToEnum(
           args.cpu_utilization_predictive_method, cpu_predictive_enum)
 
+    if self.scheduled:
+      scheduled = mig_utils.BuildScheduled(args, client.messages)
+      if scheduled:
+        new_autoscaler.autoscalingPolicy.scalingSchedules = scheduled
+
+    if self.min_max:
+      if args.IsSpecified('min_num_replicas'):
+        new_autoscaler.autoscalingPolicy.minNumReplicas = args.min_num_replicas
+      if args.IsSpecified('max_num_replicas'):
+        new_autoscaler.autoscalingPolicy.maxNumReplicas = args.max_num_replicas
+
     return self._SendPatchRequest(args, client, autoscalers_client, igm_ref,
                                   new_autoscaler)
 
   def _SendPatchRequest(self, args, client, autoscalers_client, igm_ref,
                         new_autoscaler):
-    if self.scale_in and args.IsSpecified('clear_scale_in_control'):
+    if args.IsSpecified('clear_scale_in_control'):
       # Apitools won't send null fields unless explicitly told to.
       with client.apitools_client.IncludeFields(
           ['autoscalingPolicy.scaleInControl']):
@@ -105,27 +117,27 @@ class UpdateAutoscaling(base.Command):
 class UpdateAutoscalingBeta(UpdateAutoscaling):
   """Update autoscaling parameters of a managed instance group."""
 
-  scale_in = True
   predictive = False
 
   @staticmethod
   def Args(parser):
     _CommonArgs(parser)
-    mig_utils.AddScaleInControlFlag(parser, include_clear=True)
 
 
 @base.ReleaseTracks(base.ReleaseTrack.ALPHA)
 class UpdateAutoscalingAlpha(UpdateAutoscalingBeta):
   """Update autoscaling parameters of a managed instance group."""
 
-  scale_in = True
   predictive = True
+  scheduled = True
+  min_max = True
 
   @staticmethod
   def Args(parser):
     _CommonArgs(parser)
-    mig_utils.AddScaleInControlFlag(parser, include_clear=True)
+    mig_utils.AddMinMaxControl(parser, max_required=False)
     mig_utils.AddPredictiveAutoscaling(parser)
+    mig_utils.AddScheduledAutoscaling(parser, patch_args=True)
 
 UpdateAutoscaling.detailed_help = {
     'brief': 'Update autoscaling parameters of a managed instance group',

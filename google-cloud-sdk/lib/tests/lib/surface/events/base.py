@@ -31,21 +31,17 @@ from tests.lib import sdk_test_base
 
 import mock
 
+MANAGED_EVENTS_CRD_API_VERSION = 'v1beta1'
 
-# Main API name and version used in alpha.
-ALPHA_API_NAME = 'run'
-ALPHA_API_VERSION = 'v1alpha1'
-
-# Main API name and version used post-alpha by hosted events.
-EVENTS_API_NAME = 'events'
-EVENTS_API_VERSION = 'v1beta1'
-
-# API name and version used by Anthos for working with core resources.
-_CORE_API_NAME = 'run'
-_CORE_API_VERSION = 'v1'
+ANTHOS_API_NAME = 'anthosevents'
+ANTHOS_API_VERSION = 'v1beta1'
 
 # API version used for working with CRDs.
-_CRD_API_VERSION = 'v1beta1'
+ANTHOS_CRD_API_VERSION = 'v1'
+
+# API name and version for CloudRun operator
+_OPERATOR_API_NAME = 'anthosevents'
+_OPERATOR_API_VERSION = 'v1alpha1'
 
 
 class EventsBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
@@ -54,12 +50,16 @@ class EventsBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
   # Subclasses may change the values of these fields in PreSetUp().
   # This is the main API name and version for the test class. They are used
   # everywhere except when working with core resources (Anthos only) or CRDs.
-  # For now, the only supported values are ALPHA_API_NAME/VERSION and
-  # EVENTS_API_NAME/VERSION.
-  api_name = ALPHA_API_NAME
-  api_version = ALPHA_API_VERSION
-  platform = 'managed'
+  # For now, the only supported values are ALPHA_API_NAME/VERSION,
+  # EVENTS_API_NAME/VERSION, and ANTHOS_API_NAME/VERSION.
+  api_name = ANTHOS_API_NAME
+  api_version = ANTHOS_API_VERSION
+  platform = 'gke'
   region = 'us-central1'
+
+  # API name and version used by Anthos for working with core resources.
+  core_api_name = 'run'
+  core_api_version = 'v1'
 
   def _NamespaceRef(self, project='fake-project'):
     collection = '{}.namespaces'.format(self.api_name)
@@ -68,10 +68,10 @@ class EventsBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
 
   def _CoreNamespaceRef(self, project='fake-project'):
     """This method is for Anthos only."""
-    collection = '{}.api.{}.namespaces'.format(_CORE_API_NAME,
-                                               _CORE_API_VERSION)
+    collection = '{}.api.{}.namespaces'.format(self.core_api_name,
+                                               self.core_api_version)
     return self._registry.Parse(
-        project, collection=collection, api_version=_CORE_API_VERSION)
+        project, collection=collection, api_version=self.core_api_version)
 
   def _TriggerRef(self, name, project='fake-project'):
     collection = '{}.namespaces.triggers'.format(self.api_name)
@@ -91,13 +91,13 @@ class EventsBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
 
   def _SecretRef(self, name, project='fake-project'):
     """This method is for Anthos only."""
-    collection = '{}.api.{}.namespaces.secrets'.format(_CORE_API_NAME,
-                                                       _CORE_API_VERSION)
+    collection = '{}.api.{}.namespaces.secrets'.format(self.core_api_name,
+                                                       self.core_api_version)
     return self._registry.Parse(
         name,
         params={'namespacesId': project},
         collection=collection,
-        api_version=_CORE_API_VERSION)
+        api_version=self.core_api_version)
 
   def _MockConnectionContext(self, is_gke_context):
     """Causes GetConnectionContext() to return a mock connection context.
@@ -152,6 +152,29 @@ class EventsBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
                         PropertiesValue(additionalProperties=spec_properties))),
             ]))
 
+  def _CreateMockClient(self, api_name, api_version, mock_client_hash):
+    """Returns apitools_mock.Client.
+
+    Checks mock_client_hash for pre-existing mock clients to reuse.
+    Args:
+      api_name: str, API name
+      api_version: str, API version
+      mock_client_hash: dict, contains previous mock clients
+    """
+    try:
+      return mock_client_hash[(api_name, api_version)]
+    except KeyError:
+      pass
+
+    client_class = apis.GetClientClass(api_name, api_version)
+    real_client = apis.GetClientInstance(api_name, api_version, no_http=True)
+    mock_client = apitools_mock.Client(client_class, real_client)
+    mock_client.Mock()
+    self.addCleanup(mock_client.Unmock)
+
+    mock_client_hash[(api_name, api_version)] = mock_client
+    return mock_client
+
   def SetUp(self):
     """Runs before any test method to set up the test environment."""
     properties.VALUES.run.platform.Set(self.platform)
@@ -162,44 +185,42 @@ class EventsBase(sdk_test_base.WithFakeAuth, cli_test_base.CliTestBase):
         console_io, 'IsInteractive', return_value=True)
     self.namespace = self._NamespaceRef()
 
+    if self.api_name == 'anthosevents':
+      crd_version = ANTHOS_CRD_API_VERSION
+    else:
+      crd_version = MANAGED_EVENTS_CRD_API_VERSION
+
     self.messages = apis.GetMessagesModule(self.api_name, self.api_version)
-    self.crd_messages = apis.GetMessagesModule(self.api_name, _CRD_API_VERSION)
-    self.core_messages = apis.GetMessagesModule(_CORE_API_NAME,
-                                                _CORE_API_VERSION)
+    self.crd_messages = apis.GetMessagesModule(self.api_name, crd_version)
+    self.core_messages = apis.GetMessagesModule(self.core_api_name,
+                                                self.core_api_version)
+    self.operator_messages = apis.GetMessagesModule(self.api_name,
+                                                    _OPERATOR_API_VERSION)
+
+    # Dict holding duplicate mock clients with (api_name, api_version) as key
+    mock_client_hash = {}
 
     # Create mock clients.
-    client_class = apis.GetClientClass(self.api_name, self.api_version)
-    real_client = apis.GetClientInstance(
-        self.api_name, self.api_version, no_http=True)
-    self.mock_client = apitools_mock.Client(client_class, real_client)
-    self.mock_client.Mock()
-    self.addCleanup(self.mock_client.Unmock)
-
-    # Reuse the mock client above, if possible.
-    self.mock_crd_client = self.mock_client
-    if self.api_version != _CRD_API_VERSION:
-      client_class = apis.GetClientClass(self.api_name, _CRD_API_VERSION)
-      real_client = apis.GetClientInstance(
-          self.api_name, _CRD_API_VERSION, no_http=True)
-      self.mock_crd_client = apitools_mock.Client(client_class, real_client)
-      self.mock_crd_client.Mock()
-      self.addCleanup(self.mock_crd_client.Unmock)
-
-    # Reuse one of the mock clients above, if possible.
-    self.mock_core_client = self.mock_client
-    if self.api_name != _CORE_API_NAME or self.api_version != _CORE_API_VERSION:
-      self.mock_core_client = self.mock_crd_client
-      if self.api_name != _CORE_API_NAME or _CRD_API_VERSION != _CORE_API_VERSION:
-        client_class = apis.GetClientClass(_CORE_API_NAME, _CORE_API_VERSION)
-        real_client = apis.GetClientInstance(
-            _CORE_API_NAME, _CORE_API_VERSION, no_http=True)
-        self.mock_core_client = apitools_mock.Client(client_class, real_client)
-        self.mock_core_client.Mock()
-        self.addCleanup(self.mock_core_client.Unmock)
+    self.mock_client = self._CreateMockClient(self.api_name, self.api_version,
+                                              mock_client_hash)
+    self.mock_crd_client = self._CreateMockClient(self.api_name, crd_version,
+                                                  mock_client_hash)
+    self.mock_core_client = self._CreateMockClient(self.core_api_name,
+                                                   self.core_api_version,
+                                                   mock_client_hash)
+    self.mock_operator_client = self._CreateMockClient(_OPERATOR_API_NAME,
+                                                       _OPERATOR_API_VERSION,
+                                                       mock_client_hash)
 
     self.operations = mock.Mock()
+    if self.api_name == 'anthosevents':
+      self.operations.IsCluster.return_value = True
+    else:
+      self.operations.IsCluster.return_value = False
     self.operations.client = self.mock_client
     self.operations.messages = self.messages
+    self.operations.api_name = self.api_name
+    self.operations.api_version = self.api_version
 
     operations_context = mock.Mock()
     operations_context.__enter__ = mock.Mock(return_value=self.operations)
